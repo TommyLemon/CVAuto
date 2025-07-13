@@ -132,7 +132,7 @@
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isPreviewEnabled, 10)">预览左侧输入框:  {{ isPreviewEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
                   <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isEditResponse, 11)">当前编辑模式:  {{ isEditResponse ? 'Response 后端响应结果' : 'Request 前端请求参数' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(StringUtil.isEmpty(host, true), 3)">{{ StringUtil.isEmpty(host, true) ? '隐藏(固定)URL Host: 可用空格隔开' : '显示(编辑)URL Host: \n' + host }}</a>
-                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isRandomShow, 5)">{{ isRandomShow ? '隐藏(固定)参数注入 Random Test' : '显示(编辑)参数注入 Random Test' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isRandomShow, 5)">{{ isRandomShow ? '隐藏(固定)图片参数 Image Test' : '显示(编辑)图片参数 Image Test' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isHeaderShow, 4)">{{ (isHeaderShow ? '隐藏(固定)' : '显示(编辑)') + (isEditResponse ? '响应头 Response Header' : '请求头 Request Header' ) }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isScriptShow, 13)">{{ (isScriptShow ? '隐藏(固定)' : '显示(编辑)') + '执行脚本 JavaScript' }}</a>
                   <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isStatisticsEnabled, 17)">{{ (isStatisticsEnabled ? '隐藏' : '显示') + '测试统计报告 Test Report' }} </a>
@@ -413,7 +413,7 @@ Ctrl + S 或 Command + S 保存当前用例；
 
                 <div id="vContainer" v-show="isRandomListShow && currentRandomIndex >= 0 && view === 'code'" style="width: 100%; height: 100%; padding-bottom: 36px; position: absolute; z-index: 100; background-color: white; display: flex; flex-direction: column; overflow: scroll">
                     <div style="min-width: 240px; position: relative" :style="{'height': isFullScreen ? '80%' : '30%' }">
-                        <div id="vAfterTitle" style="padding: 0px 13px 0px 6px; position: absolute; width: 100%; z-index: 100" @click="detection.isShowNum = ! detection.isShowNum" >
+                        <div id="vAfterTitle" style="padding: 0px 13px 0px 6px; position: absolute; width: 100%; z-index: 100" >
                             <a style="font-weight: bold; color: black">本次: </a><a>置信度 </a><input id="vAfterThreshold" v-model="detection.afterThreshold" style="width: 24px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'afterThreshold', true)" placeholder="阈值" />
                             <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.afterCorrect + ' 误报数 ' + detection.afterWrong + ' 漏检数 ' + detection.afterMiss : '召回率 ' + detection.afterRecallStr + ' 精确率 ' + detection.afterPrecisionStr + ' F1 ' + detection.afterF1Str }} </a>
                             <a style="height: 25px; color: black; font-weight: bold; padding: 0" href="javascript:void(0)" @click="onClickFullScreen($event)" > 全屏 </a>
@@ -424,7 +424,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                         </div>
                     </div>
                     <div style="min-width: 240px; position: relative; top: 25px" :style="{'height': isFullScreen ? '80%' : '30%' }">
-                        <div id="vDiffTitle" style="padding: 0px 13px 0px 6px; position: absolute; width: 100%; height: 25px; z-index: 100" @click="detection.isShowNum = ! detection.isShowNum" >
+                        <div id="vDiffTitle" style="padding: 0px 13px 0px 6px; position: absolute; width: 100%; height: 25px; z-index: 100" >
                             <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" />
                             <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 '  + detection.diffCorrectStr + ' 误报数 ' + detection.diffWrongStr + ' 漏检数 ' + detection.diffMissStr : '召回率 ' + detection.diffRecallStr + ' 精确率 ' + detection.diffPrecisionStr + ' F1 ' + detection.diffF1Str }} </a>
                         </div>
@@ -434,7 +434,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                         </div>
                     </div>
                     <div style="min-width: 240px; position: relative; top: 50px" :style="{'height': isFullScreen ? '80%' : '30%' }">
-                        <div id="vBeforeTitle" style="padding: 0px 13px 0px 6px; position: absolute; width: 100%; z-index: 100" @click="detection.isShowNum = ! detection.isShowNum" >
+                        <div id="vBeforeTitle" style="padding: 0px 13px 0px 6px; position: absolute; width: 100%; z-index: 100" >
                             <a style="font-weight: bold; color: black">之前: </a><a>置信度 </a><input id="vBeforeThreshold" v-model="detection.beforeThreshold" style="width: 24px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'beforeThreshold', true)" placeholder="阈值" disabled />
                             <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.beforeCorrect + ' 误报数 ' + detection.beforeWrong + ' 漏检数 ' + detection.beforeMiss : '召回率 ' + detection.beforeRecallStr + ' 精确率 ' + detection.beforePrecisionStr + ' F1 ' + detection.beforeF1Str }} </a>
                             <a > 实际 </a><input id="vAfterTotal" v-model="detection.total" style="width: 36px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'afterTotal', true)" placeholder="总数" />
@@ -479,7 +479,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                             <a class="hint--top @cli-tool" style="font-size: small;" data-hint="测试" href="javascript:void(0)" @click="onClickTestRandom()">
                               <img class="icon" src="img/refresh.png"/>
                             </a>
-                            <a class="hint--top @cli-tool" data-hint="添加配置" style="font-size:xx-large; margin-bottom: 2px; color: black;"
+                            <a class="hint--top @cli-tool" data-hint="添加配置" style="font-size:xx-large; margin-bottom: 2px; padding: 0; color: black;"
                                href="javascript:void(0)" @click="onClickAddRandom()"> + </a>
                             <a v-show="false" href="javascript:void(0)" style="font-size: small;" class="hint--top"  data-hint="上传/分享"  @click="showExport(true, true)">
                                 <svg class="icon">
@@ -493,7 +493,22 @@ Ctrl + S 或 Command + S 保存当前用例；
                             </a>
                         </div>
 
-                        <input id="vRandomKeyPath" v-show="isRandomListShow || isRandomSubListShow" v-model="((currentRemoteItem || {}).Document || {}).path" style="width: 100%; text-align: center; margin-top: 40px; background-color: rgba(255, 255, 255, 0.5); border: #DDD 1px solid; border-radius: 2px"  @keyup="doOnKeyUp(event, 'randomKeyPath', false, {'path': vRandomKeyPath.value})" placeholder="image: 图片的 JSON key 路径，以 / 分隔，转义特殊字符 / 等" />
+                        <div id="vAllContainer" v-show="isRandomListShow || isRandomSubListShow" style="width: 100%; margin-top: 40px; position: absolute; background-color: rgba(255, 255, 255, 0.5); display: flex; flex-direction: column;" @click="detection.isShowNum = ! detection.isShowNum">
+                            <div id="vAllAfterTitle" style="padding: 0; position: absolute; width: 100%; height: 25px;" >
+                                <a style="font-size: small; font-weight: bold; color: black">本次: </a>
+                                <a style="font-size: small; margin-left: -6px">{{ detection.isShowNum ? '正确(图' + detection.afterAllCorrect + ' 框' + detection.afterAllImgCorrect + ') 误报(图' + detection.afterAllWrong + ' 框' + detection.afterAllImgWrong + ') 漏检(图' + detection.afterAllMiss + ' 框' + detection.afterAllImgMiss + ')' : '召回(图' + detection.afterAllRecallStr + ' 框' + detection.afterAllImgRecallStr + ')% 精确(图' + detection.afterAllPrecisionStr + ' 框' + detection.afterAllImgPrecisionStr + ')% F1(图' + detection.afterAllF1Str + ' 框' + detection.afterAllImgF1Str + ')%' }} </a>
+                            </div>
+                            <div id="vAllDiffTitle" style="padding: 0; position: absolute; width: 100%; height: 25px; margin-top: 25px" >
+                                <a style="font-size: small; font-weight: bold; color: black">差异: </a>
+                                <a style="font-size: small; margin-left: -6px">{{ detection.isShowNum ? '正确(图' + detection.diffAllCorrect + ' 框' + detection.diffAllImgCorrect + ') 误报(图' + detection.diffAllWrong + ' 框' + detection.diffAllImgWrong + ') 漏检(图' + detection.diffAllMiss + ' 框' + detection.diffAllImgMiss + ')' : '召回(图' + detection.diffAllRecallStr + ' 框' + detection.diffAllImgRecallStr + ')% 精确(图' + detection.diffAllPrecisionStr + ' 框' + detection.diffAllImgPrecisionStr + ')% F1(图' + detection.diffAllF1Str + ' 框' + detection.diffAllImgF1Str + ')%' }} </a>
+                            </div>
+                            <div id="vAllBeforeTitle" style="padding: 0; position: absolute; width: 100%; height: 25px; margin-top: 50px" >
+                                <a style="font-size: small; font-weight: bold; color: black">之前: </a>
+                                <a style="font-size: small; margin-left: -6px">{{ detection.isShowNum ? '正确(图' + detection.beforeAllCorrect + ' 框' + detection.beforeAllImgCorrect + ') 误报(图' + detection.beforeAllWrong + ' 框' + detection.beforeAllImgWrong + ') 漏检(图' + detection.beforeAllMiss + ' 框' + detection.beforeAllImgMiss + ')' : '召回(图' + detection.beforeAllRecallStr + ' 框' + detection.beforeAllImgRecallStr + ')% 精确(图' + detection.beforeAllPrecisionStr + ' 框' + detection.beforeAllImgPrecisionStr + ')% F1(图' + detection.beforeAllF1Str + ' 框' + detection.beforeAllImgF1Str + ')%' }} </a>
+                            </div>
+                        </div>
+
+                        <input id="vRandomKeyPath" v-show="isRandomListShow || isRandomSubListShow" v-model="((currentRemoteItem || {}).Document || {}).path" style="width: 100%; text-align: center; margin-top: 115px; background-color: rgba(255, 255, 255, 0.5); border: #DDD 1px solid; border-radius: 2px"  @keyup="doOnKeyUp(event, 'randomKeyPath', false, {'path': vRandomKeyPath.value})" placeholder="image: 图片的 JSON key 路径，以 / 分隔，转义特殊字符 / 等" />
 
                         <!-- 临时生成的配置子项 -->
                         <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%; background-color: transparent; overflow: hidden;overflow-y: scroll; padding-bottom: 150px">

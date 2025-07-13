@@ -1218,36 +1218,61 @@ https://github.com/Tencent/APIJSON/issues
 
         afterThreshold: 35,
         afterCorrect: 9,
+        afterImgCorrect: 9,
         afterWrong: 1,
+        afterImgWrong: 1,
         afterMiss: 1,
+        afterImgMiss: 1,
         afterRecall: 9/(9+1),
+        afterImgRecall: 9/(9+1),
         afterRecallStr: (100*this.afterRecall).toFixed(0) + '%',
+        afterImgRecallStr: (100*this.afterImgRecall).toFixed(0), // + '%',
         afterPrecision: 9/(9+1),
+        afterImgPrecision: 9/(9+1),
         afterPrecisionStr: (100*this.afterPrecision).toFixed(0) + '%',
+        afterImgPrecisionStr: (100*this.afterImgPrecision).toFixed(0), // + '%',
         afterF1: 2*(this.afterRecall*this.afterPrecision)/(this.afterRecall + this.afterPrecision),
+        afterImgF1: 2*(this.afterImgRecall*this.afterImgPrecision)/(this.afterImgRecall + this.afterImgPrecision),
         afterF1Str: (100*this.afterF1).toFixed(0) + '%',
+        afterImgF1Str: (100*this.afterImgF1).toFixed(0), // + '%',
         after: { bboxes: [] },
 
         beforeThreshold: 30,
         beforeCorrect: 8,
+        beforeImgCorrect: 8,
         beforeWrong: 3,
+        beforeImgWrong: 3,
         beforeMiss: 2,
+        beforeImgMiss: 2,
         beforeRecall: 8/(8+3),
+        beforeImgRecall: 8/(8+3),
         beforeRecallStr: (100*this.beforeRecall).toFixed(0) + '%',
+        beforeImgRecallStr: (100*this.beforeImgRecall).toFixed(0), // + '%',
         beforePrecision: 8/(8+2),
+        beforeImgPrecision: 8/(8+2),
         beforePrecisionStr: (100*this.beforePrecision).toFixed(0) + '%',
+        beforeImgPrecisionStr: (100*this.beforeImgPrecision).toFixed(0), // + '%',
         beforeF1: 2*(this.beforeRecall*this.beforePrecision)/(this.beforeRecall + this.beforePrecision),
+        beforeImgF1: 2*(this.beforeImgRecall*this.beforeImgPrecision)/(this.beforeImgRecall + this.beforeImgPrecision),
         beforeF1Str: (100*this.beforeF1).toFixed(0) + '%',
+        beforeImgF1Str: (100*this.beforeImgF1).toFixed(0), // + '%',
         before: { bboxes: [] },
 
         diffThreshold: 90,
         diffCorrectStr: '+' + 1,
+        diffImgCorrectStr: '+' + 1,
         diffWrongStr: '-' + 2,
+        diffImgWrongStr: '-' + 2,
         diffMissStr: '-' + 1,
+        diffImgMissStr: '-' + 1,
         diffRecallStr: '+' + (100*(this.afterRecall - this.beforeRecall)).toFixed(0) + '%',
+        diffImgRecallStr: '+' + (100*(this.afterImgRecall - this.beforeImgRecall)).toFixed(0), // + '%',
         diffPrecisionStr: '+' + (100*(this.afterPrecision - this.beforePrecision)).toFixed(0) + '%',
+        diffImgPrecisionStr: '+' + (100*(this.afterImgPrecision - this.beforeImgPrecision)).toFixed(0), // + '%',
         diffF1: '+' + (100*(this.afterF1 - this.beforeF1)).toFixed(0) + '%',
+        diffImgF1: '+' + (100*(this.afterImgF1 - this.beforeImgF1)).toFixed(0), // + '%',
         diffF1Str: '+' + (100*this.diffF1).toFixed(0) + '%',
+        diffImgF1Str: '+' + (100*this.diffImgF1).toFixed(0), // + '%',
         diff: { bboxes: [] },
       },
       img: '', // 'img/Screenshot_2020-11-07-16-35-27-473_apijson.demo.jpg',
@@ -2566,7 +2591,7 @@ https://github.com/Tencent/APIJSON/issues
         }
       },
 
-      // 根据参数注入用例恢复数据
+      // 根据图片参数用例恢复数据
       restoreRandom: function (index, item) {
         this.currentRandomIndex = index
         this.currentRandomItem = item
@@ -4432,7 +4457,7 @@ https://github.com/Tencent/APIJSON/issues
               }
               App.exTxt.button = 'All:' + App.uploadTotal + '\nDone:' + App.uploadDoneCount + '\nFail:' + App.uploadFailCount
               if (App.uploadDoneCount + App.uploadFailCount >= App.uploadTotal) {
-                alert('导入完成，其中 ' + App.uploadRandomCount + ' 个用例已存在，改为生成和上传了参数注入配置')
+                alert('导入完成，其中 ' + App.uploadRandomCount + ' 个用例已存在，改为生成和上传了图片参数配置')
                 App.isSyncing = false
                 App.testCasePage = 0
                 App.isRandomShow = true
@@ -6935,10 +6960,10 @@ https://github.com/Tencent/APIJSON/issues
           styleOverride: isDiff ? (box, isBefore) => {
             if (! box.color) { // 防止空色
               box.color = [255, 255, 255, 128]
-            };
+            }
             // 以原始颜色为基准，做红移或蓝移，透明度相对调节
             // return { color: JSONResponse.shiftColor(box.color, isBefore ? 'red' : 'blue', isBefore ? 1.2 : 0.8) };  // 红移，透明度放大20%；蓝移，透明度缩小 20%
-            return { color: JSONResponse.adjustBrightness(box.color, isBefore ? 'darken' : 'brighten', isBefore ? 1.2 : 0.8) };  // 暗移，透明度放大20%；亮移，透明度缩小 20%
+            return { color: JSONResponse.adjustBrightness(box.color, isBefore ? 'brighten' : 'darken', isBefore ? 1.2 : 0.8) };  // 暗移，透明度放大20%；亮移，透明度缩小 20%
           } : null
         }, img);
       },
@@ -6964,11 +6989,11 @@ https://github.com/Tencent/APIJSON/issues
 
         ['before', 'after'].forEach(stage => {
           var det2 = detection[stage]
-          var cs = stage == 'after' ? curCorrects : corrects;
           var ws = stage == 'after' ? curWrongs : wrongs;
-          var correctCount = cs == null ? 0 : cs.length;
+          var cs = stage == 'after' ? curCorrects : corrects;
           var wrongCount = ws == null ? 0 : ws.length;
-          // const bboxes = JSONResponse.getBboxes(det2) || [];
+          const bboxes = JSONResponse.getBboxes(det2) || [];
+          var correctCount = Math.max(bboxes.length - wrongCount, cs == null ? 0 : cs.length);
           // bboxes.forEach(bbox => {
           //   if (bbox.correct === false) {
           //     wrongCount ++;
@@ -7004,6 +7029,58 @@ https://github.com/Tencent/APIJSON/issues
         detection['diffRecallStr'] = (diffRecall >= 0 ? '+' : '') + (100*diffRecall).toFixed(0) + '%';
         detection['diffPrecisionStr'] = (diffPrecision >= 0 ? '+' : '') + (100*diffPrecision).toFixed(0) + '%';
         detection['diffF1Str'] = (diffF1 >= 0 ? '+' : '') + (100*diffF1).toFixed(0) + '%';
+
+        var allImgTotal = 0;
+        var allImgCorrect = 0;
+        var allImgWrong = 0;
+        var allImgMiss = 0;
+
+        var allTotal = 0;
+        var allCorrect = 0;
+        var allWrong = 0;
+        var allMiss = 0;
+
+        var randoms = this.randoms || []
+        for (let i = 0; i < randoms.length; i ++) {
+          allImgTotal ++;
+          var rand = randoms[i];
+          var tr2 = rand == null ? null : rand.TestRecord;
+          if (tr2 == null) {
+            allImgMiss ++;
+            continue;
+          }
+
+          var total = (tr2.total || tr2.correct || 0);
+          var wrong = tr2.wrong || 0;
+          var correct = tr2.correct || total - wrong;
+          allTotal += total;
+          allWrong += wrong;
+          allCorrect += correct;
+          allImgMiss += total - correct;
+
+          if (wrong <= 0) {
+            allImgCorrect ++;
+          } else {
+            allImgWrong ++;
+          }
+        }
+
+        var allImgRecall = detection.beforeImgRecall = allImgCorrect/allImgTotal;
+        var allImgPrecision = detection.beforeImgPrecision = allImgCorrect/(allImgCorrect + allImgWrong);
+        var allImgF1 = detection.beforeImgF1 = (2*allImgRecall*allImgPrecision)/(allImgRecall + allImgPrecision);
+
+        var allRecall = detection.beforeAllRecall = allCorrect/allTotal;
+        var allPrecision = detection.beforeAllPrecision = allCorrect/(allCorrect + allWrong);
+        var allF1 = detection.beforeAllF1 = (2*allRecall*allPrecision)/(allRecall + allPrecision);
+
+        detection.beforeImgRecallStr = (100*allImgRecall).toFixed(0);
+        detection.beforeImgPrecisionStr = (100*allImgPrecision).toFixed(0);
+        detection.beforeImgF1Str = (100*allImgF1).toFixed(0);
+
+        detection.beforeAllRecallStr = (100*allRecall).toFixed(0);
+        detection.beforeAllPrecisionStr = (100*allPrecision).toFixed(0);
+        detection.beforeAllF1Str = (100*allF1).toFixed(0);
+
         this.detection = detection;
       },
       processDiffAndAutoMark: function() {
@@ -7180,6 +7257,12 @@ https://github.com/Tencent/APIJSON/issues
             break;
           }
         }
+
+        if (found == null || found == this.hoverIds[stage]) {
+          return
+        }
+
+        this.hoverIds[stage] = found;
         this.$set(this.hoverIds, stage, found);
         this.draw(stage);
       },
@@ -10313,7 +10396,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         console.log = logger
       },
 
-      /**参数注入，动态替换键值对
+      /**图片参数，动态替换键值对
        * @param show
        */
       onClickTestRandom: function (isCross, callback) {
@@ -10438,7 +10521,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
         }
       },
-      /**参数注入，动态替换键值对
+      /**图片参数，动态替换键值对
        * @param show
        * @param callback
        */
@@ -10731,7 +10814,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         return item
       },
 
-      /**参数注入，动态替换键值对
+      /**图片参数，动态替换键值对
        * @param show
        * @param callback
        */
@@ -10777,7 +10860,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        *    json: {} //const json
        *  }
        */
-      /**参数注入，动态替换键值对
+      /**图片参数，动态替换键值对
        * @param show
        * @param callback
        */
@@ -10829,7 +10912,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const pathKeys = path.split('/')
           if (pathKeys == null || pathKeys.length <= 0) {
-            throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + path + ' 不符合 JSON 路径的格式 key0/key1/../targetKey !' +
+            throw new Error('图片参数 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + path + ' 不符合 JSON 路径的格式 key0/key1/../targetKey !' +
               '\n每个随机变量配置都必须按照\n  key0/key1/../targetKey replaceKey: value  // 注释\n的格式！' +
               '\n注意冒号 ": " 左边 0 空格，右边 1 空格！其中 replaceKey 可省略。' +
               '\nkey: {} 中最外层常量对象 {} 必须用括号包裹为 ({})，也就是 key: ({}) 这种格式！' +
@@ -10840,7 +10923,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           const customizeKey = bi > 0;
           const key = customizeKey ? p_k.substring(bi + 1) : lastKeyInPath;
           if (key == null || key.trim().length <= 0) {
-            throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + key + ' 不是合法的 JSON key!' +
+            throw new Error('图片参数 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + key + ' 不是合法的 JSON key!' +
               '\n每个随机变量配置都必须按照\n  key0/key1/../targetKey replaceKey: value  // 注释\n的格式！' +
               '\n注意冒号 ": " 左边 0 空格，右边 1 空格！其中 replaceKey 可省略。' +
               '\nkey: {} 中最外层常量对象 {} 必须用括号包裹为 ({})，也就是 key: ({}) 这种格式！' +
@@ -10896,7 +10979,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     current = parent[pathKeys[j]] = {}
                   }
                   if (parent instanceof Object == false) {
-                    throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中' +
+                    throw new Error('图片参数 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中' +
                       ' pathKeys[' + j + '] = ' + pathKeys[j] + ' 在实际请求 JSON 内对应的值不是对象 {} 或 数组 [] !');
                   }
                   parent = current;
@@ -10990,10 +11073,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               var data = (res || {}).data || {}
               if (JSONResponse.isSuccess(data) != true) {
                 respCount = -reqCount;
-                vOutput.value = '参数注入 为第 ' + (which + 1) + ' 行\n  ' + p_k + '  \n获取数据库数据 异常：\n' + data.msg;
+                vOutput.value = '图片参数 为第 ' + (which + 1) + ' 行\n  ' + p_k + '  \n获取数据库数据 异常：\n' + data.msg;
                 alert(StringUtil.get(vOutput.value));
                 return
-                // throw new Error('参数注入 为\n  ' + tableName + '/' + key + '  \n获取数据库数据 异常：\n' + data.msg)
+                // throw new Error('图片参数 为\n  ' + tableName + '/' + key + '  \n获取数据库数据 异常：\n' + data.msg)
               }
 
               if (isRandom) {
@@ -11028,7 +11111,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           //支持 1, "a" 这种原始值
           // if (start < 0 || end <= start) {  //(1) 表示原始值  start*end <= 0 || start >= end) {
-          //   throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
+          //   throw new Error('图片参数 第 ' + (i + 1) + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
           // }
 
           var toEval = value;
@@ -11052,7 +11135,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               if (Number.isSafeInteger(step) != true || step <= 0
                 || (StringUtil.isEmpty(stepStr, false) != true && StringUtil.isNumber(stepStr) != true)
               ) {
-                throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中字符 ' + stepStr + ' 不符合跨步 step 格式！'
+                throw new Error('图片参数 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中字符 ' + stepStr + ' 不符合跨步 step 格式！'
                   + '\n顺序整数 和 顺序取值 可以通过以下格式配置 升降序 和 跨步：'
                   + '\n  ORDER_DB+step(arg0, arg1...)\n  ORDER_DB-step(arg0, arg1...)'
                   + '\n  ORDER_INT+step(arg0, arg1...)\n  ORDER_INT-step(arg0, arg1...)'
@@ -11765,7 +11848,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const deepAllCount = this.toTestDocIndexes == null ? 0 : this.toTestDocIndexes.length
           App.deepAllCount = deepAllCount
-          if (isRandom != true && deepAllCount > 0 && ! this.isChainShow) { // 自动给非 红色 报错的接口跑参数注入
+          if (isRandom != true && deepAllCount > 0 && ! this.isChainShow) { // 自动给非 红色 报错的接口跑图片参数
             App.deepDoneCount = 0;
             this.startRandomTest4Doc(list, this.toTestDocIndexes, 0, deepAllCount, accountIndex, isCross)
           } else if (isCross && doneCount == allCount && accountIndex <= this.accounts.length) {
