@@ -1212,6 +1212,7 @@ https://github.com/Tencent/APIJSON/issues
       allowMultiple: true,
       isFullScreen: false,
       hoverIds: { before: null, diff: null, after: null },
+      compareRandomIds: null, // [],
       detection: {
         isShowNum: false,
         total: 10,
@@ -1219,60 +1220,85 @@ https://github.com/Tencent/APIJSON/issues
         afterThreshold: 35,
         afterCorrect: 9,
         afterImgCorrect: 9,
+        afterAllCorrect: 9,
         afterWrong: 1,
         afterImgWrong: 1,
+        afterAllWrong: 1,
         afterMiss: 1,
         afterImgMiss: 1,
+        afterAllMiss: 1,
         afterRecall: 9/(9+1),
         afterImgRecall: 9/(9+1),
+        afterAllRecall: 9/(9+1),
         afterRecallStr: (100*this.afterRecall).toFixed(0) + '%',
         afterImgRecallStr: (100*this.afterImgRecall).toFixed(0), // + '%',
+        afterAllRecallStr: (100*this.afterAllRecall).toFixed(0), // + '%',
         afterPrecision: 9/(9+1),
         afterImgPrecision: 9/(9+1),
+        afterAllPrecision: 9/(9+1),
         afterPrecisionStr: (100*this.afterPrecision).toFixed(0) + '%',
         afterImgPrecisionStr: (100*this.afterImgPrecision).toFixed(0), // + '%',
+        afterAllPrecisionStr: (100*this.afterAllPrecision).toFixed(0), // + '%',
         afterF1: 2*(this.afterRecall*this.afterPrecision)/(this.afterRecall + this.afterPrecision),
         afterImgF1: 2*(this.afterImgRecall*this.afterImgPrecision)/(this.afterImgRecall + this.afterImgPrecision),
+        afterAllF1: 2*(this.afterAllRecall*this.afterAllPrecision)/(this.afterAllRecall + this.afterAllPrecision),
         afterF1Str: (100*this.afterF1).toFixed(0) + '%',
         afterImgF1Str: (100*this.afterImgF1).toFixed(0), // + '%',
+        afterAllF1Str: (100*this.afterAllF1).toFixed(0), // + '%',
         after: { bboxes: [] },
 
         beforeThreshold: 30,
         beforeCorrect: 8,
         beforeImgCorrect: 8,
+        beforeAllCorrect: 8,
         beforeWrong: 3,
         beforeImgWrong: 3,
+        beforeAllWrong: 3,
         beforeMiss: 2,
         beforeImgMiss: 2,
+        beforeAllMiss: 2,
         beforeRecall: 8/(8+3),
         beforeImgRecall: 8/(8+3),
+        beforeALlRecall: 8/(8+3),
         beforeRecallStr: (100*this.beforeRecall).toFixed(0) + '%',
         beforeImgRecallStr: (100*this.beforeImgRecall).toFixed(0), // + '%',
+        beforeAllRecallStr: (100*this.beforeAllRecall).toFixed(0), // + '%',
         beforePrecision: 8/(8+2),
         beforeImgPrecision: 8/(8+2),
+        beforeALlPrecision: 8/(8+2),
         beforePrecisionStr: (100*this.beforePrecision).toFixed(0) + '%',
         beforeImgPrecisionStr: (100*this.beforeImgPrecision).toFixed(0), // + '%',
+        beforeAllPrecisionStr: (100*this.beforeAllPrecision).toFixed(0), // + '%',
         beforeF1: 2*(this.beforeRecall*this.beforePrecision)/(this.beforeRecall + this.beforePrecision),
         beforeImgF1: 2*(this.beforeImgRecall*this.beforeImgPrecision)/(this.beforeImgRecall + this.beforeImgPrecision),
+        beforeAllF1: 2*(this.beforeAllRecall*this.beforeAllPrecision)/(this.beforeAllRecall + this.beforeAllPrecision),
         beforeF1Str: (100*this.beforeF1).toFixed(0) + '%',
         beforeImgF1Str: (100*this.beforeImgF1).toFixed(0), // + '%',
+        beforeAllF1Str: (100*this.beforeAllF1).toFixed(0), // + '%',
         before: { bboxes: [] },
 
         diffThreshold: 90,
         diffCorrectStr: '+' + 1,
         diffImgCorrectStr: '+' + 1,
+        diffAllCorrectStr: '+' + 1,
         diffWrongStr: '-' + 2,
         diffImgWrongStr: '-' + 2,
+        diffAllWrongStr: '-' + 2,
         diffMissStr: '-' + 1,
         diffImgMissStr: '-' + 1,
+        diffAllMissStr: '-' + 1,
         diffRecallStr: '+' + (100*(this.afterRecall - this.beforeRecall)).toFixed(0) + '%',
         diffImgRecallStr: '+' + (100*(this.afterImgRecall - this.beforeImgRecall)).toFixed(0), // + '%',
+        diffAllRecallStr: '+' + (100*(this.afterAllRecall - this.beforeAllRecall)).toFixed(0), // + '%',
         diffPrecisionStr: '+' + (100*(this.afterPrecision - this.beforePrecision)).toFixed(0) + '%',
         diffImgPrecisionStr: '+' + (100*(this.afterImgPrecision - this.beforeImgPrecision)).toFixed(0), // + '%',
+        diffAllPrecisionStr: '+' + (100*(this.afterAllPrecision - this.beforeAllPrecision)).toFixed(0), // + '%',
         diffF1: '+' + (100*(this.afterF1 - this.beforeF1)).toFixed(0) + '%',
         diffImgF1: '+' + (100*(this.afterImgF1 - this.beforeImgF1)).toFixed(0), // + '%',
+        diffAllF1: '+' + (100*(this.afterAllF1 - this.beforeAllF1)).toFixed(0), // + '%',
         diffF1Str: '+' + (100*this.diffF1).toFixed(0) + '%',
         diffImgF1Str: '+' + (100*this.diffImgF1).toFixed(0), // + '%',
+        diffAllF1Str: '+' + (100*this.diffAllF1).toFixed(0), // + '%',
         diff: { bboxes: [] },
       },
       img: '', // 'img/Screenshot_2020-11-07-16-35-27-473_apijson.demo.jpg',
@@ -7023,12 +7049,12 @@ https://github.com/Tencent/APIJSON/issues
         var diffRecall = detection.afterRecall - detection.beforeRecall;
         var diffPrecision = detection.afterPrecision - detection.beforePrecision;
         var diffF1 = detection.afterF1 - detection.beforeF1;
-        detection['diffCorrectStr'] = diffCorrect >= 0 ? '+' + diffCorrect : diffCorrect;
-        detection['diffWrongStr'] = diffWrong >= 0 ? '+' + diffWrong : diffWrong;
-        detection['diffMissStr'] = diffMiss >= 0 ? '+' + diffMiss : diffMiss;
-        detection['diffRecallStr'] = (diffRecall >= 0 ? '+' : '') + (100*diffRecall).toFixed(0) + '%';
-        detection['diffPrecisionStr'] = (diffPrecision >= 0 ? '+' : '') + (100*diffPrecision).toFixed(0) + '%';
-        detection['diffF1Str'] = (diffF1 >= 0 ? '+' : '') + (100*diffF1).toFixed(0) + '%';
+        detection.diffCorrectStr = diffCorrect >= 0 ? '+' + diffCorrect : diffCorrect;
+        detection.diffWrongStr = diffWrong >= 0 ? '+' + diffWrong : diffWrong;
+        detection.diffMissStr = diffMiss >= 0 ? '+' + diffMiss : diffMiss;
+        detection.diffRecallStr = (diffRecall >= 0 ? '+' : '') + (100*diffRecall).toFixed(0) + '%';
+        detection.diffPrecisionStr = (diffPrecision >= 0 ? '+' : '') + (100*diffPrecision).toFixed(0) + '%';
+        detection.diffF1Str = (diffF1 >= 0 ? '+' : '') + (100*diffF1).toFixed(0) + '%';
 
         var allImgTotal = 0;
         var allImgCorrect = 0;
@@ -7050,7 +7076,7 @@ https://github.com/Tencent/APIJSON/issues
             continue;
           }
 
-          var total = (tr2.total || tr2.correct || 0);
+          var total = tr2.total || tr2.correct || 0;
           var wrong = tr2.wrong || 0;
           var correct = tr2.correct || total - wrong;
           allTotal += total;
@@ -7082,6 +7108,82 @@ https://github.com/Tencent/APIJSON/issues
         detection.beforeAllF1Str = (100*allF1).toFixed(0);
 
         this.detection = detection;
+
+        this.adminRequest('/get', {
+          "TestRecord[]": {
+            "count": 2,
+            "TestRecord": {
+              "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;"
+                  + "count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+              "@raw": "@column",
+              "@group": "reportId",
+              "@order": "reportId-",
+              "total>=": 0,
+              "wrong>=": 0,
+              "correct>=": 0,
+              'randomId{}': this.compareRandomIds,
+              // "@explain": true
+            }
+          }
+        }, {}, function (url, res, err) {
+          App.onResponse(url, res, err)
+
+          var data = res.data || {}
+          var trs = data['TestRecord[]'] || []
+          var len = trs.length;
+          var afterTr = trs[len - 1] || {};
+          var beforeTr = trs[len - 2] || {};
+          ['after', 'before', 'diff'].forEach(stage => {
+            var isDiff = stage == 'diff';
+            var curTr = stage == 'after' ? afterTr : (stage == 'before' ? beforeTr : {});
+
+            if (isDiff) {
+              ['Img', 'All'].forEach(type => {
+                var correct = detection['after' + type + 'Correct'] - detection['before' + type + 'Correct'];
+                var wrong = detection['after' + type + 'Wrong'] - detection['before' + type + 'Wrong'];
+                var miss = detection['after' + type + 'Miss'] - detection['before' + type + 'Miss'];
+                var recall = detection['after' + type + 'Recall'] - detection['before' + type + 'Recall'];
+                var precision = detection['after' + type + 'Precision'] - detection['before' + type + 'Precision'];
+                var f1 = detection['after' + type + 'F1'] - detection['before' + type + 'F1'];
+
+                detection['diff' + type + 'CorrectStr'] = (correct >= 0 ? '+' : '') + correct;
+                detection['diff' + type + 'WrongStr'] = (wrong >= 0 ? '+' : '') + wrong;
+                detection['diff' + type + 'MissStr'] = (miss >= 0 ? '+' : '') + miss;
+                detection['diff' + type + 'RecallStr'] = (recall >= 0 ? '+' : '') + recall;
+                detection['diff' + type + 'PrecisionStr'] = (precision >= 0 ? '+' : '') + precision;
+                detection['diff' + type + 'F1Str'] = (f1 >= 0 ? '+' : '') + f1;
+              });
+            } else {
+              var imgTotal = detection[stage + 'ImgTotal'] = curTr.imgTotal || curTr.imgCorrect || 0;
+              var imgWrong = detection[stage + 'ImgWrong'] = curTr.imgWrong || 0;
+              var imgCorrect = detection[stage + 'ImgCorrect'] = curTr.imgCorrect || imgTotal - imgWrong;
+              var imgMiss = detection[stage + 'ImgMiss'] = curTr.imgMiss || imgTotal - imgCorrect;
+
+              var allTotal = detection[stage + 'AllTotal'] = curTr.allTotal || curTr.allCorrect || 0;
+              var allWrong = detection[stage + 'AllWrong'] = curTr.allWrong || 0;
+              var allCorrect = detection[stage + 'AllCorrect'] = curTr.allCorrect || allTotal - allWrong;
+              var allMiss = detection[stage + 'AllMiss'] = curTr.allMiss || allTotal - allCorrect;
+
+              var allImgRecall = detection[stage + 'ImgRecall'] = allImgCorrect / allImgTotal;
+              var allImgPrecision = detection[stage + 'ImgPrecision'] = allImgCorrect / (allImgCorrect + allImgWrong);
+              var allImgF1 = detection[stage + 'ImgF1'] = (2 * allImgRecall * allImgPrecision) / (allImgRecall + allImgPrecision);
+
+              var allRecall = detection[stage + 'AllRecall'] = allCorrect / allTotal;
+              var allPrecision = detection[stage + 'AllPrecision'] = allCorrect / (allCorrect + allWrong);
+              var allF1 = detection[stage + 'AllF1'] = (2 * allRecall * allPrecision) / (allRecall + allPrecision);
+
+              detection[stage + 'ImgRecallStr'] = (100 * allImgRecall).toFixed(0);
+              detection[stage + 'ImgPrecisionStr'] = (100 * allImgPrecision).toFixed(0);
+              detection[stage + 'ImgF1Str'] = (100 * allImgF1).toFixed(0);
+
+              detection[stage + 'AllRecallStr'] = (100 * allRecall).toFixed(0);
+              detection[stage + 'AllPrecisionStr'] = (100 * allPrecision).toFixed(0);
+              detection[stage + 'AllF1Str'] = (100 * allF1).toFixed(0);
+            }
+          })
+
+          App.detection = detection;
+        });
       },
       processDiffAndAutoMark: function() {
         var detection = this.detection || {};
@@ -10401,6 +10503,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        */
       onClickTestRandom: function (isCross, callback) {
         this.isRandomTest = true
+        this.reportId = new Date().getTime();
         this.isStatisticsEnabled = true
         this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow, null, isCross, true, callback)
       },
@@ -12314,7 +12417,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        */
       handleTest: function (right, index, item, path, isRandom, isDuration, isCross) {
         item = item || {}
-        var random = item.Random = item.Random || {}
+        const random = item.Random = item.Random || {}
         var document;
         if (isRandom) {
           if ((random.count || 0) > 1) {
@@ -12502,6 +12605,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
               if (isRandom) {
                 App.updateToRandomSummary(item, -1, App.currentAccountIndex)
+                if (App.compareRandomIds instanceof Array) {
+                  var ind = App.compareRandomIds.indexOf(random.id);
+                  if (ind >= 0) {
+                    App.compareRandomIds.splice(ind, 1)
+                  }
+                }
               } else {
                 App.updateToSummary(item, -1, App.currentAccountIndex)
               }
@@ -12684,6 +12793,15 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     testRecord.id = data.TestRecord.id
                     if (r != null) {
                       testRecord.randomId = r.id
+                    }
+                  }
+
+                  var rid = random.id || r.id || testRecord.randomId;
+                  if (rid != null && rid > 0) {
+                    if (App.compareRandomIds == null) {
+                      App.compareRandomIds = [rid]
+                    } else {
+                      App.compareRandomIds.push(rid)
                     }
                   }
                 }
