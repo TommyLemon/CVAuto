@@ -2492,7 +2492,9 @@ var JSONResponse = {
     const visiblePaths = options.visiblePaths || null;
     const stage = options.stage;
     const isDiff = stage === 'diff';
-    const markable = options.markable || stage === 'after';
+    const markable = options.markable || stage !== 'before';
+    const corrects = options.corrects || [];
+    const wrongs = options.wrongs || [];
 
     const nw = img == null ? 0 : (img.naturalWidth || 0);
     const nh = img == null ? 0 : (img.naturalHeight || 0);
@@ -2518,7 +2520,7 @@ var JSONResponse = {
 
       var color = item.color;
       if (options.styleOverride) {
-        const override = options.styleOverride(item, item.isBefore);
+        const override = options.styleOverride(item, item['@before']);
         if (override && override.color) {
           color = override.color;
         }
@@ -2547,7 +2549,7 @@ var JSONResponse = {
       }
 
       // Label
-      const label = (isDiff ? (item.isBefore ? '- ' : '+ ') : '') + `${item.ocr || item.label || ''}-${item.id || ''} ${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%${angle == 0 ? '' : ' ' + Math.round(angle) + '°'}`;
+      const label = (isDiff ? (item['@before'] ? '- ' : '+ ') : '') + `${item.ocr || item.label || ''}-${item.id || ''} ${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%${angle == 0 ? '' : ' ' + Math.round(angle) + '°'}`;
       // ctx.font = 'bold 36px';
       // const size = ctx.measureText(label);
       // const textHeight = size.height || height*0.1; // Math.max(height*0.1, size.height);
@@ -2599,13 +2601,15 @@ var JSONResponse = {
       ctx.fillText(label, labelX, labelY);
       ctx.restore();
 
-      if (markable) {
+      if (markable && item['@before'] != true) {
+        const isWrong = wrongs.indexOf(isDiff ? item['@index'] : index) >= 0; // item.correct === false;
         // 绘制 √ 和 ×
         ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = item.correct === false ? 'red' : 'green';
+        // ctx.fillStyle = isWrong ? 'red' : 'green';
+        ctx.fillStyle = isWrong ? 'red' : 'green';
         const checkX = labelX + textWidth + 4;
         const checkY = labelY;
-        ctx.fillText(item.correct === false ? '×' : '√', checkX, checkY);
+        ctx.fillText(isWrong ? '×' : '√', checkX, checkY);
 
         // 记录点击区域
         if (!canvas._clickAreas) {
@@ -2641,7 +2645,7 @@ var JSONResponse = {
         ctx.stroke();
 
         if (isRoot) {
-          const label = (isDiff ? (item.isBefore || detection.isBefore ? '- ' : '+ ') : '')
+          const label = (isDiff ? (item['@before'] || detection['@before'] ? '- ' : '+ ') : '')
               + `${item.label || ''}-${item.id || item.idx || detection.id || detection.idx || ''} `
               + `${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%`;
           ctx.font = `${Math.max(16, height*0.015)}px sans-serif`;
@@ -2671,7 +2675,7 @@ var JSONResponse = {
         ctx.fill();
 
         if (isRoot) {
-          const label = (isDiff ? (item.isBefore || detection.isBefore ? '- ' : '+ ') : '')
+          const label = (isDiff ? (item['@before'] || detection['@before'] ? '- ' : '+ ') : '')
               + `${item.label || ''}-${item.id || item.idx || detection.id || detection.idx || ''} `
               + `${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%`;
           ctx.font = `${Math.max(16, height*0.015)}px sans-serif`;
@@ -2682,23 +2686,36 @@ var JSONResponse = {
 
     // Draw polygons
     var polygons = JSONResponse.getPolygons(detection);
-    if (polygons instanceof Array && polygons?.length > 1) {
-      ctx.beginPath();
+    if (polygons instanceof Array) {
       polygons.forEach((item, i) => {
-        var [x, y, w, h, d] = JSONResponse.getXYWHD(item);
-        const isRate = Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(w) < 1 && Math.abs(h) < 1;
-        x = isRate ? x*width : x*xRate;
-        y = isRate ? y*height : y*yRate;
+        var points = JSONResponse.getPoints(item) || item;
+        if (points instanceof Array) {
+          const color = item.color || detection.color || detection.bbox?.color;
+          const rgba = color == null || color.length < 3 ? null : `rgba(${color.join(',')})`;
+          if (rgba != null) {
+            ctx.fillStyle = rgba;
+            const color2 = color.slice(0, 2);
+            ctx.strokeStyle = `rgba(${color2.join(',')})`;
+          }
 
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        }
-        else {
-          ctx.lineTo(x, y);
+          ctx.beginPath();
+          points.forEach((item, i) => {
+            var [x, y, w, h, d] = JSONResponse.getXYWHD(item);
+            const isRate = Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(w) < 1 && Math.abs(h) < 1;
+            x = isRate ? x*width : x*xRate;
+            y = isRate ? y*height : y*yRate;
+
+            if (i <= 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fill();
         }
       });
-      ctx.closePath();
-      ctx.stroke();
     }
   }
 

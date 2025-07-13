@@ -3225,7 +3225,7 @@ https://github.com/Tencent/APIJSON/issues
             const req = isExportRandom && btnIndex <= 0 ? {
               format: false,
               'Random': {
-                userId: userId,
+                // userId: userId,
                 toId: 0,
                 chainGroupId: cgId,
                 chainId: cId,
@@ -3235,7 +3235,7 @@ https://github.com/Tencent/APIJSON/issues
                 config: config
               },
               'TestRecord': {
-                'userId': userId,
+                // 'userId': userId,
                 'documentId': did,
                 'host': StringUtil.isEmpty(baseUrl, true) ? null : baseUrl,
                 'chainGroupId': cgId,
@@ -3248,7 +3248,7 @@ https://github.com/Tencent/APIJSON/issues
               format: false,
               'Document': isEditResponse ? null : {
                 'id': did == null ? undefined : did,
-                'userId': userId,
+                // 'userId': userId,
                 'project': StringUtil.isEmpty(project, true) ? null : project,
 //                'testAccountId': currentAccountId,
 //                'chainGroupId': cgId,
@@ -3264,7 +3264,7 @@ https://github.com/Tencent/APIJSON/issues
                 'detail': App.getExtraComment() || ((App.currentRemoteItem || {}).Document || {}).detail,
               },
               'TestRecord': isEditResponse != true && did != null ? null : {
-                'userId': userId,
+                // 'userId': userId,
 //                'chainGroupId': cgId,
                 'documentId': isEditResponse ? did : undefined,
                 'randomId': 0,
@@ -6929,7 +6929,9 @@ https://github.com/Tencent/APIJSON/issues
           rotateBoxes: true,
           rotateText: false,
           stage: stage,
-          markable: stage == 'after', // 'diff',
+          // markable: stage == 'after', // 'diff',
+          corrects: detection.corrects,
+          wrongs: detection.wrongs,
           styleOverride: isDiff ? (box, isBefore) => {
             if (! box.color) { // 防止空色
               box.color = [255, 255, 255, 128]
@@ -6946,18 +6948,34 @@ https://github.com/Tencent/APIJSON/issues
       compute: function() {
         const detection = this.detection || {};
         var total = detection.total;
+        const cri = this.currentRandomItem = this.currentRandomItem || this.randoms[this.currentRandomIndex] || {};
+        const random = cri.Random = cri.Random || {};
+        const tr = cri.TestRecord = cri.TestRecord || {};
+        const corrects = tr.corrects = tr.corrects || [];
+        const wrongs = tr.wrongs = tr.wrongs || [];
+
+        // var tests = this.tests[String(this.currentAccountIndex)] || {}
+        // var currentResponse = (tests[random.documentId] || {})[
+        //     (random.id > 0 ? random.id : (random.toId + '' + random.id))
+        // ]
+        const curTr = detection;
+        const curCorrects = curTr.corrects = curTr.corrects || [];
+        const curWrongs = curTr.wrongs = curTr.wrongs || [];
+
         ['before', 'after'].forEach(stage => {
           var det2 = detection[stage]
-          var correctCount = 0;
-          var wrongCount = 0;
-          const bboxes = JSONResponse.getBboxes(det2) || [];
-          bboxes.forEach(bbox => {
-            if (bbox.correct === false) {
-              wrongCount ++;
-            } else {
-              correctCount ++;
-            }
-          })
+          var cs = stage == 'after' ? curCorrects : corrects;
+          var ws = stage == 'after' ? curWrongs : wrongs;
+          var correctCount = cs == null ? 0 : cs.length;
+          var wrongCount = ws == null ? 0 : ws.length;
+          // const bboxes = JSONResponse.getBboxes(det2) || [];
+          // bboxes.forEach(bbox => {
+          //   if (bbox.correct === false) {
+          //     wrongCount ++;
+          //   } else {
+          //     correctCount ++;
+          //   }
+          // })
 
           detection[stage + 'Correct'] = correctCount;
           detection[stage + 'Wrong'] = wrongCount;
@@ -6990,6 +7008,20 @@ https://github.com/Tencent/APIJSON/issues
       },
       processDiffAndAutoMark: function() {
         var detection = this.detection || {};
+        const cri = this.currentRandomItem = this.currentRandomItem || this.randoms[this.currentRandomIndex] || {};
+        const random = cri.Random = cri.Random || {};
+        const tr = cri.TestRecord = cri.TestRecord || {};
+        const corrects = tr.corrects = tr.corrects || [];
+        const wrongs = tr.wrongs = tr.wrongs || [];
+
+        // var tests = this.tests[String(this.currentAccountIndex)] || {}
+        // var currentResponse = (tests[random.documentId] || {})[
+        //     (random.id > 0 ? random.id : (random.toId + '' + random.id))
+        // ]
+        const curTr = detection;
+        const curCorrects = curTr.corrects = curTr.corrects || [];
+        const curWrongs = curTr.wrongs = curTr.wrongs || [];
+
         const beforeBoxes = JSONResponse.getBboxes(detection.before) || [];   // 上次参考结果
         const afterBoxes = JSONResponse.getBboxes(detection.after) || [];    // 当前检测结果
         const iouThreshold = (detection.diffThreshold || 90) / 100;
@@ -7013,26 +7045,33 @@ https://github.com/Tencent/APIJSON/issues
 
         var dotInd = file.lastIndexOf('.');
         file = dotInd >= 0 ? file.substring(0, dotInd).trim() : file.trim();
+        const matchMap = {};
 
-        afterBoxes.forEach(curBox => {
+        afterBoxes.forEach((curBox, curInd) => {
           let bestIou = 0;
           let bestRef = null;
+          let bestInd = -1;
 
-          beforeBoxes.forEach(refBox => {
+          beforeBoxes.forEach((refBox, refInd) => {
             var curBbox = JSONResponse.getXYWHD(JSONResponse.getBbox(curBox));
             var refBbox = JSONResponse.getXYWHD(JSONResponse.getBbox(refBox));
             const iou = JSONResponse.computeIoU(curBbox, refBbox);
             if (iou > bestIou) {
               bestIou = iou;
               bestRef = refBox;
+              bestInd = refInd;
             }
           });
 
           var label = curBox.label;
+          var correct = curWrongs.includes(curInd) ? false : (curCorrects.includes(curInd) ? true : null);
           if (bestIou >= iouThreshold && bestRef != null) {
             // 如果匹配到：标签一致→继承correct，标签不同→打X
-            curBox.correct = label === bestRef.label ? bestRef.correct : ! bestRef.correct;
-            bestRef.match = (bestRef.match || 0) + 1;
+            // curBox.correct = label === bestRef.label ? wrongs.includes(bestInd) : ! bestRef.correct;
+            // bestRef.match = (bestRef.match || 0) + 1;
+            matchMap[bestInd] = (matchMap[bestInd] || 0) + 1;
+
+            correct = wrongs.includes(bestInd) ? false : (corrects.includes(bestInd) ? true : correct);
           } else {
             // 没有匹配→打X
             var matchFile = StringUtil.isNotEmpty(file, true) && (
@@ -7040,10 +7079,28 @@ https://github.com/Tencent/APIJSON/issues
                 || (StringUtil.isNotEmpty(curBox.ocr, true) && file.indexOf(curBox.ocr) >= 0)
             );
             // curBox.correct = total == 1 ? matchFile : (matchFile || total <= 0 || correctCount < total ? true : curBox.correct);
-            curBox.correct = total == 1 ? matchFile : (matchFile ? true : curBox.correct);
+            correct = total == 1 ? matchFile : (matchFile ? true : correct);
           }
 
-          if (curBox.correct) {
+          if (correct == false) {
+            var ind = curCorrects.indexOf(curInd);
+            if (ind >= 0) {
+              curCorrects.splice(ind, 1);
+            }
+            if (curWrongs.indexOf(curInd) < 0) {
+              curWrongs.push(curInd);
+            }
+          } else if (correct == true) {
+            var ind = curWrongs.indexOf(curInd);
+            if (ind >= 0) {
+              curWrongs.splice(ind, 1);
+            }
+            if (curCorrects.indexOf(curInd) < 0) {
+              curCorrects.push(curInd);
+            }
+          }
+
+          if (correct != false) {
             correctCount ++;
           }
 
@@ -7051,16 +7108,19 @@ https://github.com/Tencent/APIJSON/issues
           if (iouThreshold <= 0 || bestIou < iouThreshold || bestRef == null || label !== bestRef.label) {
             diffBoxes.push({
               ...curBox,
-              isBefore: false
+              // isBefore: false,
+              '@index': curInd,
             });
           }
         });
 
-        beforeBoxes.forEach(refBox => {
-          if (refBbox != null && (refBbox.match == null || refBbox.match <= 0)) {
+        beforeBoxes.forEach((refBox, refInd) => {
+          var macth = refBox == null ? null : matchMap[refInd];
+          if (refBox != null && (macth == null || macth <= 0)) {
             diffBoxes.push({
               ...refBox,
-              isBefore: true
+              // isBefore: true,
+              '@before': true
             });
           }
         });
@@ -7138,36 +7198,72 @@ https://github.com/Tencent/APIJSON/issues
        * 例如点击 √ / × 时：
        */
       onClick: function(stage, event) {
+        const detection = this.detection;
+        const isDiff = stage == 'diff';
         const img = this.imgMap[stage];
         const canvas = this.canvasMap[stage];
         const [x, y] = this.getCanvasXY(stage, event);
-        const bboxes = JSONResponse.getBboxes(this.detection[stage]) || []
+        const corrects = detection.corrects = detection.corrects || [];
+        const wrongs = detection.wrongs = detection.wrongs || [];
+
+        const bboxes = JSONResponse.getBboxes(detection[stage]) || []
         let len = bboxes.length;
         var range = ((canvas || {}).height || (img || {}).height || 240) * (len <= 1 ? 0.5 : (len <= 5 ? 0.1/len : 0.02));
-        for (const item of bboxes) {
+        for (let i = 0; i < len; i ++) {
+          const item = bboxes[i];
+          if (item == null || item['@before']) {
+            continue;
+          }
+
           const [bx, by, bw, bh, d] = JSONResponse.getXYWHD(JSONResponse.getBbox(item));
-          const labelX = bx + bw + 4; // 和 drawDetections 中计算按钮位置保持一致
-          const labelY = by; // 同上
 
-          const size = 16; // 按钮点击区域大小
-          if (x >= labelX && x <= labelX + size && y >= labelY && y <= labelY + size) {
-            item.correct = true;
-            break;
-          }
+          // 无效
+          // const labelX = bx + bw + 4; // 和 drawDetections 中计算按钮位置保持一致
+          // const labelY = by; // 同上
 
-          if (x >= labelX + size + 4 && x <= labelX + size * 2 + 4 && y >= labelY && y <= labelY + size) {
-            item.correct = false;
-            break;
-          }
+          // const size = 16; // 按钮点击区域大小
+          // if (x >= labelX && x <= labelX + size && y >= labelY && y <= labelY + size) {
+          //   // item.correct = true;
+          //   if (corrects.indexOf(i) < 0) {
+          //     corrects.push(i);
+          //   }
+          //   break;
+          // }
+          //
+          // if (x >= labelX + size + 4 && x <= labelX + size * 2 + 4 && y >= labelY && y <= labelY + size) {
+          //   // item.correct = false;
+          //   if (wrongs.indexOf(i) < 0) {
+          //     wrongs.push(i);
+          //   }
+          //   break;
+          // }
+          const ind = isDiff ? item['@index'] : i;
 
           // 其它情况，检测是否点击到框内
-          if (JSONResponse.isOnBorder(x, y, [bx, by, bw, bh], range)) {
-            item.correct = item.correct === false ? true : false;
+          if (ind != null && ind >= 0 && JSONResponse.isOnBorder(x, y, [bx, by, bw, bh], range)) {
+            // item.correct = item.correct === false ? true : false;
+            var wInd = wrongs.indexOf(ind);
+            var cInd = corrects.indexOf(ind);
+            if (wInd >= 0) {
+              wrongs.splice(wInd, 1);
+              if (cInd < 0) {
+                corrects.push(ind);
+              }
+            } else {
+              if (cInd >= 0) {
+                corrects.splice(cInd, 1);
+              }
+              if (wInd < 0) {
+                wrongs.push(ind);
+              }
+            }
             break;
           }
         }
 
-        this.draw(stage);
+        // this.draw(stage);
+        this.draw('diff');
+        this.draw('after');
         this.compute();
       },
 
@@ -10388,7 +10484,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const which = i;
           var rawConfig = testSubList && i < existCount ? ((subs[i] || {}).Random || {}).config : random.config
-          rawConfig = (StringUtil.isEmpty(rawConfig, true) ? '' : rawConfig + '\n') + vRandomKeyPath.value + ': '
+          var keyPath = (StringUtil.isEmpty(vRandomKeyPath.value, true) ? 'image' : vRandomKeyPath.value)
+          rawConfig = (StringUtil.isEmpty(rawConfig, true) ? '' : rawConfig + '\n') + keyPath + ': '
               + JSON.stringify(this.host.indexOf('localhost') >= 0 || this.host.indexOf('127.0.0.1') >= 0 ? (item.img || this.img) : random.img)
 
           var cb = function (url, res, err) {
@@ -12213,10 +12310,13 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 [300, 200, 1000, 900],
                 [1920*Math.random(), 1080*Math.random(), 1920*Math.random(), 1080*Math.random()]
               ],
-              polygons: [
-                [100, 100], [500, 160], [900, 200], [400, 900],
-                [1920*Math.random(), 1080*Math.random()], [1920*Math.random(), 1080*Math.random()], [100, 100]
-              ]
+              polygons: [{
+                color: [162, 88, 109, 76],
+                points: [
+                  [100, 100], [500, 160], [900, 200], [400, 900],
+                  [1920*Math.random(), 1080*Math.random()], [1920*Math.random(), 1080*Math.random()], [100, 100]
+                ]
+              }]
             };
             // var after = currentResponse || {
             var after = {
@@ -12248,10 +12348,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             };
 
             const detection = this.detection || {};
+            var currentRandomItem = this.currentRandomItem = this.currentRandomItem || this.randoms[this.currentRandomIndex] || {};
             if (testRecord.total != null && testRecord.total > 0) {
-              detection.total = testRecord.total;
+              currentRandomItem.total = detection.total = testRecord.total;
             } else {
-              testRecord.total = detection.total;
+              testRecord.total = currentRandomItem.total || detection.total;
             }
 
             detection.beforeCorrect = testRecord.correct;
@@ -12403,7 +12504,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const req = {
               Random: isNewRandom != true ? null : {
                 toId: random.toId,
-                userId: userId,
+                // userId: userId,
                 chainGroupId: cgId,
                 chainId: cId,
                 documentId: random.documentId,
@@ -12415,7 +12516,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 id: undefined,
                 reportId: this.reportId,
                 host: baseUrl,
-                userId: userId,
+                // userId: userId,
                 testAccountId: this.getCurrentAccountId(),
                 chainGroupId: cgId,
                 chainId: cId,
@@ -12424,7 +12525,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 maxDuration: maxDuration,
                 compare: JSON.stringify(testRecord.compare || {}),
               }) : {
-                userId: userId,
+                // userId: userId,
                 chainGroupId: cgId,
                 chainId: cId,
                 documentId: isNewRandom ? null : (isRandom ? random.documentId : document.id),
