@@ -2610,12 +2610,6 @@ var JSONResponse = {
         const checkX = labelX + textWidth + 4;
         const checkY = labelY;
         ctx.fillText(isWrong ? '×' : '√', checkX, checkY);
-
-        // 记录点击区域
-        if (!canvas._clickAreas) {
-          canvas._clickAreas = [];
-        }
-        canvas._clickAreas.push({x: checkX, y: checkY, w: 16, h: textHeight, item});
       }
 
       JSONResponse.drawDetections(canvas, item, options, img, ctx);
