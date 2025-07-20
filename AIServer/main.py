@@ -170,7 +170,7 @@ def predict():
                 angles = null if is_none(obb) else obb.tolist()
                 # for i in range(boxes.size()):
                 #     box = boxes.get(0)
-                #     xywh = box.xywh()
+                #     xywh = box.xywh
                 #     bs.append([xywh.x])
 
                 if is_empty(bs):
@@ -219,7 +219,7 @@ def predict():
                 # angles = null if is_none(obb) else obb.tolist()
                 # for i in range(boxes.size()):
                 #     box = boxes.get(0)
-                #     xywh = box.xywh()
+                #     xywh = box.xywh
                 #     bs.append([xywh.x])
 
                 if is_empty(points):
