@@ -12,7 +12,8 @@ import os
 import base64
 from io import BytesIO
 
-from unitauto.methodutil import not_empty, not_none, is_empty, null, is_none, size, false, true
+from unitauto.methodutil import not_empty, not_none, is_empty, null, is_none, size, false, true, KEY_CODE, KEY_MSG, \
+    KEY_OK, CODE_SUCCESS, MSG_SUCCESS, KEY_THROW, KEY_TRACE
 from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
@@ -62,10 +63,10 @@ def download_image(url):
         return None
 
 # 处理推理请求
-def cors_response(*args):
+def cors_response(data):
     host = request.headers.get('Origin') or request.headers.get('Referer') or 'http://localhost'
 
-    rsp = make_response(args)
+    rsp = make_response(jsonify(data), 200)
     # rsp.status = status
     # rsp.status_code = status
     rsp.headers.add('Access-Control-Allow-Origin', host)  # 允许所有域名访问
@@ -79,8 +80,8 @@ def cors_response(*args):
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 # @cross_origin
 def predict():
-    if (request.method == 'OPTIONS'):
-        return cors_response(jsonify({}), 200)
+    if request.method == 'OPTIONS':
+        return cors_response({})
 
     imgs = []
 
@@ -89,7 +90,11 @@ def predict():
         # 检查文件是否在请求中
         file = files['file']
         if file.filename == '':
-            return cors_response(jsonify({'error': 'No selected file'}), 400)
+            return cors_response({
+            KEY_OK: false,
+            KEY_CODE: 400,
+            KEY_MSG: 'No selected file'
+        })
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
@@ -114,10 +119,20 @@ def predict():
             imgs.append(img)
     except Exception as e:
         print(f"Error decoding base64 image: {e}")
-        return cors_response(jsonify({'error': f"Error decoding base64 image: {e}"}), 400)
+        return cors_response({
+            KEY_OK: false,
+            KEY_CODE: 400,
+            KEY_MSG: f"Error decoding base64 image: {e}",
+            KEY_THROW: e.__class__.__name__,
+            # KEY_TRACE: e.__traceback__.__str__
+        })
 
     if is_empty(imgs):
-        return cors_response(jsonify({'error': 'No file or image parameter found'}), 400)
+        return cors_response({
+            KEY_OK: false,
+            KEY_CODE: 400,
+            KEY_MSG: 'No file or image parameter found'
+        })
 
     bboxes = []
     with lock:
@@ -211,9 +226,12 @@ def predict():
                     bbox = bboxes[ind] or {}
                     bbox['points'] = p
 
-    return cors_response(jsonify({
+    return cors_response({
+        KEY_OK: true,
+        KEY_CODE: CODE_SUCCESS,
+        KEY_MSG: MSG_SUCCESS,
         'bboxes': bboxes
-    }), 200)
+    })
 
 
 if __name__ == '__main__':
