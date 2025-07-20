@@ -200,7 +200,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                     for i in range(len(bs)):
                         b = bs[i]
                         ind = labels[i] if i < size(labels) else -1
-                        label = names[ind] if ind >= 0 and ind < size(names) else '???'
+                        label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
                         if 'person' in label:
                             pose_indexes.append(i)
 
@@ -213,7 +213,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                             'bbox': b
                         })
 
-            pose_results = null if is_pose is False or is_empty(pose_indexes) else pose_model(img)
+            pose_results = null if is_pose is False or (is_pose is None and is_empty(pose_indexes)) else pose_model(img)
             if not_none(pose_results):
                 for result in pose_results:
                     if is_none(result):
@@ -228,28 +228,39 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         result.show()  # display to screen
                         result.save(filename="result_pose.jpg")  # save to disk
 
-                    # conf = boxes.conf
+                    conf = boxes.conf
+                    cls = boxes.cls
                     xy = keypoints.xyn
-                    # cls = boxes.cls
 
-                    # scores = null if is_none(xywh) else conf.tolist()
+                    scores = null if is_none(xy) else conf.tolist()
                     # bs = null if is_none(xywh) else xywh.tolist()
-                    # labels = null if is_none(cls) else cls.tolist()
+                    labels = null if is_none(cls) else cls.tolist()
                     points = null if is_none(xy) else xy.tolist()
-                    # angles = null if is_none(obb) else obb.tolist()
-                    # for i in range(boxes.size()):
-                    #     box = boxes.get(0)
-                    #     xywh = box.xywh
-                    #     bs.append([xywh.x])
 
                     if is_empty(points):
                         continue
 
                     for i in range(len(points)):
                         p = points[i]
-                        ind = pose_indexes[i]
-                        bbox = bboxes[ind] or {}
-                        bbox['points'] = p
+                        ind = pose_indexes[i] if is_pose is None else (labels[i] if i < size(labels) else -1)
+                        label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
+
+                        if ind is None or int(ind) >= size(bboxes):
+                            bboxes.append({
+                                'id': i,
+                                'label': label,
+                                'score': scores[i] if i < size(scores) else 0,
+                                'color': colors(0) or [255, 0, 0, 0.6],
+                                'points': p
+                            })
+                        else:
+                            bbox = bboxes[int(ind)] or {
+                                'id': i,
+                                'label': label,
+                                'score': scores[i] if i < size(scores) else 0,
+                                'color': colors(0) or [255, 0, 0, 0.6]
+                            }
+                            bbox['points'] = p
 
             seg_results = null if is_segment is not True or size(bboxes) > 10 else seg_model(img)
             if not_none(seg_results):
@@ -276,21 +287,15 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
 
                     for i in range(len(pointss)):
                         points = pointss[i]
-
-                        ps = []
-                        for j in range(len(points)):
-                            p = points[j]
-                            ind = labels[j] if j < size(labels) else -1
-                            label = names[ind] if ind >= 0 and ind < size(names) else '???'
-
-                            ps.append(p)
+                        ind = labels[i] if i < size(labels) else -1
+                        label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
 
                         polygons.append({
                             'id': i,
                             'label': label,
                             'score': scores[i] if i < size(scores) else 0,
                             'color': colors(0) or [255, 0, 0, 0.6],
-                            'points': ps
+                            'points': points
                         })
 
     return cors_response({
