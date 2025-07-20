@@ -39,12 +39,17 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# 将 Base64 字符串转换为图像
 def decode_base64_image(base64_string):
     try:
-        # 处理 Base64 编码的图像
+        # 如果是 data:image/jpeg;base64,... 这样的 URI，先去掉前缀
+        if base64_string.startswith('data:image'):
+            base64_string = base64_string.split(',')[1]
+
+        # 解码 Base64
         img_data = base64.b64decode(base64_string)
-        image = Image.open(BytesIO(img_data))
+
+        # 用 PIL 打开
+        image = Image.open(BytesIO(img_data)).convert("RGB")  # 加 convert 以避免某些灰度图问题
         return np.array(image)
     except Exception as e:
         print(f"Error decoding base64 image: {e}")
