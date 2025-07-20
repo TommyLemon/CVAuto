@@ -19,6 +19,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
+DEBUG = true
+
 app = Flask(__name__)
 CORS(app)
 
@@ -82,9 +84,28 @@ def cors_response(data):
     return rsp
 
 
+@app.route('/detect', methods=['POST', 'OPTIONS'])
+def api_detect():
+    return predict(is_detect=true, is_pose=false, is_segment=false)
+
+
+@app.route('/pose', methods=['POST', 'OPTIONS'])
+def api_pose():
+    return predict(is_detect=false, is_pose=true, is_segment=false)
+
+
+@app.route('/segment', methods=['POST', 'OPTIONS'])
+def api_segment():
+    return predict(is_detect=false, is_pose=false, is_segment=true)
+
+
 @app.route('/predict', methods=['POST', 'OPTIONS'])
+def api_predict():
+    return predict()
+
+
 # @cross_origin
-def predict():
+def predict(is_detect=true, is_pose: bool = null, is_segment=false):
     if request.method == 'OPTIONS':
         return cors_response({})
 
@@ -140,102 +161,144 @@ def predict():
         })
 
     bboxes = []
+    polygons = []
     with lock:
         for img in imgs:
-            results = model(img)  # 进行推理
-            if is_empty(results):
-                continue
-
             pose_indexes = []
-            for result in results:
-                if is_none(result):
-                    bboxes.append([])
-                    continue
+            if is_detect is not False:
+                results = model(img)  # 进行推理
+                for result in results:
+                    if is_none(result):
+                        bboxes.append([])
+                        continue
 
-                probs = result.probs  # Probs object for classification outputs
-                boxes = result.boxes  # Boxes object for bounding box outputs
-                masks = result.masks  # Masks object for segmentation masks outputs
-                keypoints = result.keypoints  # Keypoints object for pose outputs
-                obb = result.obb  # Oriented boxes object for OBB outputs
-                result.show()  # display to screen
-                result.save(filename="result.jpg")  # save to disk
+                    probs = result.probs  # Probs object for classification outputs
+                    boxes = result.boxes  # Boxes object for bounding box outputs
+                    masks = result.masks  # Masks object for segmentation masks outputs
+                    keypoints = result.keypoints  # Keypoints object for pose outputs
+                    obb = result.obb  # Oriented boxes object for OBB outputs
+                    if DEBUG:
+                        result.show()  # display to screen
+                        result.save(filename="result_detect.jpg")  # save to disk
 
-                conf = boxes.conf
-                xywh = boxes.xywh
-                cls = boxes.cls
+                    conf = boxes.conf
+                    xywh = boxes.xywhn
+                    cls = boxes.cls
 
-                scores = null if is_none(xywh) else conf.tolist()
-                bs = null if is_none(xywh) else xywh.tolist()
-                labels = null if is_none(cls) else cls.tolist()
-                angles = null if is_none(obb) else obb.tolist()
-                # for i in range(boxes.size()):
-                #     box = boxes.get(0)
-                #     xywh = box.xywh
-                #     bs.append([xywh.x])
+                    scores = null if is_none(xywh) else conf.tolist()
+                    bs = null if is_none(xywh) else xywh.tolist()
+                    labels = null if is_none(cls) else cls.tolist()
+                    angles = null if is_none(obb) else obb.tolist()
+                    # for i in range(boxes.size()):
+                    #     box = boxes.get(0)
+                    #     xywh = box.xywh
+                    #     bs.append([xywh.x])
 
-                if is_empty(bs):
-                    continue
+                    if is_empty(bs):
+                        continue
 
-                for i in range(len(bs)):
-                    b = bs[i]
-                    ind = labels[i] if i < size(labels) else -1
-                    label = names[ind] if ind >= 0 and ind < size(names) else '???'
-                    if 'person' in label:
-                        pose_indexes.append(i)
+                    for i in range(len(bs)):
+                        b = bs[i]
+                        ind = labels[i] if i < size(labels) else -1
+                        label = names[ind] if ind >= 0 and ind < size(names) else '???'
+                        if 'person' in label:
+                            pose_indexes.append(i)
 
-                    bboxes.append({
-                        'id': i,
-                        'label': label,
-                        'score': scores[i] if i < size(scores) else 0,
-                        'angle': angles[i] if i < size(angles) else 0,
-                        'color': colors(0) or [255, 0, 0, 0.6],
-                        'bbox': b
-                    })
+                        bboxes.append({
+                            'id': i,
+                            'label': label,
+                            'score': scores[i] if i < size(scores) else 0,
+                            'angle': angles[i] if i < size(angles) else 0,
+                            'color': colors(0) or [255, 0, 0, 0.6],
+                            'bbox': b
+                        })
 
-            if is_empty(pose_indexes):
-                continue
+            pose_results = null if is_pose is False or is_empty(pose_indexes) else pose_model(img)
+            if not_none(pose_results):
+                for result in pose_results:
+                    if is_none(result):
+                        continue
 
-            pose_results = pose_model(img)
-            for result in pose_results:
-                if is_none(result):
-                    continue
+                    # probs = result.probs  # Probs object for classification outputs
+                    boxes = result.boxes  # Boxes object for bounding box outputs
+                    # masks = result.masks  # Masks object for segmentation masks outputs
+                    keypoints = result.keypoints  # Keypoints object for pose outputs
+                    # obb = result.obb  # Oriented boxes object for OBB outputs
+                    if DEBUG:
+                        result.show()  # display to screen
+                        result.save(filename="result_pose.jpg")  # save to disk
 
-                # probs = result.probs  # Probs object for classification outputs
-                boxes = result.boxes  # Boxes object for bounding box outputs
-                # masks = result.masks  # Masks object for segmentation masks outputs
-                keypoints = result.keypoints  # Keypoints object for pose outputs
-                # obb = result.obb  # Oriented boxes object for OBB outputs
-                result.show()  # display to screen
-                result.save(filename="result.jpg")  # save to disk
+                    # conf = boxes.conf
+                    xy = keypoints.xyn
+                    # cls = boxes.cls
 
-                # conf = boxes.conf
-                xy = keypoints.xy
-                # cls = boxes.cls
+                    # scores = null if is_none(xywh) else conf.tolist()
+                    # bs = null if is_none(xywh) else xywh.tolist()
+                    # labels = null if is_none(cls) else cls.tolist()
+                    points = null if is_none(xy) else xy.tolist()
+                    # angles = null if is_none(obb) else obb.tolist()
+                    # for i in range(boxes.size()):
+                    #     box = boxes.get(0)
+                    #     xywh = box.xywh
+                    #     bs.append([xywh.x])
 
-                # scores = null if is_none(xywh) else conf.tolist()
-                # bs = null if is_none(xywh) else xywh.tolist()
-                # labels = null if is_none(cls) else cls.tolist()
-                points = null if is_none(xy) else xy.tolist()
-                # angles = null if is_none(obb) else obb.tolist()
-                # for i in range(boxes.size()):
-                #     box = boxes.get(0)
-                #     xywh = box.xywh
-                #     bs.append([xywh.x])
+                    if is_empty(points):
+                        continue
 
-                if is_empty(points):
-                    continue
+                    for i in range(len(points)):
+                        p = points[i]
+                        ind = pose_indexes[i]
+                        bbox = bboxes[ind] or {}
+                        bbox['points'] = p
 
-                for i in range(len(points)):
-                    p = points[i]
-                    ind = pose_indexes[i]
-                    bbox = bboxes[ind] or {}
-                    bbox['points'] = p
+            seg_results = null if is_segment is not True or size(bboxes) > 10 else seg_model(img)
+            if not_none(seg_results):
+                for result in seg_results:
+                    if is_none(result):
+                        continue
+
+                    boxes = result.boxes  # Boxes object for bounding box outputs
+                    masks = result.masks  # Masks object for segmentation masks outputs
+                    if DEBUG:
+                        result.show()  # display to screen
+                        result.save(filename="result_seg.jpg")  # save to disk
+
+                    conf = boxes.conf
+                    cls = boxes.cls
+                    xy = masks.xy
+
+                    scores = null if is_none(xy) else conf.tolist()
+                    labels = null if is_none(cls) else cls.tolist()
+                    pointss = null if is_none(xy) else [p.tolist() for p in xy]
+
+                    if is_empty(pointss):
+                        continue
+
+                    for i in range(len(pointss)):
+                        points = pointss[i]
+
+                        ps = []
+                        for j in range(len(points)):
+                            p = points[j]
+                            ind = labels[j] if j < size(labels) else -1
+                            label = names[ind] if ind >= 0 and ind < size(names) else '???'
+
+                            ps.append(p)
+
+                        polygons.append({
+                            'id': i,
+                            'label': label,
+                            'score': scores[i] if i < size(scores) else 0,
+                            'color': colors(0) or [255, 0, 0, 0.6],
+                            'points': ps
+                        })
 
     return cors_response({
         KEY_OK: true,
         KEY_CODE: CODE_SUCCESS,
         KEY_MSG: MSG_SUCCESS,
-        'bboxes': bboxes
+        'bboxes': bboxes,
+        'polygons': polygons
     })
 
 
