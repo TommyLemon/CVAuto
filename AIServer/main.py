@@ -28,7 +28,7 @@ ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 lock = threading.Lock()
 # YOLO 模型加载
-model = YOLO('yolo11m.pt')  # 使用你选择的模型
+model = YOLO('yolo11n.pt')  # 使用你选择的模型
 pose_model = YOLO('yolo11m-pose.pt')  # 使用你选择的模型
 seg_model = YOLO('yolo11m-seg.pt')  # 使用你选择的模型
 names = model.names  # 获取类别名称映射
