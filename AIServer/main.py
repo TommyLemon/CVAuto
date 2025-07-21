@@ -182,17 +182,13 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         result.save(filename="result_detect.jpg")  # save to disk
 
                     conf = boxes.conf
-                    xywh = boxes.xywhn
+                    xyxy = boxes.xyxy
                     cls = boxes.cls
 
-                    scores = null if is_none(xywh) else conf.tolist()
-                    bs = null if is_none(xywh) else xywh.tolist()
+                    scores = null if is_none(xyxy) else conf.tolist()
+                    bs = null if is_none(xyxy) else xyxy.tolist()
                     labels = null if is_none(cls) else cls.tolist()
                     angles = null if is_none(obb) else obb.tolist()
-                    # for i in range(boxes.size()):
-                    #     box = boxes.get(0)
-                    #     xywh = box.xywh
-                    #     bs.append([xywh.x])
 
                     if is_empty(bs):
                         continue
@@ -210,7 +206,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                             'score': scores[i] if i < size(scores) else 0,
                             'angle': angles[i] if i < size(angles) else 0,
                             'color': colors(0) or [255, 0, 0, 0.6],
-                            'bbox': b
+                            'bbox': [b[0], b[1], b[2] - b[0], b[3] - b[1]]
                         })
 
             pose_results = null if is_pose is False or (is_pose is None and is_empty(pose_indexes)) else pose_model(img)
