@@ -2,7 +2,7 @@
   CVAuto
 </h1>
  
-<p align="center">👁 零代码 CV AI 自动化测试平台 🚀 <br>零代码、自动化测试 CV 计算机视觉 AI 人工智能图像识别算法</p>
+<p align="center">👁 零代码零标注 CV AI 自动化测试平台 🚀 <br>零代码快速自动化测试 CV 计算机视觉 AI 人工智能图像识别算法</p>
 
 <p align="center" >
   <a href="https://deepwiki.com/TommyLemon/CVAuto">English</a>
