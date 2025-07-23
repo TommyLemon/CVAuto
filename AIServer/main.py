@@ -160,13 +160,15 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
             KEY_MSG: 'No file or image parameter found'
         })
 
+    min_conf = data.get('conf') or 0.2
+
     bboxes = []
     polygons = []
     with lock:
         for img in imgs:
             pose_indexes = []
             if is_detect is not False:
-                results = model(img)  # 进行推理
+                results = model.predict(img, conf=min_conf)  # 进行推理
                 for result in results:
                     if is_none(result):
                         bboxes.append([])
@@ -174,8 +176,6 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
 
                     probs = result.probs  # Probs object for classification outputs
                     boxes = result.boxes  # Boxes object for bounding box outputs
-                    masks = result.masks  # Masks object for segmentation masks outputs
-                    keypoints = result.keypoints  # Keypoints object for pose outputs
                     obb = result.obb  # Oriented boxes object for OBB outputs
                     if DEBUG:
                         result.show()  # display to screen
@@ -194,6 +194,10 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         continue
 
                     for i in range(len(bs)):
+                        c = scores[i] if i < size(scores) else 0
+                        if c < min_conf:
+                            continue
+
                         b = bs[i]
                         ind = labels[i] if i < size(labels) else -1
                         label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
@@ -203,13 +207,13 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         bboxes.append({
                             'id': i,
                             'label': label,
-                            'score': scores[i] if i < size(scores) else 0,
+                            'score': c,
                             'angle': angles[i] if i < size(angles) else 0,
                             'color': colors(0) or [255, 0, 0, 0.6],
                             'bbox': [b[0], b[1], b[2] - b[0], b[3] - b[1]]
                         })
 
-            pose_results = null if is_pose is False or (is_pose is None and is_empty(pose_indexes)) else pose_model(img)
+            pose_results = null if is_pose is False or (is_pose is None and is_empty(pose_indexes)) else pose_model.predict(img, conf=min_conf)
             if not_none(pose_results):
                 for result in pose_results:
                     if is_none(result):
@@ -217,16 +221,14 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
 
                     # probs = result.probs  # Probs object for classification outputs
                     boxes = result.boxes  # Boxes object for bounding box outputs
-                    # masks = result.masks  # Masks object for segmentation masks outputs
                     keypoints = result.keypoints  # Keypoints object for pose outputs
-                    # obb = result.obb  # Oriented boxes object for OBB outputs
                     if DEBUG:
                         result.show()  # display to screen
                         result.save(filename="result_pose.jpg")  # save to disk
 
                     conf = boxes.conf
                     cls = boxes.cls
-                    xy = keypoints.xyn
+                    xy = keypoints.xy
 
                     scores = null if is_none(xy) else conf.tolist()
                     # bs = null if is_none(xywh) else xywh.tolist()
@@ -237,28 +239,102 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         continue
 
                     for i in range(len(points)):
-                        p = points[i]
-                        ind = pose_indexes[i] if is_pose is None else (labels[i] if i < size(labels) else -1)
+                        c = scores[i] if i < size(scores) else 0
+                        if c < min_conf:
+                            continue
+
+                        ps = points[i]
+                        # 不准 ind = (pose_indexes[i] if i < size(pose_indexes) else -1) if is_pose is None else (labels[i] if i < size(labels) else -1)
+                        ind = labels[i] if i < size(labels) else -1
                         label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
 
-                        if ind is None or int(ind) >= size(bboxes):
+                        if size(ps) == 5:  # 人脸
+                            p0 = ps[0]
+                            p1 = ps[1]
+                            p2 = ps[2]
+                            p3 = ps[3]
+                            p4 = ps[4]
+                            lines = [
+                                [p0[0], p0[1], p1[0], p1[1]],
+                                [p1[0], p1[1], p2[0], p2[1]],
+                                [p2[0], p2[1], p3[0], p3[1]],
+                                [p3[0], p3[1], p4[0], p4[1]],
+                                [p4[0], p4[1], p2[0], p2[1]],
+                                [p2[0], p2[1], p0[0], p0[1]]
+                            ]
+                        elif size(ps) == 17:  # 人体姿态
+                            p0 = ps[0]  # 鼻子（nose）
+                            p1 = ps[1]  # 左眼（left_eye）
+                            p2 = ps[2]  # 右眼（right_eye）
+                            p3 = ps[3]  # 左耳（left_ear）
+                            p4 = ps[4]  # 右耳（right_ear）
+                            p5 = ps[5]  # 左肩（left_shoulder）
+                            p6 = ps[6]  # 右肩（right_shoulder）
+                            p7 = ps[7]  # 左肘（left_elbow）
+                            p8 = ps[8]  # 右肘（right_elbow）
+                            p9 = ps[9]  # 左腕（left_wrist）
+                            p10 = ps[10]  # 右腕（right_wrist）
+                            p11 = ps[11]  # 左髋（left_hip）
+                            p12 = ps[12]  # 右髋（right_hip）
+                            p13 = ps[13]  # 左膝（left_knee）
+                            p14 = ps[14]  # 右膝（right_knee）
+                            p15 = ps[15]  # 左踝（left_ankle）
+                            p16 = ps[16]  # 右踝（right_ankle）
+
+                            lines = [
+                                # 头部
+                                [p0[0], p0[1], p1[0], p1[1]],
+                                [p0[0], p0[1], p2[0], p2[1]],
+                                [p1[0], p1[1], p3[0], p3[1]],
+                                [p2[0], p2[1], p4[0], p4[1]],
+
+                                # 头肩
+                                [p3[0], p3[1], p5[0], p5[1]],
+                                [p4[0], p4[1], p6[0], p6[1]],
+
+                                # 肩膀
+                                [p5[0], p5[1], p6[0], p6[1]],
+
+                                # 手臂
+                                [p5[0], p5[1], p7[0], p7[1]],
+                                [p7[0], p7[1], p9[0], p9[1]],
+                                [p6[0], p6[1], p8[0], p8[1]],
+                                [p8[0], p8[1], p10[0], p10[1]],
+
+                                # 躯干
+                                [p5[0], p5[1], p11[0], p11[1]],
+                                [p6[0], p6[1], p12[0], p12[1]],
+
+                                # 左腿
+                                [p11[0], p11[1], p12[0], p12[1]],
+                                [p11[0], p11[1], p13[0], p13[1]],
+                                [p13[0], p13[1], p15[0], p15[1]],
+
+                                # 右腿
+                                [p12[0], p12[1], p14[0], p14[1]],
+                                [p14[0], p14[1], p16[0], p16[1]]
+                            ]
+
+                        if true:  # ind is None or int(ind) >= size(bboxes):
                             bboxes.append({
                                 'id': i,
                                 'label': label,
-                                'score': scores[i] if i < size(scores) else 0,
+                                'score': c,
                                 'color': colors(0) or [255, 0, 0, 0.6],
-                                'points': p
+                                'points': ps,
+                                'lines': lines
                             })
-                        else:
-                            bbox = bboxes[int(ind)] or {
-                                'id': i,
-                                'label': label,
-                                'score': scores[i] if i < size(scores) else 0,
-                                'color': colors(0) or [255, 0, 0, 0.6]
-                            }
-                            bbox['points'] = p
+                        # else:
+                        #     bbox = bboxes[int(ind)] or {
+                        #         'id': i,
+                        #         'label': label,
+                        #         'score': scores[i] if i < size(scores) else 0,
+                        #         'color': colors(0) or [255, 0, 0, 0.6]
+                        #     }
+                        #     bbox['points'] = ps
+                        #     bbox['lines'] = lines
 
-            seg_results = null if is_segment is not True or size(bboxes) > 10 else seg_model(img)
+            seg_results = null if is_segment is not True or size(bboxes) > 10 else seg_model.predict(img, conf=min_conf)
             if not_none(seg_results):
                 for result in seg_results:
                     if is_none(result):
@@ -282,6 +358,10 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         continue
 
                     for i in range(len(pointss)):
+                        c = scores[i] if i < size(scores) else 0
+                        if c < min_conf:
+                            continue
+
                         points = pointss[i]
                         ind = labels[i] if i < size(labels) else -1
                         label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
@@ -289,7 +369,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         polygons.append({
                             'id': i,
                             'label': label,
-                            'score': scores[i] if i < size(scores) else 0,
+                            'score': c,
                             'color': colors(0) or [255, 0, 0, 0.6],
                             'points': points
                         })
