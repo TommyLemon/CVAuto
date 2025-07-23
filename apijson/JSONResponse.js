@@ -290,7 +290,7 @@ var JSONResponse = {
    */
   getVariableName: function(fullName, listSuffix) {
     if (StringUtil.isEmpty(fullName, true)) {
-      return null;
+       return null;
     }
     if (JSONObject.isArrayKey(fullName)) {
       fullName = StringUtil.addSuffix(fullName.substring(0, fullName.length - 2), listSuffix || "list");
@@ -477,50 +477,50 @@ var JSONResponse = {
   COMPARE_THROW_CHANGE: 12,
 
   getCompareShowObj: function(cmp, status, response) {
-    var it = cmp;
-    var p = cmp.path
-    it.compareType = cmp.code;
-    it.compareMessage = (StringUtil.isEmpty(p, true) ? '' : p + '  ') + (cmp.msg || '查看结果')
-    switch (it.code) {
-      case JSONResponse.COMPARE_ERROR:
-        it.compareColor = 'red'
-        it.hintMessage = (status != null && status != 200 ? status + ' ' : '') + '请求出错！'
-        break;
-      case JSONResponse.COMPARE_NO_STANDARD:
-        it.compareColor = 'green'
-        it.hintMessage = '确认正确后点击[对的，纠正]'
-        break;
-      case JSONResponse.COMPARE_KEY_MORE:
-      case JSONResponse.COMPARE_VALUE_MORE:
-      case JSONResponse.COMPARE_EQUAL_EXCEPTION:
-        it.compareColor = 'green'
-        it.hintMessage = '新增字段/新增值 等'
-        break;
-      case JSONResponse.COMPARE_LENGTH_CHANGE:
-      case JSONResponse.COMPARE_VALUE_CHANGE:
-        it.compareColor = 'blue'
-        it.hintMessage = '值改变 等'
-        break;
-      case JSONResponse.COMPARE_VALUE_EMPTY:
-      case JSONResponse.COMPARE_KEY_LESS:
-        it.compareColor = 'orange'
-        it.hintMessage = '缺少字段/整数变小数 等'
-        break;
-      case JSONResponse.COMPARE_FORMAT_CHANGE:
-      case JSONResponse.COMPARE_NUMBER_TYPE_CHANGE:
-      case JSONResponse.COMPARE_TYPE_CHANGE:
-      case JSONResponse.COMPARE_CODE_CHANGE:
-      case JSONResponse.COMPARE_THROW_CHANGE:
-        var code = response == null ? null : response[JSONResponse.KEY_CODE]
-        it.compareColor = 'red'
-        it.hintMessage = (code != null && code != JSONResponse.CODE_SUCCESS
-            ? code + ' ' : (status != null && status != 200 ? status + ' ' : '')) + '状态码/异常/值类型 改变等'
-        break;
-      default:
-        it.compareColor = 'white'
-        it.hintMessage = '结果正确'
-        break;
-    }
+     var it = cmp;
+     var p = cmp.path
+     it.compareType = cmp.code;
+     it.compareMessage = (StringUtil.isEmpty(p, true) ? '' : p + '  ') + (cmp.msg || '查看结果')
+     switch (it.code) {
+            case JSONResponse.COMPARE_ERROR:
+              it.compareColor = 'red'
+              it.hintMessage = (status != null && status != 200 ? status + ' ' : '') + '请求出错！'
+              break;
+            case JSONResponse.COMPARE_NO_STANDARD:
+              it.compareColor = 'green'
+              it.hintMessage = '确认正确后点击[对的，纠正]'
+              break;
+            case JSONResponse.COMPARE_KEY_MORE:
+            case JSONResponse.COMPARE_VALUE_MORE:
+            case JSONResponse.COMPARE_EQUAL_EXCEPTION:
+              it.compareColor = 'green'
+              it.hintMessage = '新增字段/新增值 等'
+              break;
+            case JSONResponse.COMPARE_LENGTH_CHANGE:
+            case JSONResponse.COMPARE_VALUE_CHANGE:
+              it.compareColor = 'blue'
+              it.hintMessage = '值改变 等'
+              break;
+            case JSONResponse.COMPARE_VALUE_EMPTY:
+            case JSONResponse.COMPARE_KEY_LESS:
+              it.compareColor = 'orange'
+              it.hintMessage = '缺少字段/整数变小数 等'
+              break;
+            case JSONResponse.COMPARE_FORMAT_CHANGE:
+            case JSONResponse.COMPARE_NUMBER_TYPE_CHANGE:
+            case JSONResponse.COMPARE_TYPE_CHANGE:
+            case JSONResponse.COMPARE_CODE_CHANGE:
+            case JSONResponse.COMPARE_THROW_CHANGE:
+              var code = response == null ? null : response[JSONResponse.KEY_CODE]
+              it.compareColor = 'red'
+              it.hintMessage = (code != null && code != JSONResponse.CODE_SUCCESS
+               ? code + ' ' : (status != null && status != 200 ? status + ' ' : '')) + '状态码/异常/值类型 改变等'
+              break;
+            default:
+              it.compareColor = 'white'
+              it.hintMessage = '结果正确'
+              break;
+          }
     return it;
   },
 
@@ -622,10 +622,10 @@ var JSONResponse = {
     }
 
     if (noBizCode != true) {
-      delete target[codeName];
-      delete real[codeName];
-      delete target.throw;
-      delete real.throw;
+        delete target[codeName];
+        delete real[codeName];
+        delete target.throw;
+        delete real.throw;
     }
 
     //可能提示语变化，也要提示
@@ -634,9 +634,9 @@ var JSONResponse = {
 
     var result = null
     try {
-      result = isMachineLearning == true
-          ? JSONResponse.compareWithStandard(target, real, folder, exceptKeys, ignoreTrend)
-          : JSONResponse.compareWithBefore(target, real, folder, exceptKeys);
+       result = isMachineLearning == true
+        ? JSONResponse.compareWithStandard(target, real, folder, exceptKeys, ignoreTrend)
+        : JSONResponse.compareWithBefore(target, real, folder, exceptKeys);
     } finally {
       if (isMachineLearning || noBizCode != true) {
         target[codeName] = tCode;
@@ -895,7 +895,7 @@ var JSONResponse = {
     }
 
     log('\n\n\n\n\ncompareWithStandard <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' +
-        ' \ntarget = ' + JSON.stringify(target, null, '    ') + '\n\n\nreal = ' + JSON.stringify(real, null, '    '));
+      ' \ntarget = ' + JSON.stringify(target, null, '    ') + '\n\n\nreal = ' + JSON.stringify(real, null, '    '));
 
     var guess = target.guess;
     log('compareWithStandard  guess = target.guess = ' + guess + ' >>');
@@ -996,7 +996,7 @@ var JSONResponse = {
       }
 
       if (max.code < JSONResponse.COMPARE_LENGTH_CHANGE
-          && JSONResponse.isValueCorrect(target.lengthLevel, target.lengths, real.length) != true) {
+        && JSONResponse.isValueCorrect(target.lengthLevel, target.lengths, real.length) != true) {
         var lengths = target.lengths
         var maxVal = lengths == null || lengths.length <= 0 ? null : lengths[0];
         var minVal = lengths == null || lengths.length <= 0 ? null : lengths[lengths.length - 1];
@@ -1038,7 +1038,7 @@ var JSONResponse = {
           log('compareWithStandard  for k = ' + k + ' >> ');
 
           if (k != null && real[k] != null && (firstVal == null || firstVal[k] == null)
-              && (exceptKeys == null || exceptKeys.indexOf(tk) >= 0)) { //解决 null 值总是提示是新增的，且无法纠错 tks.indexOf(k) < 0) {
+            && (exceptKeys == null || exceptKeys.indexOf(tk) >= 0)) { //解决 null 值总是提示是新增的，且无法纠错 tks.indexOf(k) < 0) {
             log('compareWithStandard  k != null && tks.indexOf(k) < 0 >> max = COMPARE_KEY_MORE;');
 
             max.code = JSONResponse.COMPARE_KEY_MORE;
@@ -1060,10 +1060,10 @@ var JSONResponse = {
           var verifier = max.code < JSONResponse.COMPARE_FORMAT_CHANGE && StringUtil.isNotEmpty(format, true)
               ? FORMAT_VERIFIERS[format] : null;
           if (typeof verifier == 'function' && verifier(real) != true) {
-            max.code = JSONResponse.COMPARE_FORMAT_CHANGE - (guess != true ? 0 : 1);
-            max.msg = '不是 ' + format + " 格式！";
-            max.path = folder;
-            max.value = real;
+              max.code = JSONResponse.COMPARE_FORMAT_CHANGE - (guess != true ? 0 : 1);
+              max.msg = '不是 ' + format + " 格式！";
+              max.path = folder;
+              max.value = real;
           }
         }
         else if (format instanceof Array == false && format instanceof Object) {
@@ -1155,7 +1155,7 @@ var JSONResponse = {
   },
   compareValue: function(level, target, real, trend, repeat) {
     log('isValueCorrect  \nlevel = ' + level + '; \ntarget = ' + JSON.stringify(target)
-        + '\nreal = ' + JSON.stringify(real, null, '    '));
+      + '\nreal = ' + JSON.stringify(real, null, '    '));
     if (target == null || real == null) {
       log('isValueCorrect  target == null >>  return true;');
       return 0;
@@ -1333,8 +1333,8 @@ var JSONResponse = {
     var stddObj = isML ? (isCodeChange && hasCode ? standard : JSONResponse.updateStandard(standard, currentResponse)) : {};
 
 //    if (noBizCode != true) {
-    currentResponse.code = code;
-    currentResponse.throw = thrw;
+        currentResponse.code = code;
+        currentResponse.throw = thrw;
 //    }
 
     if (hasCode || isML) {
@@ -1382,7 +1382,7 @@ var JSONResponse = {
     }
 
     log('\n\n\n\n\nupdateStandard <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' +
-        ' \ntarget = ' + JSON.stringify(target, null, '    ') + '\n\n\nreal = ' + JSON.stringify(real, null, '    '));
+      ' \ntarget = ' + JSON.stringify(target, null, '    ') + '\n\n\nreal = ' + JSON.stringify(real, null, '    '));
 
     var notNull = target.notNull;
     log('updateStandard  notNull = target.notNull = ' + notNull + ' >>');
@@ -1450,15 +1450,15 @@ var JSONResponse = {
         target.type = 'array';
       }
       else if (StringUtil.isPriceKey(key) || StringUtil.isPercentKey(key) || StringUtil.isAmountKey(key)
-          || StringUtil.isMoneyKey(key) || StringUtil.isCashKey(key) || StringUtil.isDiscountKey(key)
-          || StringUtil.isDecimalKey(key) || StringUtil.isFloatKey(key) || StringUtil.isDoubleKey(key)
+         || StringUtil.isMoneyKey(key) || StringUtil.isCashKey(key) || StringUtil.isDiscountKey(key)
+         || StringUtil.isDecimalKey(key) || StringUtil.isFloatKey(key) || StringUtil.isDoubleKey(key)
       ) {
         target.type = 'number';
       }
       else if (StringUtil.isNumKey(key) || StringUtil.isCountKey(key) || StringUtil.isPageKey(key)
-          || StringUtil.isSizeKey(key) || StringUtil.isCapKey(key) || StringUtil.isIntKey(key) || StringUtil.isLongKey(key)
-          || StringUtil.isLevelKey(key)|| StringUtil.isGradeKey(key) || StringUtil.isScoreKey(key) || StringUtil.isTotalKey(key)
-          || StringUtil.isIdKey(key) || StringUtil.isHashKey(key)
+         || StringUtil.isSizeKey(key) || StringUtil.isCapKey(key) || StringUtil.isIntKey(key) || StringUtil.isLongKey(key)
+         || StringUtil.isLevelKey(key)|| StringUtil.isGradeKey(key) || StringUtil.isScoreKey(key) || StringUtil.isTotalKey(key)
+         || StringUtil.isIdKey(key) || StringUtil.isHashKey(key)
       ) {
         target.type = 'integer';
       }
@@ -1468,17 +1468,17 @@ var JSONResponse = {
       else {
         var cm = StringUtil.CATEGORY_MAP;
         if (cm == null || Object.keys(cm).length <= 0) {
-          cm = {}
-          var tcks = StringUtil.TYPE_CATEGORY_KEYS || {};
-          for (var k in tcks) {
-            var arr = tcks[k] || [];
-            for (var i = 0; i < arr.length; i++) {
-              var k2 = arr[i];
-              cm[k2] = k;
+            cm = {}
+            var tcks = StringUtil.TYPE_CATEGORY_KEYS || {};
+            for (var k in tcks) {
+              var arr = tcks[k] || [];
+              for (var i = 0; i < arr.length; i++) {
+                var k2 = arr[i];
+                cm[k2] = k;
+              }
             }
-          }
 
-          StringUtil.CATEGORY_MAP = cm;
+            StringUtil.CATEGORY_MAP = cm;
         }
 
         for (var k in cm) {
@@ -1536,7 +1536,7 @@ var JSONResponse = {
       var child = values[0];
       for (var i = 0; i < real.length; i ++) {
         log('updateStandard for i = ' + i + '; child = '
-            + JSON.stringify(child, null, '    ') + ';\n real[i] = '  + JSON.stringify(real[i], null, '    ') + ' >>');
+          + JSON.stringify(child, null, '    ') + ';\n real[i] = '  + JSON.stringify(real[i], null, '    ') + ' >>');
 
         child = JSONResponse.updateStandard(child, real[i], exceptKeys, true, key == null ? 'item' : key + 'Item');  //FIXME ignoreTrend 固定取 true 导致批量创建后多个 id [1,2,3] -> [3,4,5] 漏报趋势异常
       }
@@ -1586,7 +1586,7 @@ var JSONResponse = {
         }
 
         log('updateStandard for k in real = ' + k + '; firstVal[k] = '
-            + JSON.stringify(firstVal[k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
+          + JSON.stringify(firstVal[k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
         firstVal[k] = JSONResponse.updateStandard(firstVal[k], real[k], exceptKeys, ignoreTrend, k);
       }
 
@@ -1688,13 +1688,13 @@ var JSONResponse = {
       if (tgt instanceof Object) {
         if (k == '') {
           if (tgt instanceof Array) {
-            k = 0;
+              k = 0;
           } else {
-            ks = Object.keys(tgt);
-            k = ks == null ? null : ks[0];
-            if (k == null) {
-              return null;
-            }
+              ks = Object.keys(tgt);
+              k = ks == null ? null : ks[0];
+              if (k == null) {
+                return null;
+              }
           }
         }
         else {
@@ -1745,13 +1745,13 @@ var JSONResponse = {
       if (tgt instanceof Object) {
         if (k == '') {
           if (tgt instanceof Array) {
-            k = 0;
+              k = 0;
           } else {
-            ks = Object.keys(tgt);
-            k = ks == null ? null : ks[0];
-            if (k == null) {
-              return null;
-            }
+              ks = Object.keys(tgt);
+              k = ks == null ? null : ks[0];
+              if (k == null) {
+                return null;
+              }
           }
         }
         else {
@@ -1838,13 +1838,13 @@ var JSONResponse = {
       else {
         k = decodeURI(k)
         if (tgt instanceof Array) {
-          try {
-            var n = Number.parseInt(k);
-            if (Number.isSafeInteger(n)) {
-              k = n > 0 ? n : n + tgt.length;
+            try {
+              var n = Number.parseInt(k);
+              if (Number.isSafeInteger(n)) {
+                k = n > 0 ? n : n + tgt.length;
+              }
+            } catch (e) {
             }
-          } catch (e) {
-          }
         }
       }
 
@@ -1944,9 +1944,9 @@ var JSONResponse = {
     var notEmpty = prefix.endsWith('!')
     var name = nullable || notEmpty ? prefix.substring(0, prefix.length - 1) : prefix
     if (StringUtil.isName(name)) {
-      tgt.name = name
+       tgt.name = name
     } else {
-      nullable = notEmpty = null
+       nullable = notEmpty = null
     }
 
     tgt.type = JSONResponse.getType(real)
@@ -2005,10 +2005,10 @@ var JSONResponse = {
    */
   setValue: function(target, real, level, origin, isLength, ignoreTrend) {
     log('setValue  level = ' + level + '; isLength = ' + isLength
-        + ' ;\n target = ' + JSON.stringify(target, null, '    ')
-        + ' ;\n real = ' + JSON.stringify(real, null, '    ')
-        + ' ;\n origin = ' + JSON.stringify(origin, null, '    ')
-        +  ' >> ');
+      + ' ;\n target = ' + JSON.stringify(target, null, '    ')
+      + ' ;\n real = ' + JSON.stringify(real, null, '    ')
+      + ' ;\n origin = ' + JSON.stringify(origin, null, '    ')
+      +  ' >> ');
 
     if (target == null) {
       target = {};
@@ -2028,168 +2028,168 @@ var JSONResponse = {
 
     // 似乎无论怎样都要把 real 加进 values  if (isLength || (type != 'object' || type != 'array')) {
 
-    var levelName = isLength != true ? 'valueLevel' : 'lengthLevel';
-    target[levelName] = level;
-    if (level >= 3) { //无限
-      return target;
-    }
-
-    //String 类型在 长度超过一定值 或 不是 常量名 时，改成 无限模型
-    //不用 type 判断类型，这样可以保证 lengthType 不会自动升级
-    if (isLength != true && typeof real == 'string' && (real.length > 20 || StringUtil.isConstName(real) != true)) {
-      if (level != 2) { //自定义模型不受影响
-        target[levelName] = 3;
-      }
-      return target;
-    }
-
-    var vals = [];
-
-    if (level == 0 || level == 1) {
-      if (origin == null) {
-        origin = [];
+      var levelName = isLength != true ? 'valueLevel' : 'lengthLevel';
+      target[levelName] = level;
+      if (level >= 3) { //无限
+        return target;
       }
 
-      if (real != null) {
-        //趋势分析，新值落在五个区域之一的次数，"trend":{ "select": ">", "above": 5, "top":4, "center":3, "bottom":2, "below":1 }
-        if (ignoreTrend != true && isLength != true && origin.length > 0 && CodeUtil.isTypeMatch('number', type)) {
-          log('setValue  isLength != true && origin.length > 0  >> ');
+      //String 类型在 长度超过一定值 或 不是 常量名 时，改成 无限模型
+      //不用 type 判断类型，这样可以保证 lengthType 不会自动升级
+      if (isLength != true && typeof real == 'string' && (real.length > 20 || StringUtil.isConstName(real) != true)) {
+        if (level != 2) { //自定义模型不受影响
+          target[levelName] = 3;
+        }
+        return target;
+      }
 
-          var trend = target.trend || {};
-          var select = trend.select;
+      var vals = [];
 
-          log('setValue  trend.select = ' + select + '  >> ');
-          if (trend.select != '%') {  // 不再统计，可以保证容易调整判断逻辑
-            log('setValue  trend.select != %  >> ');
+      if (level == 0 || level == 1) {
+        if (origin == null) {
+          origin = [];
+        }
 
-            var above = trend.above || 0;
-            var top = trend.top || 0;
-            var center = trend.center || 0;
-            var bottom = trend.bottom || 0;
-            var below = trend.below || 0;
+        if (real != null) {
+          //趋势分析，新值落在五个区域之一的次数，"trend":{ "select": ">", "above": 5, "top":4, "center":3, "bottom":2, "below":1 }
+          if (ignoreTrend != true && isLength != true && origin.length > 0 && CodeUtil.isTypeMatch('number', type)) {
+            log('setValue  isLength != true && origin.length > 0  >> ');
 
-            log('setValue  BEFORE  select: ' + select + ', above: ' + above + ', top: ' + top + ', center: ' + center + ', bottom: ' + bottom + ', below: ' + below + ' >>');
+            var trend = target.trend || {};
+            var select = trend.select;
 
-            if (real > origin[0]) {
-              trend.above = above = above + 1;
-            }
-            else if (real == origin[0]) {
-              trend.top = top = top + 1;
-            }
-            else if (real == origin[origin.length - 1]) {
-              trend.bottom = bottom = bottom + 1;
-            }
-            else if (real < origin[origin.length - 1]) {
-              trend.below = below = below + 1;
-            }
-            else {
-              trend.center = center = center + 1;
-            }
+            log('setValue  trend.select = ' + select + '  >> ');
+            if (trend.select != '%') {  // 不再统计，可以保证容易调整判断逻辑
+              log('setValue  trend.select != %  >> ');
 
-            // = null 还有在下面判断，否则会把 trend.select 从非 null 值又设置回 null。  var select = null;
-            if (center > 0) {
-              select = '%';  // level: 1 时永远是 % 兜底 above + below <= 0 ? '%' : '~';
-            }
-            else if (bottom + below <= 0) {
-              if (trend.above > 0) {
-                select = trend.top > 0 ? '>=' : '>';
+              var above = trend.above || 0;
+              var top = trend.top || 0;
+              var center = trend.center || 0;
+              var bottom = trend.bottom || 0;
+              var below = trend.below || 0;
+
+              log('setValue  BEFORE  select: ' + select + ', above: ' + above + ', top: ' + top + ', center: ' + center + ', bottom: ' + bottom + ', below: ' + below + ' >>');
+
+              if (real > origin[0]) {
+                trend.above = above = above + 1;
               }
-            }
-            else if (top + above <= 0) {
-              if (trend.below > 0) {
-                select = trend.bottom > 0 ? '<=' : '<';
+              else if (real == origin[0]) {
+                trend.top = top = top + 1;
               }
-            }
+              else if (real == origin[origin.length - 1]) {
+                trend.bottom = bottom = bottom + 1;
+              }
+              else if (real < origin[origin.length - 1]) {
+                trend.below = below = below + 1;
+              }
+              else {
+                trend.center = center = center + 1;
+              }
 
-            if (trend.select == null || trend.select == select) {
-              // || (trend.select == '<' && select == '<=')
-              // || (trend.select == '>' && select == '>=')) {
-              log('setValue  trend.select == null || trend.select == select  >>  trend.select = select;');
-              trend.select = select;
-            }
-            else if (trend.select == '<') { // 已简化
-              log('setValue  trend.select == <  >> trend.select = select == <= ? select : %;');
-              trend.select = select == '<=' ? select : '%';
-            }
-            else if (trend.select == '>') { // 已简化
-              log('setValue  trend.select == >  >> trend.select = select == >= ? select : %;');
-              trend.select = select == '>=' ? select : '%';
-            }
-            else {  // 其它情况都未被了 递增或递减 的趋势，只能用 [min, max] 这种包括在内的区间范围
-              log('setValue  else  >> trend.select = %;');
-              trend.select = '%';
-            }
+              // = null 还有在下面判断，否则会把 trend.select 从非 null 值又设置回 null。  var select = null;
+              if (center > 0) {
+                select = '%';  // level: 1 时永远是 % 兜底 above + below <= 0 ? '%' : '~';
+              }
+              else if (bottom + below <= 0) {
+                if (trend.above > 0) {
+                  select = trend.top > 0 ? '>=' : '>';
+                }
+              }
+              else if (top + above <= 0) {
+                if (trend.below > 0) {
+                  select = trend.bottom > 0 ? '<=' : '<';
+                }
+              }
 
-            log('setValue  AFTER  select: ' + trend.select + ', above: ' + trend.above + ', top: ' + trend.top
+              if (trend.select == null || trend.select == select) {
+                // || (trend.select == '<' && select == '<=')
+                // || (trend.select == '>' && select == '>=')) {
+                log('setValue  trend.select == null || trend.select == select  >>  trend.select = select;');
+                trend.select = select;
+              }
+              else if (trend.select == '<') { // 已简化
+                log('setValue  trend.select == <  >> trend.select = select == <= ? select : %;');
+                trend.select = select == '<=' ? select : '%';
+              }
+              else if (trend.select == '>') { // 已简化
+                log('setValue  trend.select == >  >> trend.select = select == >= ? select : %;');
+                trend.select = select == '>=' ? select : '%';
+              }
+              else {  // 其它情况都未被了 递增或递减 的趋势，只能用 [min, max] 这种包括在内的区间范围
+                log('setValue  else  >> trend.select = %;');
+                trend.select = '%';
+              }
+
+              log('setValue  AFTER  select: ' + trend.select + ', above: ' + trend.above + ', top: ' + trend.top
                 + ', center: ' + trend.center + ', bottom: ' + trend.bottom + ', below: ' + trend.below + ' >>');
-            target.trend = trend;
+              target.trend = trend;
+            }
+
           }
 
+          if (origin.indexOf(real) < 0) {
+            origin.push(real);
+          }
+          else {
+            var repeat = target.repeat == null ? 0 : target.repeat
+            target.repeat = repeat + 1
+          }
         }
 
-        if (origin.indexOf(real) < 0) {
-          origin.push(real);
-        }
-        else {
-          var repeat = target.repeat == null ? 0 : target.repeat
-          target.repeat = repeat + 1
+        vals = origin;
+      }
+      else {
+        if (real != null) {
+          vals.push(real);
         }
       }
 
-      vals = origin;
-    }
-    else {
-      if (real != null) {
-        vals.push(real);
+      if (vals.length > 1 && (isLength || CodeUtil.isTypeMatch('number', type))) {
+        vals = vals.sort(function (x, y) { //倒序排列，一般都是用最大长度(数据count，字符串长度等)
+          if (x < y) {
+            return 1;
+          }
+          if (x > y) {
+            return -1;
+          }
+          return 0;
+        })
       }
-    }
 
-    if (vals.length > 1 && (isLength || CodeUtil.isTypeMatch('number', type))) {
-      vals = vals.sort(function (x, y) { //倒序排列，一般都是用最大长度(数据count，字符串长度等)
-        if (x < y) {
-          return 1;
-        }
-        if (x > y) {
-          return -1;
-        }
-        return 0;
-      })
-    }
+      var name = isLength != true ? 'values' : 'lengths';
+      log('setValue  name = ' + name + '; vals = ' + JSON.stringify(vals, null, '    ') + ' >> ');
 
-    var name = isLength != true ? 'values' : 'lengths';
-    log('setValue  name = ' + name + '; vals = ' + JSON.stringify(vals, null, '    ') + ' >> ');
+      switch (level) {
+        case 0:
+        case 1:
+          var realIsNum = CodeUtil.isTypeMatch('number', typeof real)
+          //当 离散区间模型 可取值超过最大数量时自动转为 连续区间模型
+          var maxCount = isLength ? 3 : JSONResponse.getMaxValueCount(type);
+          var extraCount = maxCount <= 0 ? 0 : vals.length - maxCount;
+          if (extraCount > 0 && level < 1) {
+            if (realIsNum != true) {  // 只有数字才可能有连续区间模型
+              target[levelName] = 3;
+              return target;
+            }
 
-    switch (level) {
-      case 0:
-      case 1:
-        var realIsNum = CodeUtil.isTypeMatch('number', typeof real)
-        //当 离散区间模型 可取值超过最大数量时自动转为 连续区间模型
-        var maxCount = isLength ? 3 : JSONResponse.getMaxValueCount(type);
-        var extraCount = maxCount <= 0 ? 0 : vals.length - maxCount;
-        if (extraCount > 0 && level < 1) {
-          if (realIsNum != true) {  // 只有数字才可能有连续区间模型
-            target[levelName] = 3;
-            return target;
+            target[levelName] = 1;  // 只有数字才可能有连续区间模型
+          }
+          else if (level < 1 && realIsNum && (real < -10 || real > 10000 || Number.isSafeInteger(real) != true)) {
+            target[levelName] = 1;  // 超出了正常的枚举值范围
           }
 
-          target[levelName] = 1;  // 只有数字才可能有连续区间模型
-        }
-        else if (level < 1 && realIsNum && (real < -10 || real > 10000 || Number.isSafeInteger(real) != true)) {
-          target[levelName] = 1;  // 超出了正常的枚举值范围
-        }
-
-        //从中间删除多余的值
-        while (extraCount > 0) {
-          vals.splice(Math.ceil(vals.length/2), 1);
-          extraCount -= 1;
-        }
-        target[name] = vals;
-        break;
-      case 2: //自定义的复杂条件，一般是准确的，不会纠错
-        // target[name] = (StringUtil.isEmpty(origin, true) ? '' : origin + ',')
-        //   + ('<=' + vals[0] + (vals.length <= 1 ? '' : ',>=' + vals[vals.length - 1]));
-        break;
-    }
+          //从中间删除多余的值
+          while (extraCount > 0) {
+            vals.splice(Math.ceil(vals.length/2), 1);
+            extraCount -= 1;
+          }
+          target[name] = vals;
+          break;
+        case 2: //自定义的复杂条件，一般是准确的，不会纠错
+          // target[name] = (StringUtil.isEmpty(origin, true) ? '' : origin + ',')
+          //   + ('<=' + vals[0] + (vals.length <= 1 ? '' : ',>=' + vals[vals.length - 1]));
+          break;
+      }
     // }
 
     return target;
@@ -2284,10 +2284,28 @@ var JSONResponse = {
 
     var x = bbox.x || bbox.x0 || bbox.x1 || bbox.startX || bbox.xStart || bbox.leftTopX || bbox.topLeftX || bbox.start_x || bbox.x_start || bbox.left_top_x || bbox.top_left_x || 0;
     var y = bbox.y || bbox.y0 || bbox.y1 || bbox.startY || bbox.yStart || bbox.leftTopY || bbox.topLeftY || bbox.start_y || bbox.y_start || bbox.left_top_y || bbox.top_left_y || 0;
-    var w = bbox.w || bbox.width || ((bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || 0) - x);
-    var h = bbox.h || bbox.height || ((bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || 0) - y);
+    var w = bbox.width || bbox.w || ((bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || 0) - x);
+    var h = bbox.height || bbox.h || ((bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || 0) - y);
     var d = bbox.degree || bbox.angle || bbox.rotate || bbox.perspective || bbox.d || bbox.r || bbox.p || bbox.a;
     return [+ (x || 0), + (y || 0), + (w || 0), + (h || 0), + (d || 0)];
+  },
+  getXYXYD: function (bbox) {
+    if (bbox == null) {
+      return null;
+    }
+    if (JSONResponse.isString(bbox)) {
+      bbox = StringUtil.split(bbox, ',', true);
+    }
+    if (bbox instanceof Array) {
+      return [+ (bbox[0] || 0), + (bbox[1] || 0), + (bbox[2] || 0), + (bbox[3] || 0), + (bbox[4] || 0)];
+    }
+
+    var x = bbox.x || bbox.x0 || bbox.x1 || bbox.startX || bbox.xStart || bbox.leftTopX || bbox.topLeftX || bbox.start_x || bbox.x_start || bbox.left_top_x || bbox.top_left_x || 0;
+    var y = bbox.y || bbox.y0 || bbox.y1 || bbox.startY || bbox.yStart || bbox.leftTopY || bbox.topLeftY || bbox.start_y || bbox.y_start || bbox.left_top_y || bbox.top_left_y || 0;
+    var x2 = bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || ((bbox.width || bbox.w || 0) + x);
+    var y2 = bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || ((bbox.height || bbox.h || 0) + y);
+    var d = bbox.degree || bbox.angle || bbox.rotate || bbox.perspective || bbox.d || bbox.r || bbox.p || bbox.a;
+    return [+ (x || 0), + (y || 0), + (x2 || 0), + (y2 || 0), + (d || 0)];
   },
   /**
    * 计算两个 bbox（[x, y, w, h, r]）的 IoU
@@ -2362,7 +2380,7 @@ var JSONResponse = {
    * @param {number} alphaFactor 透明度缩放因子，例如1.2 或 0.7
    * @returns {number[]} 新的RGBA颜色数组
    */
-  shiftColor: function(color, mode, alphaFactor = 1) {
+   shiftColor: function(color, mode, alphaFactor = 1) {
     let [r, g, b, a] = color;
     const shiftRatio = 0.2; // 20%
 
@@ -2504,121 +2522,118 @@ var JSONResponse = {
     // Draw bboxes
     var bboxes = JSONResponse.getBboxes(detection) || []
     if (bboxes instanceof Array) {
-      bboxes?.forEach((item, index) => {
-        const isHovered = index === hoverBoxId;
-        const visible = ! visiblePaths || visiblePaths.length <= 0 || visiblePaths.includes(item.path || item.id);
-        if (! visible) {
-          return;
-        }
-
-        var [x, y, w, h, d] = JSONResponse.getXYWHD(JSONResponse.getBbox(item) || []);
-        const isRate = Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(w) < 1 && Math.abs(h) < 1;
-        x = isRate ? x*width : x*xRate;
-        y = isRate ? y*height : y*yRate;
-        w = isRate ? w*width : w*xRate;
-        h = isRate ? h*height : h*yRate;
-        const angle = item.degree || item.rotate || item.angle || item.perspective || d || 0;
-
-        var color = item.color;
-        if (options.styleOverride) {
-          const override = options.styleOverride(item, item['@before']);
-          if (override && override.color) {
-            color = override.color;
+        bboxes?.forEach((item, index) => {
+          const isHovered = index === hoverBoxId;
+          const visible = ! visiblePaths || visiblePaths.length <= 0 || visiblePaths.includes(item.path || item.id);
+          if (! visible) {
+            return;
           }
-        }
 
-        const [r, g, b, a] = color || [0, 255, 0, 255];
-        const rgba = `rgba(${r}, ${g}, ${b}, ${hoverBoxId != null || ! isHovered ? 0.3 : Math.min(0.5, a < 1 ? a : a / 255)})`;
+          var [x, y, w, h, d] = JSONResponse.getXYWHD(JSONResponse.getBbox(item) || []);
+          const isRate = Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(w) < 1 && Math.abs(h) < 1;
+          x = isRate ? x*width : x*xRate;
+          y = isRate ? y*height : y*yRate;
+          w = isRate ? w*width : w*xRate;
+          h = isRate ? h*height : h*yRate;
+          const angle = item.degree || item.rotate || item.angle || item.perspective || d || 0;
 
-        const reversedRgba = `rgba(${255 - r}, ${255 - g}, ${255 - b}, ${isHovered || hoverBoxId == null ? 1 : 0.3})`;
-        // const luma = 0.299 * r + 0.587 * g + 0.114 * b;
-        const backgroundFill = rgba; // 还是有些看不清 luma > 186 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)';
-
-        ctx.strokeStyle = isHovered ? reversedRgba : rgba;
-        ctx.fillStyle = rgba;
-
-        // Draw horizontal box
-        ctx.strokeRect(x, y, w, h);
-
-        // Optionally draw rotated box
-        if (rotateBoxes && angle !== 0) {
-          ctx.save();
-          ctx.translate(x + w / 2, y + h / 2);
-          ctx.rotate((angle * Math.PI) / 180);
-          ctx.strokeRect(-w / 2, -h / 2, w, h);
-          ctx.restore();
-        }
-
-        if (hoverBoxId != null && ! isHovered) {
-          return
-        }
-
-        // Label
-        const label = (isDiff ? (item['@before'] ? '- ' : '+ ') : '') + `${item.ocr || item.label || ''}-${item.id || ''} ${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%${angle == 0 ? '' : ' ' + Math.round(angle) + '°'}`;
-        // ctx.font = 'bold 36px';
-        // const size = ctx.measureText(label);
-        // const textHeight = size.height || height*0.1; // Math.max(height*0.1, size.height);
-        // 让字号约为 canvas 高度的 2%，并限定 12~48px
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        const size = ctx.measureText(label);
-        // 自动从 font 里提取 px 字号
-        const fontMatch = ctx.font.match(/(\d+)px/);
-        const textHeight = fontMatch ? parseInt(fontMatch[1]) : 36;  // fallback 到 36px
-        const textWidth = size.width; // *textHeight/size.height;
-        const padding = 2;
-
-        let positions = [
-          [x, y - textHeight - padding],
-          [x + w - textWidth, y - textHeight - padding],
-          [x, y + h + padding],
-          [x + w - textWidth, y + h + padding]
-        ];
-
-        let labelX = x, labelY = y - textHeight - padding;
-        for (const [lx, ly] of positions) {
-          const overlaps = placedLabels.some(({ x: ox, y: oy, w: ow, h: oh }) =>
-              lx < ox + ow && lx + textWidth > ox && ly < oy + oh && ly + textHeight > oy
-          );
-          if (! overlaps && lx >= 0 && ly >= 0 && lx + textWidth <= canvas.width && ly + textHeight <= canvas.height) {
-            labelX = lx;
-            labelY = ly;
-            break;
+          var color = item.color;
+          if (options.styleOverride) {
+            const override = options.styleOverride(item, item['@before']);
+            if (override && override.color) {
+              color = override.color;
+            }
           }
-        }
 
-        placedLabels.push({ x: labelX, y: labelY, w: textWidth, h: textHeight });
+          const [r, g, b, a] = color || [0, 255, 0, 255];
+          const rgba = `rgba(${r}, ${g}, ${b}, ${hoverBoxId != null && ! isHovered ? 0.3 : Math.min(0.5, a < 1 ? a : a / 255)})`;
 
-        ctx.save();
-        if (rotateText && angle !== 0) {
-          ctx.translate(labelX + textWidth / 2, labelY + textHeight / 2);
-          ctx.rotate((angle * Math.PI) / 180);
-          ctx.translate(-textWidth / 2, -textHeight / 2);
-          labelX = 0;
-          labelY = 0;
-        }
+          const reversedRgba = `rgba(${255 - r}, ${255 - g}, ${255 - b}, ${isHovered || hoverBoxId == null ? 1 : 0.3})`;
+          // const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          const backgroundFill = rgba; // 还是有些看不清 luma > 186 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)';
 
-        if (showLabelBackground) {
-          ctx.fillStyle = backgroundFill;
-          ctx.fillRect(labelX - 2, labelY - 1, textWidth + 4, textHeight + 2);
-        }
+          ctx.strokeStyle = isHovered ? reversedRgba : rgba;
+          ctx.fillStyle = rgba;
 
-        ctx.fillStyle = showLabelBackground ? reversedRgba : rgba;
-        ctx.fillText(label, labelX, labelY);
-        ctx.restore();
+          // Draw horizontal box
+          ctx.strokeRect(x, y, w, h);
 
-        if (markable && item['@before'] != true) {
-          const isWrong = wrongs.indexOf(isDiff ? item['@index'] : index) >= 0; // item.correct === false;
-          // 绘制 √ 和 ×
+          // Optionally draw rotated box
+          if (rotateBoxes && angle !== 0) {
+            ctx.save();
+            ctx.translate(x + w / 2, y + h / 2);
+            ctx.rotate((angle * Math.PI) / 180);
+            ctx.strokeRect(-w / 2, -h / 2, w, h);
+            ctx.restore();
+          }
+
+          if (hoverBoxId != null && ! isHovered) {
+            return
+          }
+
+          is_before = item['@before'];
+          mark = '';
+          if (markable && is_before != true) {
+            const isWrong = wrongs.indexOf(isDiff ? item['@index'] : index) >= 0; // item.correct === false;
+            // 绘制 √ 和 ×
+            mark = isWrong ? '× ' : '✓ ';
+          }
+
+          // Label
+          const label = mark + (isDiff ? (is_before ? '- ' : '+ ') : '') + `${item.ocr || item.label || ''}-${item.id || ''} ${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%${angle == 0 ? '' : ' ' + Math.round(angle) + '°'}`;
+          // ctx.font = 'bold 36px';
+          // const size = ctx.measureText(label);
+          // const textHeight = size.height || height*0.1; // Math.max(height*0.1, size.height);
+          // 让字号约为 canvas 高度的 2%，并限定 12~48px
           ctx.font = `bold ${fontSize}px sans-serif`;
-          // ctx.fillStyle = isWrong ? 'red' : 'green';
-          ctx.fillStyle = isWrong ? 'red' : 'green';
-          const checkX = labelX + textWidth + 4;
-          const checkY = labelY;
-          ctx.fillText(isWrong ? '×' : '√', checkX, checkY);
-        }
+          const size = ctx.measureText(label);
+          // 自动从 font 里提取 px 字号
+          const fontMatch = ctx.font.match(/(\d+)px/);
+          const textHeight = fontMatch ? parseInt(fontMatch[1]) : 36;  // fallback 到 36px
+          const textWidth = size.width; // *textHeight/size.height;
+          const padding = 2;
 
-        JSONResponse.drawDetections(canvas, item, options, img, ctx);
-      });
+          let positions = [
+            [x, y - textHeight - padding],
+            [x + w - textWidth, y - textHeight - padding],
+            [x, y + h + padding],
+            [x + w - textWidth, y + h + padding]
+          ];
+
+          let labelX = x, labelY = y - textHeight - padding;
+          for (const [lx, ly] of positions) {
+            const overlaps = placedLabels.some(({ x: ox, y: oy, w: ow, h: oh }) =>
+                lx < ox + ow && lx + textWidth > ox && ly < oy + oh && ly + textHeight > oy
+            );
+            if (! overlaps && lx >= 0 && ly >= 0 && lx + textWidth <= canvas.width && ly + textHeight <= canvas.height) {
+              labelX = lx;
+              labelY = ly;
+              break;
+            }
+          }
+
+          placedLabels.push({ x: labelX, y: labelY, w: textWidth, h: textHeight });
+
+          ctx.save();
+          if (rotateText && angle !== 0) {
+            ctx.translate(labelX + textWidth / 2, labelY + textHeight / 2);
+            ctx.rotate((angle * Math.PI) / 180);
+            ctx.translate(-textWidth / 2, -textHeight / 2);
+            labelX = 0;
+            labelY = 0;
+          }
+
+          if (showLabelBackground) {
+            ctx.fillStyle = backgroundFill;
+            ctx.fillRect(labelX - 2, labelY - 1, textWidth + 4, textHeight + 2);
+          }
+
+          ctx.fillStyle = showLabelBackground ? reversedRgba : rgba;
+          ctx.fillText(label, labelX, labelY);
+          ctx.restore();
+
+          JSONResponse.drawDetections(canvas, item, options, img, ctx);
+        });
     }
 
     // Draw lines
@@ -2629,12 +2644,12 @@ var JSONResponse = {
           return;
         }
 
-        var [x, y, w, h, d] = JSONResponse.getXYWHD(item);
-        const isRate = Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(w) < 1 && Math.abs(h) < 1;
+        var [x, y, x2, y2, d] = JSONResponse.getXYXYD(item);
+        const isRate = Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(x2) < 1 && Math.abs(y2) < 1;
         x = isRate ? x*width : x*xRate;
         y = isRate ? y*height : y*yRate;
-        w = isRate ? w*width : w*xRate;
-        h = isRate ? h*height : h*yRate;
+        x2 = isRate ? x2*width : x2*xRate;
+        y2 = isRate ? y2*height : y2*yRate;
 
         const color = item.color || detection.color || detection.bbox?.color;
         const rgba = color == null || color.length <= 0 ? null : `rgba(${color.join(',')})`;
@@ -2645,7 +2660,7 @@ var JSONResponse = {
 
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x2, y2);
         ctx.stroke();
 
         if (isRoot) {
