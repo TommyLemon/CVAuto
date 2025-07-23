@@ -21,7 +21,7 @@
 自动断言画框是否正确，可点击边框来调整对错(✓ 和 X)，一键上传可作为基准的断言结果， <br/>
 自动统计正确数、误报数、漏检数、召回率、精准率、F1 Score 等指标、自动对比前后效果。 <br/>
 
-![CVAuto-with-AIServer](https://github.com/user-attachments/assets/ba917fae-a1cf-4f28-9588-da218b84b6d6)
+![CVAuto-with-AIServer](https://github.com/user-attachments/assets/847bff1c-bd7d-4ac9-ad7c-7b95f2fa9850)
 
 ### 支持算法
 * **目标检测**：行人、车辆、异物、零部件 等
