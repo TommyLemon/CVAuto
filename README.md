@@ -18,10 +18,10 @@
 不用提前标注画框及标签等作为 Ground Truth 这种工作量巨大的人工手动繁琐操作， <br/>
 只需上传测试图片，通过 HTTP API 调用算法模型得到推理后返回的 JSON 响应结果， <br/>
 然后自动在图上绘制 label 标签、box 画框、line 连线、point 关键点、polygon 多边形等， <br/>
-自动断言画框是否正确，可点击边框来调整对错(√ 和 X)，一键上传可作为基准的断言结果， <br/>
+自动断言画框是否正确，可点击边框来调整对错(✓ 和 X)，一键上传可作为基准的断言结果， <br/>
 自动统计正确数、误报数、漏检数、召回率、精准率、F1 Score 等指标、自动对比前后效果。 <br/>
 
-![CVAuto-Admin-and-AIServer](https://github.com/user-attachments/assets/5e1ae542-79f7-47f6-b76d-a5c487bdf070)
+![CVAuto-with-AIServer](https://github.com/user-attachments/assets/ba917fae-a1cf-4f28-9588-da218b84b6d6)
 
 ### 支持算法
 * **目标检测**：行人、车辆、异物、零部件 等
