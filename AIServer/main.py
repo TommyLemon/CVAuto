@@ -205,7 +205,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                             pose_indexes.append(i)
 
                         bboxes.append({
-                            'id': i,
+                            'id': i + 1,
                             'label': label,
                             'score': c,
                             'angle': angles[i] if i < size(angles) else 0,
@@ -227,11 +227,12 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         result.save(filename="result_pose.jpg")  # save to disk
 
                     conf = boxes.conf
+                    xyxy = boxes.xyxy
                     cls = boxes.cls
                     xy = keypoints.xy
 
                     scores = null if is_none(xy) else conf.tolist()
-                    # bs = null if is_none(xywh) else xywh.tolist()
+                    bs = null if is_none(xyxy) else xyxy.tolist()
                     labels = null if is_none(cls) else cls.tolist()
                     points = null if is_none(xy) else xy.tolist()
 
@@ -315,12 +316,14 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                                 [p14[0], p14[1], p16[0], p16[1]]
                             ]
 
+                        b = null if i >= size(bs) else bs[i]
                         if true:  # ind is None or int(ind) >= size(bboxes):
                             bboxes.append({
-                                'id': i,
+                                'id': i + 1,
                                 'label': label,
                                 'score': c,
                                 'color': colors(0) or [255, 0, 0, 0.6],
+                                'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
                                 'points': ps,
                                 'lines': lines
                             })
@@ -347,10 +350,12 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         result.save(filename="result_seg.jpg")  # save to disk
 
                     conf = boxes.conf
+                    xyxy = boxes.xyxy
                     cls = boxes.cls
                     xy = masks.xy
 
                     scores = null if is_none(xy) else conf.tolist()
+                    bs = null if is_none(xyxy) else xyxy.tolist()
                     labels = null if is_none(cls) else cls.tolist()
                     pointss = null if is_none(xy) else [p.tolist() for p in xy]
 
@@ -365,12 +370,14 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                         points = pointss[i]
                         ind = labels[i] if i < size(labels) else -1
                         label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
+                        b = null if i >= size(bs) else bs[i]
 
                         polygons.append({
-                            'id': i,
+                            'id': i + 1,
                             'label': label,
                             'score': c,
                             'color': colors(0) or [255, 0, 0, 0.6],
+                            'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
                             'points': points
                         })
 
