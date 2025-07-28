@@ -196,7 +196,7 @@ https://github.com/TommyLemon/APIAuto/issues
 ### 技术交流
 ##### 关于作者
 [https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
-![image](https://github.com/user-attachments/assets/c4aa8573-f8b3-4973-8c37-29677c06ac3b)
+![TommyLemon-GItHub](https://github.com/user-attachments/assets/4c2d9e75-01f7-4072-bed3-cfbd10076512)
 
 如果有什么问题或建议可以 [提 issue](https://github.com/TommyLemon/APIAuto/issues)，交流技术，分享经验。<br >
 如果你解决了某些 bug，或者新增了一些功能，欢迎 [提 PR 贡献代码](https://github.com/Tencent/APIJSON/blob/master/CONTRIBUTING.md)，感激不尽。
