@@ -22,6 +22,7 @@
 自动统计正确数、误报数、漏检数、召回率、精准率、F1 Score 等指标、自动对比前后效果。 <br/>
 
 ![CVAuto-with-AIServer](https://github.com/user-attachments/assets/847bff1c-bd7d-4ac9-ad7c-7b95f2fa9850)
+注：上图左侧是 CVAuto 管理台前端网页工具页面，右侧是模拟被测的 CV AI 算法模型推理服务
 
 ### 支持算法
 * **目标检测**：行人、车辆、异物、零部件 等
