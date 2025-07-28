@@ -8,7 +8,6 @@
   <a href="https://deepwiki.com/TommyLemon/CVAuto">English</a>
   <a href="https://github.com/TommyLemon/CVAuto#%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B">快速上手</a>
   <a href="https://search.bilibili.com/all?keyword=APIAuto">视频教程</a>
-  <a href="http://apijson.cn/cv">在线体验</a>
   <a href="https://deepwiki.com/TommyLemon/CVAuto">AI 问答</a>
 </p>
 
