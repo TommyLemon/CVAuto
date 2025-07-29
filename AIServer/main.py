@@ -19,6 +19,14 @@ import cv2
 import numpy as np
 from PIL import Image
 
+import ssl
+# pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org easyocr
+import easyocr  # FIXME 不需要或者按以上方式也安装不了依赖的话可以注释掉
+
+ssl._create_default_https_context = ssl._create_unverified_context  # 解决 easyocr 在线下载模型报错 http ssl cert error
+reader = easyocr.Reader(['ch_sim', 'en'])  # FIXME 不需要或者安装不了 easyocr 依赖的话可以注释掉
+
+# DEBUG = false
 DEBUG = true
 
 app = Flask(__name__)
@@ -35,6 +43,7 @@ pose_model = YOLO('yolo11m-pose.pt')  # 使用你选择的模型
 seg_model = YOLO('yolo11m-seg.pt')  # 使用你选择的模型
 names = model.names  # 获取类别名称映射
 colors = Colors()
+
 
 # 检查文件类型
 def allowed_file(filename):
@@ -86,17 +95,22 @@ def cors_response(data):
 
 @app.route('/detect', methods=['POST', 'OPTIONS'])
 def api_detect():
-    return predict(is_detect=true, is_pose=false, is_segment=false)
+    return predict(is_detect=true, is_pose=false)
 
 
 @app.route('/pose', methods=['POST', 'OPTIONS'])
 def api_pose():
-    return predict(is_detect=false, is_pose=true, is_segment=false)
+    return predict(is_detect=false, is_pose=true)
 
 
 @app.route('/segment', methods=['POST', 'OPTIONS'])
 def api_segment():
     return predict(is_detect=false, is_pose=false, is_segment=true)
+
+
+@app.route('/ocr', methods=['POST', 'OPTIONS'])
+def api_ocr():
+    return predict(is_detect=false, is_pose=false, is_ocr=true)
 
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
@@ -105,7 +119,7 @@ def api_predict():
 
 
 # @cross_origin
-def predict(is_detect=true, is_pose: bool = null, is_segment=false):
+def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool = null):
     if request.method == 'OPTIONS':
         return cors_response({})
 
@@ -327,7 +341,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                                 'points': ps,
                                 'lines': lines
                             })
-                        # else:
+                        # else: # TODO 根据 IOU 合并重复框
                         #     bbox = bboxes[int(ind)] or {
                         #         'id': i,
                         #         'label': label,
@@ -380,6 +394,37 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false):
                             'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
                             'points': points
                         })
+
+            ocr_results = null if is_ocr is not True else reader.readtext(img, text_threshold=min_conf)
+            if not_none(ocr_results):
+                i = 0
+                for bbox, text, conf in results:
+                    # 转为 [x1, y1, x2, y2]
+                    x1, y1 = np.min(bbox, axis=0)
+                    x2, y2 = np.max(bbox, axis=0)
+
+                    bboxes.append({
+                        'id': i + 1,
+                        # 'label': label,
+                        'ocr': text,
+                        'score': float(conf),
+                        # 'angle': 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
+                        # 'color': colors(0) or [255, 0, 0, 0.6],
+                        'bbox': null if is_empty(b) else [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)],
+                        'points': ps,
+                        'lines': lines
+                    })
+
+                    polygons.append({
+                        'id': i + 1,
+                        # 'label': label,
+                        'ocr': text,
+                        'score': float(conf),
+                        # 'color': colors(0) or [255, 0, 0, 0.6],
+                        'points': null if is_empty(b) else [[int(item[0]), int(item[1])] for item in bbox],
+                    })
+
+                    i += 1
 
     return cors_response({
         KEY_OK: true,
