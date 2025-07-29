@@ -398,7 +398,10 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
             ocr_results = null if is_ocr is not True else reader.readtext(img, text_threshold=min_conf)
             if not_none(ocr_results):
                 i = 0
-                for bbox, text, conf in results:
+                for bbox, text, conf in ocr_results:
+                    if is_empty(bbox):
+                        continue
+
                     # 转为 [x1, y1, x2, y2]
                     x1, y1 = np.min(bbox, axis=0)
                     x2, y2 = np.max(bbox, axis=0)
@@ -410,18 +413,16 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                         'score': float(conf),
                         # 'angle': 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
                         # 'color': colors(0) or [255, 0, 0, 0.6],
-                        'bbox': null if is_empty(b) else [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)],
-                        'points': ps,
-                        'lines': lines
+                        'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
                     })
 
                     polygons.append({
                         'id': i + 1,
                         # 'label': label,
-                        'ocr': text,
+                        # 'ocr': text,
                         'score': float(conf),
                         # 'color': colors(0) or [255, 0, 0, 0.6],
-                        'points': null if is_empty(b) else [[int(item[0]), int(item[1])] for item in bbox],
+                        'points': [[int(item[0]), int(item[1])] for item in bbox],
                     })
 
                     i += 1
