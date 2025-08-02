@@ -49,6 +49,14 @@ if you cannot run the command successfully, try pip3:
 ```sh
 pip3 install -r requirements.txt
 ```
+如果有这个报错则信任相关域名：SSLCertVerificationError certificate verify failed: unable to get local issuer certificate ... <br />
+If it shows the error, then trust the domains: certificate verify failed: unable to get local issuer certificate ...
+```shell
+ pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt 
+```
+```shell
+ pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt 
+```
 
 <br />
 
