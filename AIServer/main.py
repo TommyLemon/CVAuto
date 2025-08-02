@@ -41,7 +41,11 @@ lock = threading.Lock()
 model = YOLO('yolo11n.pt')  # 使用你选择的模型
 pose_model = YOLO('yolo11n-pose.pt')  # 使用你选择的模型
 seg_model = YOLO('yolo11n-seg.pt')  # 使用你选择的模型
+obb_model = YOLO('yolo11n-obb.pt')  # 使用你选择的模型
 names = model.names  # 获取类别名称映射
+pose_names = pose_model.names  # 获取类别名称映射
+seg_names = seg_model.names  # 获取类别名称映射
+obb_names = obb_model.names  # 获取类别名称映射
 colors = Colors()
 
 
@@ -108,6 +112,11 @@ def api_segment():
     return predict(is_detect=false, is_pose=false, is_segment=true)
 
 
+@app.route('/rotate', methods=['POST', 'OPTIONS'])
+def api_rotate():
+    return predict(is_detect=false, is_pose=false, is_rotate=true)
+
+
 @app.route('/ocr', methods=['POST', 'OPTIONS'])
 def api_ocr():
     return predict(is_detect=false, is_pose=false, is_ocr=true)
@@ -119,7 +128,7 @@ def api_predict():
 
 
 # @cross_origin
-def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool = null):
+def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool = null, is_rotate: bool = null):
     if request.method == 'OPTIONS':
         return cors_response({})
 
@@ -184,28 +193,22 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
             if is_detect is not False:
                 results = model.predict(img, conf=min_conf)  # 进行推理
                 for result in results:
-                    if is_none(result):
-                        bboxes.append([])
+                    boxes = null if is_none(result) else result.boxes  # Boxes object for bounding box outputs
+                    xyxy = null if is_none(boxes) else boxes.xyxy
+                    bs = null if is_none(xyxy) else xyxy.tolist()
+                    if is_empty(bs):
                         continue
 
                     probs = result.probs  # Probs object for classification outputs
-                    boxes = result.boxes  # Boxes object for bounding box outputs
-                    obb = result.obb  # Oriented boxes object for OBB outputs
                     if DEBUG:
                         result.show()  # display to screen
                         result.save(filename="result_detect.jpg")  # save to disk
 
                     conf = boxes.conf
-                    xyxy = boxes.xyxy
                     cls = boxes.cls
 
                     scores = null if is_none(xyxy) else conf.tolist()
-                    bs = null if is_none(xyxy) else xyxy.tolist()
                     labels = null if is_none(cls) else cls.tolist()
-                    angles = null if is_none(obb) else obb.tolist()
-
-                    if is_empty(bs):
-                        continue
 
                     for i in range(len(bs)):
                         c = scores[i] if i < size(scores) else 0
@@ -222,36 +225,32 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             'id': i + 1,
                             'label': label,
                             'score': c,
-                            'angle': angles[i] if i < size(angles) else 0,
-                            'color': colors(0) or [255, 0, 0, 0.6],
+                            'color': colors(ind%colors.n) or [255, 0, 0, 0.6],
                             'bbox': [b[0], b[1], b[2] - b[0], b[3] - b[1]]
                         })
 
             pose_results = null if is_pose is False or (is_pose is None and is_empty(pose_indexes)) else pose_model.predict(img, conf=min_conf)
             if not_none(pose_results):
                 for result in pose_results:
-                    if is_none(result):
+                    keypoints = null if is_none(result) else result.keypoints  # Keypoints object for pose outputs
+                    xy = null if is_none(keypoints) else keypoints.xy
+                    points = null if is_none(xy) else xy.tolist()
+                    if is_empty(points):
                         continue
 
                     # probs = result.probs  # Probs object for classification outputs
                     boxes = result.boxes  # Boxes object for bounding box outputs
-                    keypoints = result.keypoints  # Keypoints object for pose outputs
                     if DEBUG:
                         result.show()  # display to screen
                         result.save(filename="result_pose.jpg")  # save to disk
 
                     conf = boxes.conf
-                    xyxy = boxes.xyxy
                     cls = boxes.cls
-                    xy = keypoints.xy
+                    xyxy = boxes.xyxy
 
-                    scores = null if is_none(xy) else conf.tolist()
-                    bs = null if is_none(xyxy) else xyxy.tolist()
+                    scores = null if is_none(conf) else conf.tolist()
                     labels = null if is_none(cls) else cls.tolist()
-                    points = null if is_none(xy) else xy.tolist()
-
-                    if is_empty(points):
-                        continue
+                    bs = null if is_none(xyxy) else xyxy.tolist()
 
                     for i in range(len(points)):
                         c = scores[i] if i < size(scores) else 0
@@ -261,7 +260,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                         ps = points[i]
                         # 不准 ind = (pose_indexes[i] if i < size(pose_indexes) else -1) if is_pose is None else (labels[i] if i < size(labels) else -1)
                         ind = labels[i] if i < size(labels) else -1
-                        label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
+                        label = pose_names[int(ind)] if ind >= 0 and int(ind) < size(pose_names) else '???'
 
                         if size(ps) == 5:  # 人脸
                             p0 = ps[0]
@@ -336,7 +335,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                                 'id': i + 1,
                                 'label': label,
                                 'score': c,
-                                'color': colors(0) or [255, 0, 0, 0.6],
+                                'color': colors(ind%colors.n) or [0, 255, 0, 0.6],
                                 'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
                                 'points': ps,
                                 'lines': lines
@@ -354,27 +353,24 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
             seg_results = null if is_segment is not True or size(bboxes) > 10 else seg_model.predict(img, conf=min_conf)
             if not_none(seg_results):
                 for result in seg_results:
-                    if is_none(result):
+                    masks = null if is_none(result) else result.masks  # Masks object for segmentation masks outputs
+                    xy = null if is_none(masks) else masks.xy
+                    pointss = null if is_none(xy) else [p.tolist() for p in xy]
+                    if is_empty(pointss):
                         continue
 
                     boxes = result.boxes  # Boxes object for bounding box outputs
-                    masks = result.masks  # Masks object for segmentation masks outputs
                     if DEBUG:
                         result.show()  # display to screen
                         result.save(filename="result_seg.jpg")  # save to disk
 
                     conf = boxes.conf
-                    xyxy = boxes.xyxy
                     cls = boxes.cls
-                    xy = masks.xy
+                    xyxy = boxes.xyxy
 
-                    scores = null if is_none(xy) else conf.tolist()
-                    bs = null if is_none(xyxy) else xyxy.tolist()
+                    scores = null if is_none(conf) else conf.tolist()
                     labels = null if is_none(cls) else cls.tolist()
-                    pointss = null if is_none(xy) else [p.tolist() for p in xy]
-
-                    if is_empty(pointss):
-                        continue
+                    bs = null if is_none(xyxy) else xyxy.tolist()
 
                     for i in range(len(pointss)):
                         c = scores[i] if i < size(scores) else 0
@@ -383,16 +379,77 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
 
                         points = pointss[i]
                         ind = labels[i] if i < size(labels) else -1
-                        label = names[int(ind)] if ind >= 0 and int(ind) < size(names) else '???'
+                        label = seg_names[int(ind)] if ind >= 0 and int(ind) < size(seg_names) else '???'
                         b = null if i >= size(bs) else bs[i]
 
+                        x1, y1, x2, y2 = b[0], b[1], b[2], b[3]
+
+                        ind = labels[i] if i < size(labels) else -1
+                        label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
+
+                        bboxes.append({
+                            'id': i + 1,
+                            'label': label,
+                            'score': c,
+                            'color': colors(ind % colors.n) or [0, 0, 255, 0.6],
+                            'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
+                        })
                         polygons.append({
                             'id': i + 1,
                             'label': label,
                             'score': c,
-                            'color': colors(0) or [255, 0, 0, 0.6],
+                            'color': colors(ind%colors.n) or [0, 0, 255, 0.6],
                             'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
                             'points': points
+                        })
+
+            obb_results = null if is_rotate is not True else obb_model.predict(img, conf=min_conf)
+            if not_none(obb_results):
+                for result in obb_results:
+                    obb = null if is_none(result) else result.obb  # Oriented boxes object for OBB outputs
+                    xyxyxyxy = null if is_none(obb) else obb.xyxyxyxy
+                    obs = null if is_none(xyxyxyxy) else xyxyxyxy.tolist()
+                    if is_empty(obs):
+                        continue
+
+                    if DEBUG:
+                        result.show()  # display to screen
+                        result.save(filename="result_obb.jpg")  # save to disk
+
+                    conf = obb.conf
+                    cls = obb.cls
+                    xywhr = obb.xywhr
+
+                    scores = null if is_none(conf) else conf.tolist()
+                    labels = null if is_none(cls) else cls.tolist()
+                    angles = null if is_none(xywhr) else xywhr.tolist()
+
+                    for i in range(len(obs)):
+                        c = scores[i] if i < size(scores) else 0
+                        if c < min_conf:
+                            continue
+
+                        ob = obs[i]
+                        x1, y1 = np.min(ob, axis=0)
+                        x2, y2 = np.max(ob, axis=0)
+
+                        ind = labels[i] if i < size(labels) else -1
+                        label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
+
+                        bboxes.append({
+                            'id': i + 1,
+                            'label': label,
+                            'score': c,
+                            'angle': null if i >= size(angles) else 2*angles[i][4],
+                            'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
+                            'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2)- int(y1)]
+                        })
+                        polygons.append({
+                            'id': i + 1,
+                            'label': label,
+                            'score': c,
+                            'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
+                            'points': [[int(obi[0]), int(obi[1])] for obi in ob]
                         })
 
             ocr_results = null if is_ocr is not True else reader.readtext(img, text_threshold=min_conf)
@@ -412,7 +469,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                         'ocr': text,
                         'score': float(conf),
                         # 'angle': 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
-                        # 'color': colors(0) or [255, 0, 0, 0.6],
+                        'color': [0, 100, 100, 0.6],
                         'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
                     })
 
@@ -421,7 +478,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                         # 'label': label,
                         # 'ocr': text,
                         'score': float(conf),
-                        # 'color': colors(0) or [255, 0, 0, 0.6],
+                        'color': [0, 100, 100, 0.6],
                         'points': [[int(item[0]), int(item[1])] for item in bbox],
                     })
 
