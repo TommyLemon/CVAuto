@@ -398,6 +398,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             'id': i + 1,
                             'label': label,
                             'score': c,
+                            'fill': true,
                             'color': colors(ind%colors.n) or [0, 0, 255, 0.6],
                             'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
                             'points': points
@@ -448,6 +449,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             'id': i + 1,
                             'label': label,
                             'score': c,
+                            'fill': false,
                             'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
                             'points': [[int(obi[0]), int(obi[1])] for obi in ob]
                         })
@@ -477,6 +479,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                         'id': i + 1,
                         # 'label': label,
                         # 'ocr': text,
+                        'fill': false,
                         'score': float(conf),
                         'color': [0, 100, 100, 0.6],
                         'points': [[int(item[0]), int(item[1])] for item in bbox],
