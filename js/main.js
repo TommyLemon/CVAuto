@@ -7278,9 +7278,9 @@ https://github.com/Tencent/APIJSON/issues
         const curWrongs = curTr.wrongs = curTr.wrongs || [];
 
         var beforeBoxes = JSONResponse.getBboxes(detection.before) || [];   // 上次参考结果
-        var missBboxes = this.isMLEnabled ? JSONResponse.getBboxes(detection.missTruth) : null;
-        if (missBboxes != null && missBboxes.length > 0) {
-          beforeBoxes = JSONResponse.deepMerge(beforeBoxes, missBboxes);
+        var beforeMissBboxes = this.isMLEnabled ? JSONResponse.getBboxes(detection.missTruth) : null;
+        if (beforeMissBboxes != null && beforeMissBboxes.length > 0) {
+          beforeBoxes = JSONResponse.deepMerge(beforeBoxes, beforeMissBboxes);
         }
 
         const afterBoxes = JSONResponse.getBboxes(detection.after) || [];    // 当前检测结果
@@ -7395,6 +7395,11 @@ https://github.com/Tencent/APIJSON/issues
               '@before': true
             };
             diffBoxes.push(box);
+
+            if (curWrongs.includes(refInd)) { // || wrongs.includes(refInd)) {
+              return;
+            }
+
             missBboxes.push(box); // 需要在渲染前合并时区分
 
             var polygon = beforePolygons[refInd]
@@ -13007,7 +13012,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             'invalid': 0,
             'host': this.getBaseUrl(),
             '@order': 'date-',
-            '@column': 'id,userId,testAccountId,documentId,randomId,reportId,duration,minDuration,maxDuration,total,correct,wrong,miss,score,iou,recall,precision,f1,corrects,wrongs,response' + (this.isMLEnabled ? ',standard' : ''),
+            '@column': 'id,userId,testAccountId,documentId,randomId,reportId,duration,minDuration,maxDuration,total,correct,wrong,miss,score,iou,recall,precision,f1,corrects,wrongs,sameRandomIds,missTruth,response' + (this.isMLEnabled ? ',standard' : ''),
             'standard{}': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
           }
         }, {}, function (url, res, err) {
