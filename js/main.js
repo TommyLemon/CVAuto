@@ -7371,6 +7371,16 @@ https://github.com/Tencent/APIJSON/issues
           }
         });
 
+        var missTruth = this.missTruth = this.missTruth || {};
+        var missBboxes = missTruth.bboxes || [];
+        var missPolygons = missTruth.polygons || [];
+        var missLines = missTruth.lines || [];
+        var missPoints = missTruth.points || [];
+
+        const beforePolygons = JSONResponse.getPolygons(detection.before) || [];   // 上次参考结果
+        const beforeLines = JSONResponse.getLines(detection.before) || [];   // 上次参考结果
+        const beforePoints = JSONResponse.getPoints(detection.before) || [];   // 上次参考结果
+
         beforeBoxes.forEach((refBox, refInd) => {
           var macth = refBox == null ? null : matchMap[refInd];
           if (refBox != null && (macth == null || macth <= 0)) {
@@ -7379,6 +7389,23 @@ https://github.com/Tencent/APIJSON/issues
               // isBefore: true,
               '@before': true
             });
+
+            missBboxes.push(refBox);
+
+            var polygon = beforePolygons[refInd]
+            if (polygon != null) {
+              missPolygons.push(polygon)
+            }
+
+            var line = beforeLines[refInd]
+            if (line != null) {
+              missLines.push(line)
+            }
+
+            var point = beforePoints[refInd]
+            if (point != null) {
+              missPoints.push(point)
+            }
           }
         });
 
@@ -7387,6 +7414,20 @@ https://github.com/Tencent/APIJSON/issues
         diff.bboxes = diffBoxes;
         detection.diff = diff;
         this.detection = detection;
+
+        if (missBboxes.length > 0) {
+          missTruth.bboxes = missBboxes;
+        }
+        if (missPolygons.length > 0) {
+          missTruth.polygons = missPolygons;
+        }
+        if (missLines.length > 0) {
+          missTruth.lines = missLines;
+        }
+        if (missPoints.length > 0) {
+          missTruth.points = missPoints;
+        }
+        this.missTruth = missTruth;
 
         this.drawAll();
         this.compute();
@@ -12806,6 +12847,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const cgId = chain.groupId || 0
             const cId = chain.id || 0
             const detection = this.detection || {};
+            const missTruth = this.missTruth || {}
 
             //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
@@ -12854,7 +12896,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 corrects: detection.corrects,
                 wrongs: detection.wrongs,
                 sameRandomIds: this.sameRandomIds,
-                missTruth: this.missTruth,
+                missTruth: Object.keys(missTruth).length <= 0 ? null : JSON.stringify(missTruth),
                 compare: JSON.stringify(testRecord.compare || {}),
                 response: rawRspStr,
                 standard: isML ? JSON.stringify(stddObj) : null
