@@ -7277,7 +7277,12 @@ https://github.com/Tencent/APIJSON/issues
         const curCorrects = curTr.corrects = curTr.corrects || [];
         const curWrongs = curTr.wrongs = curTr.wrongs || [];
 
-        const beforeBoxes = JSONResponse.getBboxes(detection.before) || [];   // 上次参考结果
+        var beforeBoxes = JSONResponse.getBboxes(detection.before) || [];   // 上次参考结果
+        var missBboxes = this.isMLEnabled ? JSONResponse.getBboxes(detection.missTruth) : null;
+        if (missBboxes != null && missBboxes.length > 0) {
+          beforeBoxes = JSONResponse.deepMerge(beforeBoxes, missBboxes);
+        }
+
         const afterBoxes = JSONResponse.getBboxes(detection.after) || [];    // 当前检测结果
         const iouThreshold = (detection.diffThreshold || 90) / 100;
 
@@ -7384,13 +7389,13 @@ https://github.com/Tencent/APIJSON/issues
         beforeBoxes.forEach((refBox, refInd) => {
           var macth = refBox == null ? null : matchMap[refInd];
           if (refBox != null && (macth == null || macth <= 0)) {
-            diffBoxes.push({
+            var box = {
               ...refBox,
               // isBefore: true,
               '@before': true
-            });
-
-            missBboxes.push(refBox);
+            };
+            diffBoxes.push(box);
+            missBboxes.push(box); // 需要在渲染前合并时区分
 
             var polygon = beforePolygons[refInd]
             if (polygon != null) {
