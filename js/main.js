@@ -7181,31 +7181,97 @@ https://github.com/Tencent/APIJSON/issues
         this.detection = detection;
 
         var compareRandomIds = this.compareRandomIds || [];
-        if (compareRandomIds instanceof Array) {
-          compareRandomIds = [...new Set([...compareRandomIds, ...(detection.sameRandomIds || [])])];
-        }
+        // var afterIds = [...new Set([...compareRandomIds, ...(this.sameRandomIds || [])])];
+        // var beforeIds = [...new Set([...compareRandomIds, ...(detection.sameRandomIds || [])])];
+        var afterIds = this.sameRandomIds || [];
+        var beforeIds = detection.sameRandomIds || [];
 
         this.adminRequest('/get', {
-          "TestRecord[]": {
-            "count": 2,
+          // "TestRecord[]": {
+          //   "count": 2,
+          //   "TestRecord": {
+          //     "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+          //     "@raw": "@column",
+          //     "@group": "reportId",
+          //     "@order": "reportId-",
+          //     "total>=": 0,
+          //     "wrong>=": 0,
+          //     "correct>=": 0,
+          //     'randomId{}': compareRandomIds.length <= 0 ? null : compareRandomIds,
+          //     // "@explain": true
+          //   },
+          // },
+          // 引用失败 "TestRecord-reportId[]": {
+          //   "count": 2,
+          //   "TestRecord": {
+          //     "@column": "reportId",
+          //     "@group": "reportId",
+          //     "@order": "reportId-",
+          //     "total>=": 0,
+          //     "wrong>=": 0,
+          //     "correct>=": 0
+          //   }
+          // },
+          "TestRecord:post": {
+            "@column": "reportId",
+            "@order": "reportId-"
+          },
+          "TestRecord:pre": {
+            "reportId<@": "TestRecord:post/reportId",
+            "@column": "reportId",
+            "@order": "reportId-"
+          },
+          "TestRecord:after": {
+            "reportId@": "TestRecord:post/reportId",
+            "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+            "@raw": "@column",
+            "@group": "reportId",
+            "@order": "reportId-",
+            "total>=": 0,
+            "wrong>=": 0,
+            "correct>=": 0
+          },
+          "TestRecord:before": {
+            "reportId@": "TestRecord:pre/reportId",
+            "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+            "@raw": "@column",
+            "@group": "reportId",
+            "@order": "reportId-",
+            "total>=": 0,
+            "wrong>=": 0,
+            "correct>=": 0
+          },
+          "TestRecord-reportId:ids2[]": {
             "TestRecord": {
-              "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;"
-                  + "count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
-              "@raw": "@column",
-              "@group": "reportId",
-              "@order": "reportId-",
+              "reportId<@": "TestRecord:pre/reportId",
+              "@column": "max(reportId):reportId",
+              "@group": "randomId",
               "total>=": 0,
               "wrong>=": 0,
-              "correct>=": 0,
-              'randomId{}': compareRandomIds.length <= 0 ? null : compareRandomIds,
-              // "@explain": true
+              "correct>=": 0
             }
+          },
+          "TestRecord:beforeSame": {
+            "reportId{}@": "TestRecord-reportId:ids2[]",
+            'randomId{}': beforeIds.length <= 0 ? null : beforeIds,
+            "@column": "sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+            "@raw": "@column",
+            "total>=": 0,
+            "wrong>=": 0,
+            "correct>=": 0
           }
+          // "@explain": true,
         }, {}, function (url, res, err) {
           App.onResponse(url, res, err)
 
           var data = res.data || {}
-          var trs = data['TestRecord[]'] || []
+          var trs = data['TestRecord[]'] || [data['TestRecord:after'], data['TestRecord:before']];
+          var beforeSame = data['TestRecord:beforeSame'] || {};
+          var extras = [
+            {imgTotal: sameImgTotal, imgWrong: sameImgWrong, imgCorrect: sameImgCorrect, imgMiss: sameImgMiss},
+            beforeSame
+          ];
+
           ['after', 'before', 'diff'].forEach((stage, i) => {
             var isDiff = stage == 'diff';
             var tr = trs[i] || {};
@@ -7227,15 +7293,16 @@ https://github.com/Tencent/APIJSON/issues
                 detection['diff' + type + 'F1Str'] = (f1 >= 0 ? '+' : '') + (100 * f1).toFixed(0);
               });
             } else {
-              var imgTotal = detection[stage + 'ImgTotal'] = (tr.imgTotal || tr.imgCorrect || 0) + (isAfter ? sameImgTotal : 0);
-              var imgWrong = detection[stage + 'ImgWrong'] = (tr.imgWrong || 0) + (isAfter ? sameImgWrong : 0);
-              var imgCorrect = detection[stage + 'ImgCorrect'] = ((tr.imgCorrect || 0) + (isAfter ? sameImgCorrect : 0)) || (imgTotal - imgWrong);
-              var imgMiss = detection[stage + 'ImgMiss'] = ((tr.imgMiss || 0) + (isAfter ? sameImgMiss : 0)) || (imgTotal - imgCorrect);
+              var extra = extras[i] || {};
+              var imgTotal = detection[stage + 'ImgTotal'] = (tr.imgTotal || tr.imgCorrect || 0) + (extra.imgTotal || 0);
+              var imgWrong = detection[stage + 'ImgWrong'] = (tr.imgWrong || 0) + (extra.imgWrong || 0);
+              var imgCorrect = detection[stage + 'ImgCorrect'] = ((tr.imgCorrect || 0) + (extra.imgCorrect || 0)) || (imgTotal - imgWrong);
+              var imgMiss = detection[stage + 'ImgMiss'] = ((tr.imgMiss || 0) + (extra.imgMiss || 0)) || (imgTotal - imgCorrect);
 
-              var allTotal = detection[stage + 'AllTotal'] = (tr.allTotal || tr.allCorrect || 0) + (isAfter ? sameTotal : 0);
-              var allWrong = detection[stage + 'AllWrong'] = (tr.allWrong || 0) + (isAfter ? sameWrong : 0);
-              var allCorrect = detection[stage + 'AllCorrect'] = ((tr.allCorrect || 0) + (isAfter ? sameCorrect : 0)) || (allTotal - allWrong);
-              var allMiss = detection[stage + 'AllMiss'] = ((tr.allMiss || 0) + (isAfter ? sameMiss : 0)) || (allTotal - allCorrect);
+              var allTotal = detection[stage + 'AllTotal'] = (tr.allTotal || tr.allCorrect || 0) + (extra.sameTotal || 0);
+              var allWrong = detection[stage + 'AllWrong'] = (tr.allWrong || 0) + (extra.sameWrong || 0);
+              var allCorrect = detection[stage + 'AllCorrect'] = ((tr.allCorrect || 0) + (extra.sameCorrect || 0)) || (allTotal - allWrong);
+              var allMiss = detection[stage + 'AllMiss'] = ((tr.allMiss || 0) + (extra.sameMiss || 0)) || (allTotal - allCorrect);
 
               var allImgRecall = detection[stage + 'ImgRecall'] = allImgCorrect / allImgTotal;
               var allImgPrecision = detection[stage + 'ImgPrecision'] = allImgCorrect / (allImgCorrect + allImgWrong);
