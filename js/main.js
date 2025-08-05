@@ -11982,10 +11982,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var bdt = tr.duration || 0
         it.durationBeforeShowStr = bdt <= 0 ? '' : (bdt < 1000 ? bdt + 'ms' : (bdt < 1000*60 ? (bdt/1000).toFixed(1) + 's' : (bdt <= 1000*60*60 ? (bdt/1000/60).toFixed(1) + 'm' : '>1h')))
         try {
-          var durationInfo = response == null ? null : response['time:start|duration|end|parse|sql']
+          var durationInfo = response == null ? null : response['time:start|duration|end|parse|sql|model']
           it.durationInfo = durationInfo
           if (durationInfo == null) {
-            throw new Error("response['time:start|duration|end|parse|sql'] is null!");
+            throw new Error("response['time:start|duration|end|parse|sql|model'] is null!");
           }
 
           var di = durationInfo.substring(durationInfo.indexOf('|') + 1)
@@ -12003,7 +12003,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         catch (e) {
           // log(e)
           it.durationShowStr = it.durationShowStr || it.duration
-          it.durationHint = it.durationHint || '最外层缺少字段 "time:start|duration|end|parse|sql"，无法对比耗时'
+          it.durationHint = it.durationHint || '最外层缺少字段 "time:start|duration|end|parse|sql|model"，无法对比耗时'
         }
 
         if (err != null) {
@@ -12569,6 +12569,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           delete obj["timestamp"]
           delete obj["time:start|duration|end"]
           delete obj["time:start|duration|end|parse|sql"]
+          delete obj["time:start|duration|end|parse|sql|model"]
+          delete obj["detect-time:start|duration|end"]
+          delete obj["pose-time:start|duration|end"]
+          delete obj["seg-time:start|duration|end"]
+          delete obj["obb-time:start|duration|end"]
+          delete obj["ocr-time:start|duration|end"]
           // 保留 delete obj["throw"]
           // 保留 delete obj["trace:throw"]
           delete obj["trace:stack"]
@@ -12881,7 +12887,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             var maxDuration = testRecord.maxDuration
             if (isDuration) {
               if (item.duration == null) {  // 没有获取到
-                alert('最外层缺少字段 "time:start|duration|end|parse|sql"，无法对比耗时！')
+                alert('最外层缺少字段 "time:start|duration|end|parse|sql|model"，无法对比耗时！')
                 return
               }
               else if (maxDuration == null && minDuration == null) {

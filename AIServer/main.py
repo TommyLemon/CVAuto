@@ -535,7 +535,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
         KEY_OK: true,
         KEY_CODE: CODE_SUCCESS,
         KEY_MSG: MSG_SUCCESS,
-        KEY_TIME_DETAIL + '|parse|model': total_time_detail + f'|{total_dur - dur}|{dur}'
+        KEY_TIME_DETAIL + '|parse|sql|model': total_time_detail + f'|{total_dur - dur}|0|{dur}'
     }
     if not_empty(detect_time_detail):
         rsp['detect-' + KEY_TIME_DETAIL] = detect_time_detail

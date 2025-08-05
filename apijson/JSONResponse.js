@@ -2282,9 +2282,9 @@ var JSONResponse = {
     var isArr = bbox instanceof Array;
     var x = + ((isArr ? bbox[0] : bbox.x || bbox.x0 || bbox.x1 || bbox.startX || bbox.xStart || bbox.leftTopX || bbox.topLeftX || bbox.start_x || bbox.x_start || bbox.left_top_x || bbox.top_left_x) || 0);
     var y = + ((isArr ? bbox[1] : bbox.y || bbox.y0 || bbox.y1 || bbox.startY || bbox.yStart || bbox.leftTopY || bbox.topLeftY || bbox.start_y || bbox.y_start || bbox.left_top_y || bbox.top_left_y) || 0);
-    var w = + ((isArr ? bbox[2] : bbox.width || bbox.w || ((bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || 0) - x)));
-    var h = + ((isArr ? bbox[3] : bbox.height || bbox.h || ((bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || 0) - y)));
-    var d = + (isArr ? bbox[4] : JSONResponse.getDegree(bbox) || 0);
+    var w = + ((isArr ? bbox[2] : bbox.width || bbox.w || ((bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || 0) - x)) || 0);
+    var h = + ((isArr ? bbox[3] : bbox.height || bbox.h || ((bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || 0) - y)) || 0);
+    var d = + ((isArr ? bbox[4] : JSONResponse.getDegree(bbox)) || 0);
 
     const isRate = (width != null && width > 0) && (height != null && height > 0)
         && Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(w) <= 1 && Math.abs(h) <= 1;
@@ -2309,9 +2309,9 @@ var JSONResponse = {
     var isArr = bbox instanceof Array;
     var x = + ((isArr ? bbox[0] : bbox.x || bbox.x0 || bbox.x1 || bbox.startX || bbox.xStart || bbox.leftTopX || bbox.topLeftX || bbox.start_x || bbox.x_start || bbox.left_top_x || bbox.top_left_x) || 0);
     var y = + ((isArr ? bbox[1] : bbox.y || bbox.y0 || bbox.y1 || bbox.startY || bbox.yStart || bbox.leftTopY || bbox.topLeftY || bbox.start_y || bbox.y_start || bbox.left_top_y || bbox.top_left_y) || 0);
-    var x2 = + ((isArr ? bbox[2] : bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || ((bbox.width || bbox.w || 0) + x)));
-    var y2 = + ((isArr ? bbox[3] : bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || ((bbox.height || bbox.h || 0) + y)));
-    var d = + (isArr ? bbox[4] : JSONResponse.getDegree(bbox) || 0);
+    var x2 = + ((isArr ? bbox[2] : bbox.x2 || bbox.x1 || bbox.rbx || bbox.brx || bbox.endX || bbox.xEnd || bbox.rightBottomX || bbox.bottomRightX || bbox.end_x || bbox.x_end || bbox.right_bottom_x || bbox.bottom_right_x || ((bbox.width || bbox.w || 0) + x)) || 0);
+    var y2 = + ((isArr ? bbox[3] : bbox.y2 || bbox.y1 || bbox.rby || bbox.bry || bbox.endY || bbox.yEnd || bbox.rightBottomY || bbox.bottomRightY || bbox.end_y || bbox.y_end || bbox.right_bottom_y || bbox.bottom_right_y || ((bbox.height || bbox.h || 0) + y)) || 0);
+    var d = + ((isArr ? bbox[4] : JSONResponse.getDegree(bbox)) || 0);
 
     const isRate = (width != null && width > 0) && (height != null && height > 0)
         && Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(x2) < 1 && Math.abs(y2) < 1;
