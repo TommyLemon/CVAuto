@@ -1,3 +1,4 @@
+import json
 import threading
 
 import requests
@@ -13,7 +14,8 @@ import base64
 from io import BytesIO
 
 from unitauto.methodutil import not_empty, not_none, is_empty, null, is_none, size, false, true, KEY_CODE, KEY_MSG, \
-    KEY_OK, CODE_SUCCESS, MSG_SUCCESS, KEY_THROW, KEY_TRACE
+    KEY_OK, CODE_SUCCESS, MSG_SUCCESS, KEY_THROW, KEY_TRACE, cur_time_in_millis, get_time_detail, KEY_TIME_DETAIL, \
+    is_str
 from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
@@ -86,14 +88,15 @@ def download_image(url):
 def cors_response(data):
     host = request.headers.get('Origin') or request.headers.get('Referer') or 'http://localhost'
 
-    rsp = make_response(jsonify(data), 200)
+    rsp = make_response(data if is_str(data) else json.dumps(data), 200)
     # rsp.status = status
     # rsp.status_code = status
-    rsp.headers.add('Access-Control-Allow-Origin', host)  # 允许所有域名访问
-    rsp.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')  # 允许的请求方法
-    rsp.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Authentication,Cookie,Token,JWT')  # 允许的请求头
-    rsp.headers.add('Access-Control-Allow-Credentials', 'true')  # 支持 cookies 或者认证信息
-    rsp.headers.add('Access-Control-Max-Age', '3600')  # 预检请求结果缓存时间，单位为秒
+    rsp.headers.set('Access-Control-Allow-Origin', host)  # 允许所有域名访问
+    rsp.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')  # 允许的请求方法
+    rsp.headers.set('Access-Control-Allow-Headers', 'Content-Type,Authorization,Authentication,Cookie,Token,JWT')  # 允许的请求头
+    rsp.headers.set('Access-Control-Allow-Credentials', 'true')  # 支持 cookies 或者认证信息
+    rsp.headers.set('Access-Control-Max-Age', '3600')  # 预检请求结果缓存时间，单位为秒
+    rsp.headers.set('Content-Type', 'application/json;charset=utf-8')  # 固定返回 JSON
     return rsp
 
 
@@ -140,10 +143,10 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
         file = files['file']
         if file.filename == '':
             return cors_response({
-            KEY_OK: false,
-            KEY_CODE: 400,
-            KEY_MSG: 'No selected file'
-        })
+                KEY_OK: false,
+                KEY_CODE: 400,
+                KEY_MSG: 'No selected file'
+            })
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
@@ -187,11 +190,25 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
 
     bboxes = []
     polygons = []
+
+    dur = 0
+    detect_time_detail = null
+    pose_time_detail = null
+    seg_time_detail = null
+    obb_time_detail = null
+    ocr_time_detail = null
+
+    total_start_time = cur_time_in_millis()
     with lock:
         for img in imgs:
             pose_indexes = []
             if is_detect is not False:
+                start_time = cur_time_in_millis()
                 results = model.predict(img, conf=min_conf)  # 进行推理
+                end_time = cur_time_in_millis()
+                dur += end_time - start_time
+                detect_time_detail = get_time_detail(start_time, end_time)
+
                 for result in results:
                     boxes = null if is_none(result) else result.boxes  # Boxes object for bounding box outputs
                     xyxy = null if is_none(boxes) else boxes.xyxy
@@ -229,271 +246,309 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             'bbox': [b[0], b[1], b[2] - b[0], b[3] - b[1]]
                         })
 
-            pose_results = null if is_pose is False or (is_pose is None and is_empty(pose_indexes)) else pose_model.predict(img, conf=min_conf)
-            if not_none(pose_results):
-                for result in pose_results:
-                    keypoints = null if is_none(result) else result.keypoints  # Keypoints object for pose outputs
-                    xy = null if is_none(keypoints) else keypoints.xy
-                    points = null if is_none(xy) else xy.tolist()
-                    if is_empty(points):
-                        continue
-
-                    # probs = result.probs  # Probs object for classification outputs
-                    boxes = result.boxes  # Boxes object for bounding box outputs
-                    if DEBUG:
-                        result.show()  # display to screen
-                        result.save(filename="result_pose.jpg")  # save to disk
-
-                    conf = boxes.conf
-                    cls = boxes.cls
-                    xyxy = boxes.xyxy
-
-                    scores = null if is_none(conf) else conf.tolist()
-                    labels = null if is_none(cls) else cls.tolist()
-                    bs = null if is_none(xyxy) else xyxy.tolist()
-
-                    for i in range(len(points)):
-                        c = scores[i] if i < size(scores) else 0
-                        if c < min_conf:
+            if is_pose or (is_pose is None and is_detect and not_empty(pose_indexes)):
+                start_time = cur_time_in_millis()
+                pose_results = pose_model.predict(img, conf=min_conf)
+                end_time = cur_time_in_millis()
+                dur += end_time - start_time
+                pose_time_detail = get_time_detail(start_time, end_time)
+                if not_none(pose_results):
+                    for result in pose_results:
+                        keypoints = null if is_none(result) else result.keypoints  # Keypoints object for pose outputs
+                        xy = null if is_none(keypoints) else keypoints.xy
+                        points = null if is_none(xy) else xy.tolist()
+                        if is_empty(points):
                             continue
 
-                        ps = points[i]
-                        # 不准 ind = (pose_indexes[i] if i < size(pose_indexes) else -1) if is_pose is None else (labels[i] if i < size(labels) else -1)
-                        ind = labels[i] if i < size(labels) else -1
-                        label = pose_names[int(ind)] if ind >= 0 and int(ind) < size(pose_names) else '???'
+                        # probs = result.probs  # Probs object for classification outputs
+                        boxes = result.boxes  # Boxes object for bounding box outputs
+                        if DEBUG:
+                            result.show()  # display to screen
+                            result.save(filename="result_pose.jpg")  # save to disk
 
-                        if size(ps) == 5:  # 人脸
-                            p0 = ps[0]
-                            p1 = ps[1]
-                            p2 = ps[2]
-                            p3 = ps[3]
-                            p4 = ps[4]
-                            lines = [
-                                [p0[0], p0[1], p1[0], p1[1]],
-                                [p1[0], p1[1], p2[0], p2[1]],
-                                [p2[0], p2[1], p3[0], p3[1]],
-                                [p3[0], p3[1], p4[0], p4[1]],
-                                [p4[0], p4[1], p2[0], p2[1]],
-                                [p2[0], p2[1], p0[0], p0[1]]
-                            ]
-                        elif size(ps) == 17:  # 人体姿态
-                            p0 = ps[0]  # 鼻子（nose）
-                            p1 = ps[1]  # 左眼（left_eye）
-                            p2 = ps[2]  # 右眼（right_eye）
-                            p3 = ps[3]  # 左耳（left_ear）
-                            p4 = ps[4]  # 右耳（right_ear）
-                            p5 = ps[5]  # 左肩（left_shoulder）
-                            p6 = ps[6]  # 右肩（right_shoulder）
-                            p7 = ps[7]  # 左肘（left_elbow）
-                            p8 = ps[8]  # 右肘（right_elbow）
-                            p9 = ps[9]  # 左腕（left_wrist）
-                            p10 = ps[10]  # 右腕（right_wrist）
-                            p11 = ps[11]  # 左髋（left_hip）
-                            p12 = ps[12]  # 右髋（right_hip）
-                            p13 = ps[13]  # 左膝（left_knee）
-                            p14 = ps[14]  # 右膝（right_knee）
-                            p15 = ps[15]  # 左踝（left_ankle）
-                            p16 = ps[16]  # 右踝（right_ankle）
+                        conf = boxes.conf
+                        cls = boxes.cls
+                        xyxy = boxes.xyxy
 
-                            lines = [
-                                # 头部
-                                [p0[0], p0[1], p1[0], p1[1]],
-                                [p0[0], p0[1], p2[0], p2[1]],
-                                [p1[0], p1[1], p3[0], p3[1]],
-                                [p2[0], p2[1], p4[0], p4[1]],
+                        scores = null if is_none(conf) else conf.tolist()
+                        labels = null if is_none(cls) else cls.tolist()
+                        bs = null if is_none(xyxy) else xyxy.tolist()
 
-                                # 头肩
-                                [p3[0], p3[1], p5[0], p5[1]],
-                                [p4[0], p4[1], p6[0], p6[1]],
+                        for i in range(len(points)):
+                            c = scores[i] if i < size(scores) else 0
+                            if c < min_conf:
+                                continue
 
-                                # 肩膀
-                                [p5[0], p5[1], p6[0], p6[1]],
+                            ps = points[i]
+                            # 不准 ind = (pose_indexes[i] if i < size(pose_indexes) else -1) if is_pose is None else (labels[i] if i < size(labels) else -1)
+                            ind = labels[i] if i < size(labels) else -1
+                            label = pose_names[int(ind)] if ind >= 0 and int(ind) < size(pose_names) else '???'
 
-                                # 手臂
-                                [p5[0], p5[1], p7[0], p7[1]],
-                                [p7[0], p7[1], p9[0], p9[1]],
-                                [p6[0], p6[1], p8[0], p8[1]],
-                                [p8[0], p8[1], p10[0], p10[1]],
+                            if size(ps) == 5:  # 人脸
+                                p0 = ps[0]
+                                p1 = ps[1]
+                                p2 = ps[2]
+                                p3 = ps[3]
+                                p4 = ps[4]
+                                lines = [
+                                    [p0[0], p0[1], p1[0], p1[1]],
+                                    [p1[0], p1[1], p2[0], p2[1]],
+                                    [p2[0], p2[1], p3[0], p3[1]],
+                                    [p3[0], p3[1], p4[0], p4[1]],
+                                    [p4[0], p4[1], p2[0], p2[1]],
+                                    [p2[0], p2[1], p0[0], p0[1]]
+                                ]
+                            elif size(ps) == 17:  # 人体姿态
+                                p0 = ps[0]  # 鼻子（nose）
+                                p1 = ps[1]  # 左眼（left_eye）
+                                p2 = ps[2]  # 右眼（right_eye）
+                                p3 = ps[3]  # 左耳（left_ear）
+                                p4 = ps[4]  # 右耳（right_ear）
+                                p5 = ps[5]  # 左肩（left_shoulder）
+                                p6 = ps[6]  # 右肩（right_shoulder）
+                                p7 = ps[7]  # 左肘（left_elbow）
+                                p8 = ps[8]  # 右肘（right_elbow）
+                                p9 = ps[9]  # 左腕（left_wrist）
+                                p10 = ps[10]  # 右腕（right_wrist）
+                                p11 = ps[11]  # 左髋（left_hip）
+                                p12 = ps[12]  # 右髋（right_hip）
+                                p13 = ps[13]  # 左膝（left_knee）
+                                p14 = ps[14]  # 右膝（right_knee）
+                                p15 = ps[15]  # 左踝（left_ankle）
+                                p16 = ps[16]  # 右踝（right_ankle）
 
-                                # 躯干
-                                [p5[0], p5[1], p11[0], p11[1]],
-                                [p6[0], p6[1], p12[0], p12[1]],
+                                lines = [
+                                    # 头部
+                                    [p0[0], p0[1], p1[0], p1[1]],
+                                    [p0[0], p0[1], p2[0], p2[1]],
+                                    [p1[0], p1[1], p3[0], p3[1]],
+                                    [p2[0], p2[1], p4[0], p4[1]],
 
-                                # 左腿
-                                [p11[0], p11[1], p12[0], p12[1]],
-                                [p11[0], p11[1], p13[0], p13[1]],
-                                [p13[0], p13[1], p15[0], p15[1]],
+                                    # 头肩
+                                    [p3[0], p3[1], p5[0], p5[1]],
+                                    [p4[0], p4[1], p6[0], p6[1]],
 
-                                # 右腿
-                                [p12[0], p12[1], p14[0], p14[1]],
-                                [p14[0], p14[1], p16[0], p16[1]]
-                            ]
+                                    # 肩膀
+                                    [p5[0], p5[1], p6[0], p6[1]],
 
-                        b = null if i >= size(bs) else bs[i]
-                        if true:  # ind is None or int(ind) >= size(bboxes):
+                                    # 手臂
+                                    [p5[0], p5[1], p7[0], p7[1]],
+                                    [p7[0], p7[1], p9[0], p9[1]],
+                                    [p6[0], p6[1], p8[0], p8[1]],
+                                    [p8[0], p8[1], p10[0], p10[1]],
+
+                                    # 躯干
+                                    [p5[0], p5[1], p11[0], p11[1]],
+                                    [p6[0], p6[1], p12[0], p12[1]],
+
+                                    # 左腿
+                                    [p11[0], p11[1], p12[0], p12[1]],
+                                    [p11[0], p11[1], p13[0], p13[1]],
+                                    [p13[0], p13[1], p15[0], p15[1]],
+
+                                    # 右腿
+                                    [p12[0], p12[1], p14[0], p14[1]],
+                                    [p14[0], p14[1], p16[0], p16[1]]
+                                ]
+
+                            b = null if i >= size(bs) else bs[i]
+                            if true:  # ind is None or int(ind) >= size(bboxes):
+                                bboxes.append({
+                                    'id': i + 1,
+                                    'label': label,
+                                    'score': c,
+                                    'color': colors(ind%colors.n) or [0, 255, 0, 0.6],
+                                    'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
+                                    'points': ps,
+                                    'lines': lines
+                                })
+                            # else: # TODO 根据 IOU 合并重复框
+                            #     bbox = bboxes[int(ind)] or {
+                            #         'id': i,
+                            #         'label': label,
+                            #         'score': scores[i] if i < size(scores) else 0,
+                            #         'color': colors(0) or [255, 0, 0, 0.6]
+                            #     }
+                            #     bbox['points'] = ps
+                            #     bbox['lines'] = lines
+
+            if is_segment or (is_segment is None and is_detect and size(bboxes) < 10):
+                start_time = cur_time_in_millis()
+                seg_results = seg_model.predict(img, conf=min_conf)
+                end_time = cur_time_in_millis()
+                dur += end_time - start_time
+                seg_time_detail = get_time_detail(start_time, end_time)
+
+                if not_none(seg_results):
+                    for result in seg_results:
+                        masks = null if is_none(result) else result.masks  # Masks object for segmentation masks outputs
+                        xy = null if is_none(masks) else masks.xy
+                        pointss = null if is_none(xy) else [p.tolist() for p in xy]
+                        if is_empty(pointss):
+                            continue
+
+                        boxes = result.boxes  # Boxes object for bounding box outputs
+                        if DEBUG:
+                            result.show()  # display to screen
+                            result.save(filename="result_seg.jpg")  # save to disk
+
+                        conf = boxes.conf
+                        cls = boxes.cls
+                        xyxy = boxes.xyxy
+
+                        scores = null if is_none(conf) else conf.tolist()
+                        labels = null if is_none(cls) else cls.tolist()
+                        bs = null if is_none(xyxy) else xyxy.tolist()
+
+                        for i in range(len(pointss)):
+                            c = scores[i] if i < size(scores) else 0
+                            if c < min_conf:
+                                continue
+
+                            points = pointss[i]
+                            ind = labels[i] if i < size(labels) else -1
+                            label = seg_names[int(ind)] if ind >= 0 and int(ind) < size(seg_names) else '???'
+                            b = null if i >= size(bs) else bs[i]
+
+                            x1, y1, x2, y2 = b[0], b[1], b[2], b[3]
+
+                            ind = labels[i] if i < size(labels) else -1
+                            label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
+
                             bboxes.append({
                                 'id': i + 1,
                                 'label': label,
                                 'score': c,
-                                'color': colors(ind%colors.n) or [0, 255, 0, 0.6],
-                                'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
-                                'points': ps,
-                                'lines': lines
+                                'color': colors(ind % colors.n) or [0, 0, 255, 0.6],
+                                'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
                             })
-                        # else: # TODO 根据 IOU 合并重复框
-                        #     bbox = bboxes[int(ind)] or {
-                        #         'id': i,
-                        #         'label': label,
-                        #         'score': scores[i] if i < size(scores) else 0,
-                        #         'color': colors(0) or [255, 0, 0, 0.6]
-                        #     }
-                        #     bbox['points'] = ps
-                        #     bbox['lines'] = lines
+                            polygons.append({
+                                'id': i + 1,
+                                'label': label,
+                                'score': c,
+                                'fill': true,
+                                'color': colors(ind%colors.n) or [0, 0, 255, 0.6],
+                                'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
+                                'points': points
+                            })
 
-            seg_results = null if is_segment is not True or size(bboxes) > 10 else seg_model.predict(img, conf=min_conf)
-            if not_none(seg_results):
-                for result in seg_results:
-                    masks = null if is_none(result) else result.masks  # Masks object for segmentation masks outputs
-                    xy = null if is_none(masks) else masks.xy
-                    pointss = null if is_none(xy) else [p.tolist() for p in xy]
-                    if is_empty(pointss):
-                        continue
-
-                    boxes = result.boxes  # Boxes object for bounding box outputs
-                    if DEBUG:
-                        result.show()  # display to screen
-                        result.save(filename="result_seg.jpg")  # save to disk
-
-                    conf = boxes.conf
-                    cls = boxes.cls
-                    xyxy = boxes.xyxy
-
-                    scores = null if is_none(conf) else conf.tolist()
-                    labels = null if is_none(cls) else cls.tolist()
-                    bs = null if is_none(xyxy) else xyxy.tolist()
-
-                    for i in range(len(pointss)):
-                        c = scores[i] if i < size(scores) else 0
-                        if c < min_conf:
+            if is_rotate or (is_rotate is None and is_ocr):
+                start_time = cur_time_in_millis()
+                obb_results = obb_model.predict(img, conf=min_conf)
+                end_time = cur_time_in_millis()
+                dur += end_time - start_time
+                obb_time_detail = get_time_detail(start_time, end_time)
+                if not_none(obb_results):
+                    for result in obb_results:
+                        obb = null if is_none(result) else result.obb  # Oriented boxes object for OBB outputs
+                        xyxyxyxy = null if is_none(obb) else obb.xyxyxyxy
+                        obs = null if is_none(xyxyxyxy) else xyxyxyxy.tolist()
+                        if is_empty(obs):
                             continue
 
-                        points = pointss[i]
-                        ind = labels[i] if i < size(labels) else -1
-                        label = seg_names[int(ind)] if ind >= 0 and int(ind) < size(seg_names) else '???'
-                        b = null if i >= size(bs) else bs[i]
+                        if DEBUG:
+                            result.show()  # display to screen
+                            result.save(filename="result_obb.jpg")  # save to disk
 
-                        x1, y1, x2, y2 = b[0], b[1], b[2], b[3]
+                        conf = obb.conf
+                        cls = obb.cls
+                        xywhr = obb.xywhr
 
-                        ind = labels[i] if i < size(labels) else -1
-                        label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
+                        scores = null if is_none(conf) else conf.tolist()
+                        labels = null if is_none(cls) else cls.tolist()
+                        angles = null if is_none(xywhr) else xywhr.tolist()
+
+                        for i in range(len(obs)):
+                            c = scores[i] if i < size(scores) else 0
+                            if c < min_conf:
+                                continue
+
+                            ob = obs[i]
+                            x1, y1 = np.min(ob, axis=0)
+                            x2, y2 = np.max(ob, axis=0)
+
+                            ind = labels[i] if i < size(labels) else -1
+                            label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
+
+                            bboxes.append({
+                                'id': i + 1,
+                                'label': label,
+                                'score': c,
+                                'angle': null if i >= size(angles) else 2*angles[i][4],
+                                'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
+                                'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2)- int(y1)]
+                            })
+                            polygons.append({
+                                'id': i + 1,
+                                'label': label,
+                                'score': c,
+                                'fill': false,
+                                'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
+                                'points': [[int(obi[0]), int(obi[1])] for obi in ob]
+                            })
+
+            if is_ocr or (is_ocr is None and is_rotate):
+                start_time = cur_time_in_millis()
+                ocr_results = reader.readtext(img, text_threshold=min_conf)
+                end_time = cur_time_in_millis()
+                dur += end_time - start_time
+                ocr_time_detail = get_time_detail(start_time, end_time)
+                if not_none(ocr_results):
+                    i = 0
+                    for bbox, text, conf in ocr_results:
+                        if is_empty(bbox):
+                            continue
+
+                        # 转为 [x1, y1, x2, y2]
+                        x1, y1 = np.min(bbox, axis=0)
+                        x2, y2 = np.max(bbox, axis=0)
 
                         bboxes.append({
                             'id': i + 1,
-                            'label': label,
-                            'score': c,
-                            'color': colors(ind % colors.n) or [0, 0, 255, 0.6],
+                            # 'label': label,
+                            'ocr': text,
+                            'score': float(conf),
+                            # 'angle': 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
+                            'color': [0, 100, 100, 0.6],
                             'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
                         })
+
                         polygons.append({
                             'id': i + 1,
-                            'label': label,
-                            'score': c,
-                            'fill': true,
-                            'color': colors(ind%colors.n) or [0, 0, 255, 0.6],
-                            'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
-                            'points': points
-                        })
-
-            obb_results = null if is_rotate is not True else obb_model.predict(img, conf=min_conf)
-            if not_none(obb_results):
-                for result in obb_results:
-                    obb = null if is_none(result) else result.obb  # Oriented boxes object for OBB outputs
-                    xyxyxyxy = null if is_none(obb) else obb.xyxyxyxy
-                    obs = null if is_none(xyxyxyxy) else xyxyxyxy.tolist()
-                    if is_empty(obs):
-                        continue
-
-                    if DEBUG:
-                        result.show()  # display to screen
-                        result.save(filename="result_obb.jpg")  # save to disk
-
-                    conf = obb.conf
-                    cls = obb.cls
-                    xywhr = obb.xywhr
-
-                    scores = null if is_none(conf) else conf.tolist()
-                    labels = null if is_none(cls) else cls.tolist()
-                    angles = null if is_none(xywhr) else xywhr.tolist()
-
-                    for i in range(len(obs)):
-                        c = scores[i] if i < size(scores) else 0
-                        if c < min_conf:
-                            continue
-
-                        ob = obs[i]
-                        x1, y1 = np.min(ob, axis=0)
-                        x2, y2 = np.max(ob, axis=0)
-
-                        ind = labels[i] if i < size(labels) else -1
-                        label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
-
-                        bboxes.append({
-                            'id': i + 1,
-                            'label': label,
-                            'score': c,
-                            'angle': null if i >= size(angles) else 2*angles[i][4],
-                            'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
-                            'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2)- int(y1)]
-                        })
-                        polygons.append({
-                            'id': i + 1,
-                            'label': label,
-                            'score': c,
+                            # 'label': label,
+                            # 'ocr': text,
                             'fill': false,
-                            'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
-                            'points': [[int(obi[0]), int(obi[1])] for obi in ob]
+                            'score': float(conf),
+                            'color': [0, 100, 100, 0.6],
+                            'points': [[int(item[0]), int(item[1])] for item in bbox],
                         })
 
-            ocr_results = null if is_ocr is not True else reader.readtext(img, text_threshold=min_conf)
-            if not_none(ocr_results):
-                i = 0
-                for bbox, text, conf in ocr_results:
-                    if is_empty(bbox):
-                        continue
+                        i += 1
 
-                    # 转为 [x1, y1, x2, y2]
-                    x1, y1 = np.min(bbox, axis=0)
-                    x2, y2 = np.max(bbox, axis=0)
+    total_end_time = cur_time_in_millis()
+    total_dur = total_end_time - total_start_time
+    total_time_detail = get_time_detail(total_start_time, total_end_time)
 
-                    bboxes.append({
-                        'id': i + 1,
-                        # 'label': label,
-                        'ocr': text,
-                        'score': float(conf),
-                        # 'angle': 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
-                        'color': [0, 100, 100, 0.6],
-                        'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
-                    })
-
-                    polygons.append({
-                        'id': i + 1,
-                        # 'label': label,
-                        # 'ocr': text,
-                        'fill': false,
-                        'score': float(conf),
-                        'color': [0, 100, 100, 0.6],
-                        'points': [[int(item[0]), int(item[1])] for item in bbox],
-                    })
-
-                    i += 1
-
-    return cors_response({
+    rsp = {
+        'bboxes': bboxes,
+        'polygons': polygons,
         KEY_OK: true,
         KEY_CODE: CODE_SUCCESS,
         KEY_MSG: MSG_SUCCESS,
-        'bboxes': bboxes,
-        'polygons': polygons
-    })
+        KEY_TIME_DETAIL + '|parse|model': total_time_detail + f'|{total_dur - dur}|{dur}'
+    }
+    if not_empty(detect_time_detail):
+        rsp['detect-' + KEY_TIME_DETAIL] = detect_time_detail
+    if not_empty(pose_time_detail):
+        rsp['pose-' + KEY_TIME_DETAIL] = pose_time_detail
+    if not_empty(seg_time_detail):
+        rsp['seg-' + KEY_TIME_DETAIL] = seg_time_detail
+    if not_empty(obb_time_detail):
+        rsp['obb-' + KEY_TIME_DETAIL] = obb_time_detail
+    if not_empty(ocr_time_detail):
+        rsp['ocr-' + KEY_TIME_DETAIL] = ocr_time_detail
+
+    return cors_response(rsp)
 
 
 if __name__ == '__main__':
