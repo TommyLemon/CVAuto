@@ -30,6 +30,7 @@ reader = easyocr.Reader(['ch_sim', 'en'])  # FIXME 不需要或者安装不了 e
 
 # DEBUG = false
 DEBUG = true
+MIN_IOU = 0.8
 
 app = Flask(__name__)
 CORS(app)
@@ -50,6 +51,27 @@ seg_names = seg_model.names  # 获取类别名称映射
 obb_names = obb_model.names  # 获取类别名称映射
 colors = Colors()
 
+COLOR_RED = [255, 0, 0]
+COLOR_GREEN = [0, 255, 0]
+COLOR_BLUE = [0, 0, 255]
+COLOR_YELLOW = [255, 255, 0]
+COLOR_PINK = [255, 0, 255]
+
+KEY_COLOR = 'color'
+KEY_ID = 'id'
+KEY_SCORE = 'score'
+KEY_LABEL = 'label'
+KEY_OCR = 'ocr'
+KEY_ANGLE = 'angle'
+KEY_FILL = 'fill'
+KEY_BBOX = 'bbox'
+KEY_POLYGON = 'polygon'
+KEY_POINT = 'point'
+KEY_LINE = 'line'
+KEY_BBOXES = 'bboxes'
+KEY_POLYGONS = 'polygons'
+KEY_POINTS = 'points'
+KEY_LINES = 'lines'
 
 # 检查文件类型
 def allowed_file(filename):
@@ -83,6 +105,31 @@ def download_image(url):
     except Exception as e:
         print(f"Error downloading or processing image: {e}")
         return url
+
+
+def compute_iou(b1: list[int], b2: list[int]):
+    # 计算两个 bbox（[x, y, w, h, r]）的 IoU
+
+    x1, y1, w1, h1, d1 = b1[0], b1[1], b1[2], b1[3], (0 if size(b1) < 5 else b1[4])
+    x2, y2, w2, h2, d2 = b2[0], b2[1], b2[2], b2[3], (0 if size(b2) < 5 else b2[4])
+
+    xa = max(x1, x2)
+    ya = max(y1, y2)
+    xb = min(x1 + w1, x2 + w2)
+    yb = min(y1 + h1, y2 + h2)
+
+    iw = xb - xa
+    ih = yb - ya
+
+    if iw <= 0 or ih <= 0:
+        return 0
+
+    ia = iw * ih
+    ua = w1 * h1 + w2 * h2 - ia
+    dd = (1 - abs(d1 - d2)/180)
+
+    return (ia / ua) * dd
+
 
 # 处理推理请求
 def cors_response(data):
@@ -239,11 +286,11 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             pose_indexes.append(i)
 
                         bboxes.append({
-                            'id': i + 1,
-                            'label': label,
-                            'score': c,
-                            'color': colors(ind%colors.n) or [255, 0, 0, 0.6],
-                            'bbox': [b[0], b[1], b[2] - b[0], b[3] - b[1]]
+                            KEY_ID: i + 1,
+                            KEY_LABEL: label,
+                            KEY_SCORE: c,
+                            KEY_COLOR: colors(ind%colors.n) or [255, 0, 0, 0.6],
+                            KEY_BBOX: [b[0], b[1], b[2] - b[0], b[3] - b[1]]
                         })
 
             if is_pose or (is_pose is None and is_detect and not_empty(pose_indexes)):
@@ -319,58 +366,108 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
 
                                 lines = [
                                     # 头部
-                                    [p0[0], p0[1], p1[0], p1[1]],
-                                    [p0[0], p0[1], p2[0], p2[1]],
-                                    [p1[0], p1[1], p3[0], p3[1]],
-                                    [p2[0], p2[1], p4[0], p4[1]],
+                                    {
+                                        KEY_LINE: [p0[0], p0[1], p1[0], p1[1]],
+                                        KEY_COLOR: COLOR_GREEN
+                                    }, {
+                                        KEY_LINE: [p0[0], p0[1], p2[0], p2[1]],
+                                        KEY_COLOR: COLOR_GREEN
+                                    }, {
+                                        KEY_LINE: [p1[0], p1[1], p3[0], p3[1]],
+                                        KEY_COLOR: COLOR_GREEN
+                                    }, {
+                                        KEY_LINE: [p2[0], p2[1], p4[0], p4[1]],
+                                        KEY_COLOR: COLOR_GREEN
+                                    },
 
                                     # 头肩
-                                    [p3[0], p3[1], p5[0], p5[1]],
-                                    [p4[0], p4[1], p6[0], p6[1]],
+                                    {
+                                        KEY_LINE: [p3[0], p3[1], p5[0], p5[1]],
+                                        KEY_COLOR: COLOR_GREEN
+                                    }, {
+                                        KEY_LINE: [p4[0], p4[1], p6[0], p6[1]],
+                                        KEY_COLOR: COLOR_GREEN
+                                    },
+
 
                                     # 肩膀
-                                    [p5[0], p5[1], p6[0], p6[1]],
+                                    {
+                                        KEY_LINE: [p5[0], p5[1], p6[0], p6[1]],
+                                        KEY_COLOR: COLOR_BLUE
+                                    },
 
                                     # 手臂
-                                    [p5[0], p5[1], p7[0], p7[1]],
-                                    [p7[0], p7[1], p9[0], p9[1]],
-                                    [p6[0], p6[1], p8[0], p8[1]],
-                                    [p8[0], p8[1], p10[0], p10[1]],
+                                    {
+                                        KEY_LINE: [p5[0], p5[1], p7[0], p7[1]],
+                                        KEY_COLOR: COLOR_BLUE
+                                    }, {
+                                        KEY_LINE: [p7[0], p7[1], p9[0], p9[1]],
+                                        KEY_COLOR: COLOR_BLUE
+                                    }, {
+                                        KEY_LINE: [p6[0], p6[1], p8[0], p8[1]],
+                                        KEY_COLOR: COLOR_BLUE
+                                    }, {
+                                        KEY_LINE: [p8[0], p8[1], p10[0], p10[1]],
+                                        KEY_COLOR: COLOR_BLUE
+                                    },
 
                                     # 躯干
-                                    [p5[0], p5[1], p11[0], p11[1]],
-                                    [p6[0], p6[1], p12[0], p12[1]],
+                                    {
+                                        KEY_LINE: [p5[0], p5[1], p11[0], p11[1]],
+                                        KEY_COLOR: COLOR_PINK
+                                    }, {
+                                        KEY_LINE: [p6[0], p6[1], p12[0], p12[1]],
+                                        KEY_COLOR: COLOR_PINK
+                                    },
 
                                     # 左腿
-                                    [p11[0], p11[1], p12[0], p12[1]],
-                                    [p11[0], p11[1], p13[0], p13[1]],
-                                    [p13[0], p13[1], p15[0], p15[1]],
+                                    {
+                                        KEY_LINE: [p11[0], p11[1], p12[0], p12[1]],
+                                        KEY_COLOR: COLOR_YELLOW
+                                    }, {
+                                        KEY_LINE: [p11[0], p11[1], p13[0], p13[1]],
+                                        KEY_COLOR: COLOR_YELLOW
+                                    }, {
+                                        KEY_LINE: [p13[0], p13[1], p15[0], p15[1]],
+                                        KEY_COLOR: COLOR_YELLOW
+                                    },
 
                                     # 右腿
-                                    [p12[0], p12[1], p14[0], p14[1]],
-                                    [p14[0], p14[1], p16[0], p16[1]]
+                                    {
+                                        KEY_LINE: [p12[0], p12[1], p14[0], p14[1]],
+                                        KEY_COLOR: COLOR_YELLOW
+                                    }, {
+                                        KEY_LINE: [p14[0], p14[1], p16[0], p16[1]],
+                                        KEY_COLOR: COLOR_YELLOW
+                                    }
                                 ]
 
                             b = null if i >= size(bs) else bs[i]
                             if true:  # ind is None or int(ind) >= size(bboxes):
-                                bboxes.append({
-                                    'id': i + 1,
-                                    'label': label,
-                                    'score': c,
-                                    'color': colors(ind%colors.n) or [0, 255, 0, 0.6],
-                                    'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
-                                    'points': ps,
-                                    'lines': lines
+                                x1, y1, x2, y2 = b[0], b[1], b[2], b[3]
+                                pb = null if is_empty(b) else [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
+                                repeat = -1
+                                if not_empty(pb):
+                                    for j in range(size(bboxes)):
+                                        det_bbox = bboxes[j]
+                                        db = null if label != det_bbox.get(KEY_LABEL) else det_bbox.get(KEY_BBOX)
+                                        if not_empty(db) and compute_iou(db, pb) > MIN_IOU:
+                                            repeat = j
+                                            break
+
+                                if repeat >= 0:
+                                    del bboxes[repeat]
+
+                                bboxes.insert(0, {
+                                    KEY_ID: i + 1,
+                                    KEY_LABEL: label,
+                                    KEY_SCORE: c,
+                                    KEY_COLOR: colors(ind%colors.n) or [0, 255, 0, 0.6],
+                                    KEY_BBOX: pb,
+                                    KEY_POINTS: ps,
+                                    KEY_LINES: lines
                                 })
-                            # else: # TODO 根据 IOU 合并重复框
-                            #     bbox = bboxes[int(ind)] or {
-                            #         'id': i,
-                            #         'label': label,
-                            #         'score': scores[i] if i < size(scores) else 0,
-                            #         'color': colors(0) or [255, 0, 0, 0.6]
-                            #     }
-                            #     bbox['points'] = ps
-                            #     bbox['lines'] = lines
+
 
             if is_segment or (is_segment is None and is_detect and size(bboxes) < 10):
                 start_time = cur_time_in_millis()
@@ -402,34 +499,43 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
 
                         for i in range(len(pointss)):
                             c = scores[i] if i < size(scores) else 0
-                            if c < min_conf:
+                            points = null if c < min_conf else pointss[i]
+                            b = null if size(points) < 3 or i >= size(bs) else bs[i]
+                            if is_empty(b):
                                 continue
 
-                            points = pointss[i]
                             ind = labels[i] if i < size(labels) else -1
                             label = seg_names[int(ind)] if ind >= 0 and int(ind) < size(seg_names) else '???'
-                            b = null if i >= size(bs) else bs[i]
 
                             x1, y1, x2, y2 = b[0], b[1], b[2], b[3]
+                            sb = null if is_empty(b) else [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
+                            repeat = -1
+                            if not_empty(pb):
+                                for j in range(size(bboxes)):
+                                    det_bbox = bboxes[j]
+                                    db = null if label != det_bbox.get(KEY_LABEL) else det_bbox.get(KEY_BBOX)
+                                    if not_empty(db) and compute_iou(db, pb) > MIN_IOU:
+                                        repeat = j
+                                        break
 
-                            ind = labels[i] if i < size(labels) else -1
-                            label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
+                            if repeat >= 0:
+                                del bboxes[repeat]
 
-                            bboxes.append({
-                                'id': i + 1,
-                                'label': label,
-                                'score': c,
-                                'color': colors(ind % colors.n) or [0, 0, 255, 0.6],
-                                'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
+                            bboxes.insert(0, {
+                                KEY_ID: i + 1,
+                                KEY_LABEL: label,
+                                KEY_SCORE: c,
+                                KEY_COLOR: colors(ind % colors.n) or [0, 0, 255, 0.6],
+                                KEY_BBOX: sb
                             })
-                            polygons.append({
-                                'id': i + 1,
-                                'label': label,
-                                'score': c,
-                                'fill': true,
-                                'color': colors(ind%colors.n) or [0, 0, 255, 0.6],
-                                'bbox': null if is_empty(b) else [b[0], b[1], b[2] - b[0], b[3] - b[1]],
-                                'points': points
+                            polygons.insert(0, {
+                                KEY_ID: i + 1,
+                                KEY_LABEL: label,
+                                KEY_SCORE: c,
+                                KEY_FILL: true,
+                                KEY_COLOR: colors(ind%colors.n) or [0, 0, 255, 0.6],
+                                # KEY_BBOX: sb,
+                                KEY_POINTS: points
                             })
 
             if is_rotate or (is_rotate is None and is_ocr):
@@ -471,20 +577,20 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             label = obb_names[int(ind)] if ind >= 0 and int(ind) < size(obb_names) else ''
 
                             bboxes.append({
-                                'id': i + 1,
-                                'label': label,
-                                'score': c,
-                                'angle': null if i >= size(angles) else 2*angles[i][4],
-                                'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
-                                'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2)- int(y1)]
+                                KEY_ID: i + 1,
+                                KEY_LABEL: label,
+                                KEY_SCORE: c,
+                                KEY_ANGLE: null if i >= size(angles) else 2*angles[i][4],
+                                KEY_COLOR: colors(ind % colors.n) or [100, 100, 0, 0.6],
+                                KEY_BBOX: [int(x1), int(y1), int(x2) - int(x1), int(y2)- int(y1)]
                             })
                             polygons.append({
-                                'id': i + 1,
-                                'label': label,
-                                'score': c,
-                                'fill': false,
-                                'color': colors(ind % colors.n) or [100, 100, 0, 0.6],
-                                'points': [[int(obi[0]), int(obi[1])] for obi in ob]
+                                KEY_ID: i + 1,
+                                KEY_LABEL: label,
+                                KEY_SCORE: c,
+                                KEY_FILL: false,
+                                KEY_COLOR: colors(ind % colors.n) or [100, 100, 0, 0.6],
+                                KEY_POINTS: [[int(obi[0]), int(obi[1])] for obi in ob]
                             })
 
             if is_ocr or (is_ocr is None and is_rotate):
@@ -504,23 +610,23 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                         x2, y2 = np.max(bbox, axis=0)
 
                         bboxes.append({
-                            'id': i + 1,
-                            # 'label': label,
-                            'ocr': text,
-                            'score': float(conf),
-                            # 'angle': 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
-                            'color': [0, 100, 100, 0.6],
-                            'bbox': [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
+                            KEY_ID: i + 1,
+                            # KEY_LABEL: label,
+                            KEY_OCR: text,
+                            KEY_SCORE: float(conf),
+                            # KEY_ANGLE: 0, # TODO 根据长边顶点与中心角度差算旋转角度？还是先对齐水平的长短
+                            KEY_COLOR: [0, 100, 100, 0.6],
+                            KEY_BBOX: [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
                         })
 
                         polygons.append({
-                            'id': i + 1,
-                            # 'label': label,
-                            # 'ocr': text,
-                            'fill': false,
-                            'score': float(conf),
-                            'color': [0, 100, 100, 0.6],
-                            'points': [[int(item[0]), int(item[1])] for item in bbox],
+                            KEY_ID: i + 1,
+                            # KEY_LABEL: label,
+                            # KEY_OCR: text,
+                            KEY_FILL: false,
+                            KEY_SCORE: float(conf),
+                            KEY_COLOR: [0, 100, 100, 0.6],
+                            KEY_POINTS: [[int(item[0]), int(item[1])] for item in bbox],
                         })
 
                         i += 1
@@ -530,8 +636,8 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
     total_time_detail = get_time_detail(total_start_time, total_end_time)
 
     rsp = {
-        'bboxes': bboxes,
-        'polygons': polygons,
+        KEY_BBOXES: bboxes,
+        KEY_POLYGONS: polygons,
         KEY_OK: true,
         KEY_CODE: CODE_SUCCESS,
         KEY_MSG: MSG_SUCCESS,
