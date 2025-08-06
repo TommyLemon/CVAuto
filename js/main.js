@@ -7201,7 +7201,7 @@ https://github.com/Tencent/APIJSON/issues
           "TestRecord[]": {
             "count": 2,
             "TestRecord": {
-              "@column": "reportId;sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
+              "@column": "reportId;sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;sum(miss):allMiss;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
               "@raw": "@column",
               "@group": "reportId",
               "@order": "reportId-",
@@ -7237,7 +7237,7 @@ https://github.com/Tencent/APIJSON/issues
           // },
           // "TestRecord:after": {
           //   "reportId@": "TestRecord:post/reportId",
-          //   "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+          //   "@column": "reportId;sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;sum(miss):allMiss;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
           //   "@raw": "@column",
           //   "@group": "reportId",
           //   "@order": "reportId-",
@@ -7247,7 +7247,7 @@ https://github.com/Tencent/APIJSON/issues
           // },
           // "TestRecord:before": {
           //   "reportId@": "TestRecord:pre/reportId",
-          //   "@column": "reportId;sum(total):allTotal;sum(wrong):allWrong;sum(correct):allCorrect;count(*):imgTotal;count(wrong > 0):imgWrong;count(miss > 0):imgCorrect;count(wrong + miss <= 0):imgCorrect",
+          //   "@column": "reportId;sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;sum(miss):allMiss;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
           //   "@raw": "@column",
           //   "@group": "reportId",
           //   "@order": "reportId-",
@@ -7270,7 +7270,7 @@ https://github.com/Tencent/APIJSON/issues
             // 'randomId{}': beforeIds.length <= 0 ? null : beforeIds,
             'id{}': beforeIds.length <= 0 ? null : beforeIds,
             'documentId': did,
-            "@column": "sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
+            "@column": "sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;sum(miss):allMiss;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
             "@raw": "@column",
             "total>=": 0,
             "wrong>=": 0,
@@ -7348,7 +7348,7 @@ https://github.com/Tencent/APIJSON/issues
         const corrects = tr.corrects = tr.corrects || [];
         const wrongs = tr.wrongs = tr.wrongs || [];
 
-        this.img = random.img;
+        vBefore.src = vDiff.src = vAfter.src = this.img = random.img;
         this.file = random.file;
 
         // var tests = this.tests[String(this.currentAccountIndex)] || {}
@@ -13104,7 +13104,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 //   }
                 // }
 
-                App.updateTestRecord(0, list, index, item, rawRspStr == null ? null : parseJSON(rawRspStr), isRandom, true, App.currentAccountIndex, isCross)
+                App.updateTestRecord(0, list, index, item, rawRspStr == null ? null : parseJSON(rawRspStr), isRandom, true, App.currentAccountIndex, isCross, true)
                 App.summary();
               }
 
@@ -13114,7 +13114,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
       },
 
-      updateTestRecord: function (allCount, list, index, item, response, isRandom, ignoreTrend, accountIndex, isCross) {
+      updateTestRecord: function (allCount, list, index, item, response, isRandom, ignoreTrend, accountIndex, isCross, isSummary) {
         item = item || {}
         var doc = (isRandom ? item.Random : item.Document) || {}
 
@@ -13140,6 +13140,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           item.TestRecord = data.TestRecord
           App.compareResponse(res, allCount, list, index, item, response, isRandom, accountIndex, true, err, ignoreTrend, isCross);
+
+          if (isSummary) {
+            App.summary();
+          }
         })
       },
 
