@@ -10747,6 +10747,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       },
       testRandom: function (show, testList, testSubList, limit, isCross, isManual, callback) {
         this.isRandomEditable = false
+        this.currentRandomIndex = -1
         this.sameIds = []
         this.missTruth = {}
 
@@ -12144,13 +12145,20 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         var doneCount = isRandom ? App.randomDoneCount : App.doneCount
+        var isDone = doneCount >= allCount
         if (isRandom) {
-          this.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
+          this.testRandomProcess = isDone ? '' : ('正在测试: ' + doneCount + '/' + allCount)
+          if (isDone) {
+            App.currentRandomIndex = -1
+            App.isRandomShow = true
+            App.isRandomListShow = true
+            App.handleTest(false, 0, list[0], null, isRandom)  // , false, isCross)
+          }
         } else {
-          this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
+          this.testProcess = isDone ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
         }
 
-        if (doneCount < allCount && callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
+        if (isDone != true && callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
           this.autoTestCallback('正在测试')
         }
 
@@ -12238,12 +12246,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               }, IS_NODE ? 200 : 1000)
             } else {
               App.testRandomProcess = ''
-              if (isRandom) {
-                App.currentRandomIndex = -1
-                App.isRandomShow = true
-                App.isRandomListShow = true
-                App.handleTest(false, 0, list[0], null, isRandom)  // , false, isCross)
-              }
 
               if (isCross) {
                 if (deepDoneCount == deepAllCount) {
