@@ -510,11 +510,11 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                             x1, y1, x2, y2 = b[0], b[1], b[2], b[3]
                             sb = null if is_empty(b) else [int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)]
                             repeat = -1
-                            if not_empty(pb):
+                            if not_empty(sb):
                                 for j in range(size(bboxes)):
                                     det_bbox = bboxes[j]
                                     db = null if label != det_bbox.get(KEY_LABEL) else det_bbox.get(KEY_BBOX)
-                                    if not_empty(db) and compute_iou(db, pb) > MIN_IOU:
+                                    if not_empty(db) and compute_iou(db, sb) > MIN_IOU:
                                         repeat = j
                                         break
 
