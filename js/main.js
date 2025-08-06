@@ -12751,7 +12751,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           if (isChanged && isRandom) {
             //FIXME 仅测试用
-            var before = parseJSON(testRecord.response) || {
+            var before = parseJSON(testRecord.response) || (DEBUG ? {
               bboxes: [{
                 id: 1, label: '湘A580319X', score: 0.95, angle: 10, color: [255, 0, 70, 128], bbox: [100, 105, 400, 300]
               }, {
@@ -12773,8 +12773,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   [1920*Math.random(), 1080*Math.random()], [1920*Math.random(), 1080*Math.random()], [100, 100]
                 ]
               }]
-            };
-             var after = currentResponse || {
+            } : {});
+
+            var after = currentResponse || (DEBUG ? {
 //            var after = {
               bboxes: [{
                 id: 1, label: '湘A5883I9X', score: 0.6, angle: 11, color: [255, 0, 70, 128], bbox: [100, 105, 400, 300]
@@ -12801,7 +12802,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 [100, 100], [500, 160], [900, 200], [400, 900],
                 [1920*Math.random(), 1080*Math.random()], [1920*Math.random(), 1080*Math.random()], [100, 100]
               ]
-            };
+            } : {});
 
             const detection = this.detection || {};
             // var currentRandomItem = this.currentRandomItem = this.currentRandomItem || this.randoms[this.currentRandomIndex] || {};

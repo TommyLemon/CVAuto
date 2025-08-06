@@ -2781,7 +2781,8 @@ var JSONResponse = {
 
         ctx.beginPath();
         ctx.arc(x, y, Math.max(2, height*0.005), 0, 2*Math.PI);
-        if (JSONResponse.getFill(item) != false) {
+        let fill = JSONResponse.getFill(item);
+        if (fill || (fill == null && JSONResponse.getFill(detection) != false)) {
           ctx.fill();
         }
 
@@ -2820,8 +2821,8 @@ var JSONResponse = {
           }
 
           ctx.beginPath();
-          points.forEach((item, i) => {
-            var [x, y, w, h, d] = JSONResponse.getXYWHD(JSONResponse.getPoint(item) || item, width, height, xRate, yRate);
+          points.forEach((item2, i) => {
+            var [x, y, w, h, d] = JSONResponse.getXYWHD(JSONResponse.getPoint(item2) || item2, width, height, xRate, yRate);
 
             if (i <= 0) {
               ctx.moveTo(x, y);
@@ -2831,7 +2832,8 @@ var JSONResponse = {
           });
           ctx.closePath();
           ctx.stroke();
-          if (JSONResponse.getFill(item)) {
+          let fill = JSONResponse.getFill(item);
+          if (fill || (fill == null && JSONResponse.getFill(detection))) {
             ctx.fill();
           }
         }
