@@ -2461,6 +2461,19 @@ var JSONResponse = {
 
     return detection.polygons
   },
+  getPolygon: function (item) {
+    if (JSONResponse.isString(item)) {
+      return StringUtil.split(item);
+    }
+    if (item instanceof Array) {
+      return item;
+    }
+    if (! JSONResponse.isObject(item)) {
+      return null;
+    }
+
+    return item.polygon || item
+  },
   getLines: function (detection) {
     if (! JSONResponse.isObject(detection)) {
       return null;
@@ -2468,12 +2481,38 @@ var JSONResponse = {
 
     return detection.lines || detection.keyLines || detection.key_lines
   },
+  getLine: function (item) {
+    if (JSONResponse.isString(item)) {
+      return StringUtil.split(item);
+    }
+    if (item instanceof Array) {
+      return item;
+    }
+    if (! JSONResponse.isObject(item)) {
+      return null;
+    }
+
+    return item.line || item.keyLine || item.key_line || item
+  },
   getPoints: function (detection) {
     if (! JSONResponse.isObject(detection)) {
       return null;
     }
 
     return detection.points || detection.keyPoints || detection.key_points
+  },
+  getPoint: function (item) {
+    if (JSONResponse.isString(item)) {
+      return StringUtil.split(item);
+    }
+    if (item instanceof Array) {
+      return item;
+    }
+    if (! JSONResponse.isObject(item)) {
+      return null;
+    }
+
+    return item.point || item.keyPoint || item.key_point || item
   },
   getBboxes: function (detection) {
     if (! JSONResponse.isObject(detection)) {
@@ -2483,7 +2522,10 @@ var JSONResponse = {
     return detection.bboxes || detection.boxes || detection.targets
   },
   getBbox: function (item) {
-    if (item instanceof Array || JSONResponse.isString(item)) {
+    if (JSONResponse.isString(item)) {
+      return StringUtil.split(item);
+    }
+    if (item instanceof Array) {
       return item;
     }
     if (! JSONResponse.isObject(item)) {
@@ -2696,7 +2738,7 @@ var JSONResponse = {
           return;
         }
 
-        var [x, y, x2, y2, d] = JSONResponse.getXYXYD(item, width, height, xRate, yRate);
+        var [x, y, x2, y2, d] = JSONResponse.getXYXYD(JSONResponse.getLine(item) || item, width, height, xRate, yRate);
 
         const color = JSONResponse.getColor(item) || JSONResponse.getColor(detection) || JSONResponse.getColor(detection.bbox);
         const rgba = color == null || color.length <= 0 ? null : `rgba(${color.join(',')})`;
@@ -2728,7 +2770,7 @@ var JSONResponse = {
           return;
         }
 
-        var [x, y, w, h, d] = JSONResponse.getXYWHD(item, width, height, xRate, yRate);
+        var [x, y, w, h, d] = JSONResponse.getXYWHD(JSONResponse.getPoint(item) || item, width, height, xRate, yRate);
 
         const color = JSONResponse.getColor(item) || JSONResponse.getColor(detection) || JSONResponse.getColor(detection.bbox);
         const rgba = color == null || color.length <= 0 ? null : `rgba(${color.join(',')})`;
@@ -2761,7 +2803,8 @@ var JSONResponse = {
           return;
         }
 
-        var points = JSONResponse.getPoints(item) || item;
+        var polygon = JSONResponse.getPolygon(item) || item;
+        var points = JSONResponse.getPoints(polygon) || item;
         if (points instanceof Array) {
           const color = JSONResponse.getColor(item) || JSONResponse.getColor(detection) || JSONResponse.getColor(detection.bbox);
           if (color != null && color.length >= 3) {
@@ -2778,7 +2821,7 @@ var JSONResponse = {
 
           ctx.beginPath();
           points.forEach((item, i) => {
-            var [x, y, w, h, d] = JSONResponse.getXYWHD(item, width, height, xRate, yRate);
+            var [x, y, w, h, d] = JSONResponse.getXYWHD(JSONResponse.getPoint(item) || item, width, height, xRate, yRate);
 
             if (i <= 0) {
               ctx.moveTo(x, y);
