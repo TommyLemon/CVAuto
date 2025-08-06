@@ -12682,9 +12682,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         item = item || {}
         const random = item.Random = item.Random || {}
         var document;
+        var isChanged = false;
         if (isRandom) {
           this.currentRandomItem = item;
-          var isChanged = this.currentRandomIndex != index;
+          isChanged = this.currentRandomIndex != index;
           if (isChanged) {
             this.currentRandomIndex = index;
             this.hoverIds = {};
