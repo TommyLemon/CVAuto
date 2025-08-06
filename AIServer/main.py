@@ -82,7 +82,7 @@ def download_image(url):
         return np.array(img)  # 转换为 NumPy 数组
     except Exception as e:
         print(f"Error downloading or processing image: {e}")
-        return None
+        return url
 
 # 处理推理请求
 def cors_response(data):
