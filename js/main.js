@@ -12915,7 +12915,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 item.TestRecord = null
               }
 
-              App.updateTestRecord(0, list, index, item, rawRspStr == null ? null : parseJSON(rawRspStr), isRandom, true, App.currentAccountIndex, isCross)
+              App.updateTestRecord(0, list, index, item, rawRspStr == null ? null : parseJSON(rawRspStr), isRandom, true, App.currentAccountIndex, isCross, true)
+              App.summary();
             })
           }
           else { //上传新的校验标准
