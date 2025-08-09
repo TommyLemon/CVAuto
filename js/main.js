@@ -7265,7 +7265,7 @@ https://github.com/Tencent/APIJSON/issues
           "TestRecord:beforeSame": {
             // "reportId{}@": "TestRecord-reportId:ids2[]",
             // 'randomId{}': beforeIds.length <= 0 ? null : beforeIds,
-            'id{}': beforeIds.length <= 0 ? null : beforeIds,
+            'id{}': beforeIds,
             'documentId': did,
             "@column": "sum(total):allTotal;sum(correct):allCorrect;sum(wrong):allWrong;sum(miss):allMiss;count(*):imgTotal;sum(wrong + miss <= 0):imgCorrect;sum(wrong > 0):imgWrong;sum(miss > 0):imgMiss",
             "@raw": "@column",
