@@ -644,7 +644,7 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
         KEY_TIME_DETAIL + '|parse|sql|model': total_time_detail + f'|{total_dur - dur}|0|{dur}'
     }
     if not_empty(detect_time_detail):
-        rsp['detect-' + KEY_TIME_DETAIL] = detect_time_detail
+        rsp['det-' + KEY_TIME_DETAIL] = detect_time_detail
     if not_empty(pose_time_detail):
         rsp['pose-' + KEY_TIME_DETAIL] = pose_time_detail
     if not_empty(seg_time_detail):
