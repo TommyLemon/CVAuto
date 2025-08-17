@@ -47,6 +47,7 @@
         var Vue = require('./vue.min'); // 某些版本不兼容 require('vue');
         var StringUtil = require('../apijson/StringUtil');
         var CodeUtil = require('../apijson/CodeUtil');
+        var FileUtil = require('../apijson/FileUtil');
         var JSONObject = require('../apijson/JSONObject');
         var JSONResponse = require('../apijson/JSONResponse');
         var JSONRequest = require('../apijson/JSONRequest');
@@ -6874,6 +6875,145 @@ https://github.com/Tencent/APIJSON/issues
           reader.readAsDataURL(file);
         });
       },
+
+      uploadMedia: function(randomIndex, randomSubIndex) {
+        const isSub = randomSubIndex != null;
+        const items = (isSub ? this.randomSubs : this.randoms) || [];
+        const cri = this.currentRandomItem || {};
+        const ind = isSub && randomSubIndex != null ? randomSubIndex : randomIndex;
+        const item = items[ind] || {};
+        const random = item.Random || {};
+        const file = item.img; // 可能是图片，也可能是视频
+
+        if (!file) {
+          alert("Please select a file.");
+          this.onClickAddRandom(randomIndex, randomSubIndex);
+          return;
+        }
+
+        // TODO 视频作为一个分组，按次数 1 还是 2+ 等来传视频或抽帧
+        if (file.type && file.type.startsWith("video/")) {
+          // === 视频处理 ===
+          this.extractFramesAndUpload(file, 5, async (frameBlob, rank, totalFrames) => {
+            const formData = new FormData();
+            formData.append("file", frameBlob, `frame_${rank}.jpg`);
+            formData.append("rank", rank);  // 👈 加 rank 字段
+            formData.append("totalFrames", totalFrames);
+            formData.append("videoName", file.name);
+
+            try {
+              const resp = await fetch(this.server + "/upload", {
+                method: "POST",
+                body: formData
+              });
+              const data = await resp.json();
+              if (!data.path) throw new Error("上传失败 " + JSON.stringify(data));
+
+              console.log("Frame upload success:", data);
+
+              if (rank === 0) {  // 第一帧上传完成时，更新 UI
+                item.status = "done";
+                App.img = random.img = (data.path.startsWith("/") ? App.server + data.path : data.path);
+                random.width = data.width;
+                random.height = data.height;
+                random.size = data.size;
+                Vue.set(items, ind, item);
+                App.updateRandom(random);
+              }
+            } catch (e) {
+              console.error("Frame upload failed:", e);
+              item.status = "failed";
+            }
+          });
+        } else {
+          // === 图片处理（不变） ===
+          const formData = new FormData();
+          formData.append("file", file);
+
+          fetch(this.server + "/upload", {
+            method: "POST",
+            body: formData,
+          })
+              .then((response) => response.json())
+              .then((data) => {
+                if (!data.path) throw new Error("上传失败 " + JSON.stringify(data));
+
+                console.log("Upload successful:", data);
+                item.status = "done";
+                const img = (data.path.startsWith("/") ? App.server + data.path : data.path) || file;
+                var keys = StringUtil.split(data.path, "/");
+                var fn = keys && keys.length ? keys[keys.length - 1] : null;
+                random.name = random.file = fn || random.file;
+                App.img = random.img = img;
+                random.size = data.size || (StringUtil.length(img) * (3/4)) - (img.endsWith("==") ? 2 : 1);
+                random.width = data.width || random.width;
+                random.height = data.height || random.height;
+
+                try {
+                  Vue.set(items, ind, item);
+                } catch (e) {
+                  console.error(e);
+                }
+
+                App.updateRandom(random);
+              })
+              .catch((error) => {
+                console.error("Upload failed:", error);
+                alert("Failed to upload image.");
+                item.status = "failed";
+              });
+        }
+      },
+
+      /**
+       * 从视频抽帧（倒序），支持并发上传
+       * @param {File} file - 视频文件
+       * @param {number} concurrency - 最大并发数
+       * @param {function} onFrameReady - 回调(frameBlob, rank, totalFrames)
+       */
+      extractFramesAndUpload: function(file, concurrency, onFrameReady) {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement("video");
+        video.src = url;
+        video.preload = "metadata";
+
+        video.onloadedmetadata = async () => {
+          const duration = video.duration;
+          let timestamps = [];
+
+          if (duration <= 100) {
+            for (let t = Math.floor(duration); t >= 0; t--) timestamps.push(t);
+          } else {
+            const step = duration / 100;
+            for (let i = 100; i >= 0; i--) timestamps.push(i * step);
+          }
+
+          const totalFrames = timestamps.length;
+          let index = 0;
+
+          async function worker() {
+            while (index < totalFrames) {
+              const i = index++;
+              const time = timestamps[i];
+              const frameBlob = await FileUtil.captureFrame(video, time);
+              // rank 按倒序：0 表示最新帧，totalFrames-1 表示最早帧
+              const rank = i;
+              onFrameReady(frameBlob, rank, totalFrames);
+            }
+          }
+
+          // 并发执行
+          const workers = [];
+          for (let i = 0; i < concurrency; i++) {
+            workers.push(worker());
+          }
+          await Promise.all(workers);
+
+          URL.revokeObjectURL(url);
+        };
+      },
+
+
 
       uploadImage: function(randomIndex, randomSubIndex) {
         const isSub = randomSubIndex != null;
