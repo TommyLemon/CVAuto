@@ -6785,6 +6785,8 @@ https://github.com/Tencent/APIJSON/issues
         const doc = (this.currentRemoteItem || {}).Document || {}
         const random = cri.Random || {}
         const ind = isSub && this.currentRandomSubIndex != null ? this.currentRandomSubIndex : this.currentRandomIndex;
+        const index = ind != null && ind >= 0 ? ind : -1; // items.length;
+        const server = this.server
 
         var selectedFiles = Array.from(event.target.files);
         // const previewList = document.getElementById('previewList');
@@ -6792,177 +6794,104 @@ https://github.com/Tencent/APIJSON/issues
 
         selectedFiles.forEach((file, i) => {
           const reader = new FileReader();
-          reader.onload = (e) => {
+          reader.onload = (evt) => {
             // const img = document.createElement('img');
-            // img.src = e.target.result;
+            // img.src = evt.target.result;
             // img.style.height = '100%';
             // img.style.margin = '1px';
             // previewList.appendChild(img);
 
-            const index = ind != null && ind >= 0 ? ind : -1; // items.length;
-            var item = JSONResponse.deepMerge({
-              Random: {
-                id: -(index || 0) - 1, //表示未上传
-                toId: random.id,
-                userId: random.userId || doc.userId,
-                documentId: random.documentId || doc.id,
-                count: 1,
-                name: '分析位于 ' + index + ' 的这张图片',
-                img: e.target.result,
-                config: ''
+            function callback(blob, img, name, size, width, height, index, rank) {
+
+              var item = JSONResponse.deepMerge({
+                Random: {
+                  id: -(index || 0) - 1, //表示未上传
+                  toId: random.id,
+                  userId: random.userId || doc.userId,
+                  documentId: random.documentId || doc.id,
+                  count: 1,
+                  name: '分析位于 ' + index + ' 的这张图片',
+                  img: img,
+                  config: ''
+                }
+              }, items[index] || {});
+              item.status = 'uploading';
+
+              const r = item.Random || {};
+              r.name = r.file = name;
+              r.size = size;
+              r.width = width;
+              r.height = height;
+              r.rank = rank;
+
+              if (index < 0) { // || r.id == null || r.id <= 0) {
+                items.unshift(item);
+              } else {
+                items[index] = item;
               }
-            }, items[index] || {});
-            item.status = 'uploading';
 
-            const r = item.Random || {};
-            r.name = r.file = file.name;
-            r.size = file.size;
-            r.width = file.width;
-            r.height = file.height;
+              if (isSub) {
+                App.randomSubs = items;
+              } else {
+                App.randoms = items;
+              }
 
-            if (index < 0) { // || r.id == null || r.id <= 0) {
-              items.unshift(item);
+              try {
+                Vue.set(items, index < 0 ? 0 : index, item);
+              } catch (e) {
+                console.error(e)
+              }
+
+              const formData = new FormData();
+              formData.append('file', blob);
+
+              fetch(server + '/upload', {
+                method: 'POST',
+                body: formData
+              })
+                  .then(response => response.json())
+                  .then(data => {
+                    var path = data.path;
+                    if (StringUtil.isEmpty(path, true) || data.size == null) {
+                      throw new Error('上传失败！' + JSON.stringify(data || {}));
+                    }
+
+                    console.log('Upload successful:', data);
+                    item.status = 'done';
+                    if (!(server.includes('localhost') || server.includes('127.0.0.1'))) {
+                      r.img = (path.startsWith('/') ? server + path : path) || r.img;
+                    }
+
+                    try {
+                      Vue.set(items, index < 0 ? 0 : index, item);
+                    } catch (e) {
+                      console.error(e)
+                    }
+
+                    App.updateRandom(r)
+                  })
+                  .catch(error => {
+                    console.error('Upload failed:', error);
+                    item.status = 'failed';
+                  });
+            }
+
+            if (file.type && file.type.startsWith("video/")) {
+              // === 视频处理 ===
+              this.extractFramesAndUpload(file, 5, async (frameBlob, rank, totalFrames) => {
+                const reader2 = new FileReader();
+                reader2.onload = (evt) => { // TODO 传 toId，视频作为分组，次数作为抽取帧数
+                  callback(frameBlob, reader2.result, file.name + '-' + rank + '.jpg', frameBlob.size, frameBlob.width, frameBlob.height, -1, rank)
+                }
+                reader2.readAsDataURL(frameBlob);
+              });
             } else {
-              items[index] = item;
+              callback(file, reader.result, file.name, file.size, file.width, file.height, index)
             }
 
-            if (isSub) {
-              this.randomSubs = items;
-            }
-            else {
-              this.randoms = items;
-            }
-
-            try {
-              Vue.set(items, index < 0 ? 0 : index, item);
-            } catch (e) {
-              console.error(e)
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            fetch(this.server + '/upload', {
-              method: 'POST',
-              body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                  var path = data.path;
-                  if (StringUtil.isEmpty(path, true) || data.size == null) {
-                    throw new Error('上传失败！' + JSON.stringify(data || {}));
-                  }
-
-                  console.log('Upload successful:', data);
-                  item.status = 'done';
-                  if (! (App.server.includes('localhost') || App.server.includes('127.0.0.1'))) {
-                    r.img = (path.startsWith('/') ? App.server + path : path) || r.img;
-                  }
-
-                  try {
-                    Vue.set(items, index < 0 ? 0 : index, item);
-                  } catch (e) {
-                    console.error(e)
-                  }
-
-                  App.updateRandom(r)
-                })
-                .catch(error => {
-                  console.error('Upload failed:', error);
-                  item.status = 'failed';
-                });
           };
           reader.readAsDataURL(file);
         });
-      },
-
-      uploadMedia: function(randomIndex, randomSubIndex) {
-        const isSub = randomSubIndex != null;
-        const items = (isSub ? this.randomSubs : this.randoms) || [];
-        const cri = this.currentRandomItem || {};
-        const ind = isSub && randomSubIndex != null ? randomSubIndex : randomIndex;
-        const item = items[ind] || {};
-        const random = item.Random || {};
-        const file = item.img; // 可能是图片，也可能是视频
-
-        if (!file) {
-          alert("Please select a file.");
-          this.onClickAddRandom(randomIndex, randomSubIndex);
-          return;
-        }
-
-        // TODO 视频作为一个分组，按次数 1 还是 2+ 等来传视频或抽帧
-        if (file.type && file.type.startsWith("video/")) {
-          // === 视频处理 ===
-          this.extractFramesAndUpload(file, 5, async (frameBlob, rank, totalFrames) => {
-            const formData = new FormData();
-            formData.append("file", frameBlob, `frame_${rank}.jpg`);
-            formData.append("rank", rank);  // 👈 加 rank 字段
-            formData.append("totalFrames", totalFrames);
-            formData.append("videoName", file.name);
-
-            try {
-              const resp = await fetch(this.server + "/upload", {
-                method: "POST",
-                body: formData
-              });
-              const data = await resp.json();
-              if (!data.path) throw new Error("上传失败 " + JSON.stringify(data));
-
-              console.log("Frame upload success:", data);
-
-              if (rank === 0) {  // 第一帧上传完成时，更新 UI
-                item.status = "done";
-                App.img = random.img = (data.path.startsWith("/") ? App.server + data.path : data.path);
-                random.width = data.width;
-                random.height = data.height;
-                random.size = data.size;
-                Vue.set(items, ind, item);
-                App.updateRandom(random);
-              }
-            } catch (e) {
-              console.error("Frame upload failed:", e);
-              item.status = "failed";
-            }
-          });
-        } else {
-          // === 图片处理（不变） ===
-          const formData = new FormData();
-          formData.append("file", file);
-
-          fetch(this.server + "/upload", {
-            method: "POST",
-            body: formData,
-          })
-              .then((response) => response.json())
-              .then((data) => {
-                if (!data.path) throw new Error("上传失败 " + JSON.stringify(data));
-
-                console.log("Upload successful:", data);
-                item.status = "done";
-                const img = (data.path.startsWith("/") ? App.server + data.path : data.path) || file;
-                var keys = StringUtil.split(data.path, "/");
-                var fn = keys && keys.length ? keys[keys.length - 1] : null;
-                random.name = random.file = fn || random.file;
-                App.img = random.img = img;
-                random.size = data.size || (StringUtil.length(img) * (3/4)) - (img.endsWith("==") ? 2 : 1);
-                random.width = data.width || random.width;
-                random.height = data.height || random.height;
-
-                try {
-                  Vue.set(items, ind, item);
-                } catch (e) {
-                  console.error(e);
-                }
-
-                App.updateRandom(random);
-              })
-              .catch((error) => {
-                console.error("Upload failed:", error);
-                alert("Failed to upload image.");
-                item.status = "failed";
-              });
-        }
       },
 
       /**
@@ -7012,8 +6941,6 @@ https://github.com/Tencent/APIJSON/issues
           URL.revokeObjectURL(url);
         };
       },
-
-
 
       uploadImage: function(randomIndex, randomSubIndex) {
         const isSub = randomSubIndex != null;

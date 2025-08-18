@@ -89,7 +89,7 @@
         </span>
         <a v-show="isDelayShow" >2s</a>
 
-        <input type="file" id="imageInput" accept="image/*" style="opacity: 0; width: 1px; display: none" :multiple="allowMultiple" @change="handleFileSelect($event)" >
+        <input type="file" id="imageInput" accept="image/*,video/*" style="opacity: 0; width: 1px; display: none" :multiple="allowMultiple" @change="handleFileSelect($event)" >
 
         <iframe v-show="User.id == null || User.id <= 0" src="https://ghbtns.com/github-btn.html?user=Tencent&amp;repo=APIJSON&amp;type=star&amp;count=true&amp;size=small" frameborder="0" scrolling="0" width="160px" height="18px"></iframe>
 
