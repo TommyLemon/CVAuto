@@ -6801,7 +6801,7 @@ https://github.com/Tencent/APIJSON/issues
             // img.style.margin = '1px';
             // previewList.appendChild(img);
 
-            function callback(blob, img, name, size, width, height, index, rank) {
+            function callback(file, img, name, size, width, height, index, rank) {
 
               var item = JSONResponse.deepMerge({
                 Random: {
@@ -6843,7 +6843,7 @@ https://github.com/Tencent/APIJSON/issues
               }
 
               const formData = new FormData();
-              formData.append('file', blob);
+              formData.append('file', file);
 
               fetch(server + '/upload', {
                 method: 'POST',
@@ -6881,7 +6881,8 @@ https://github.com/Tencent/APIJSON/issues
               this.extractFramesAndUpload(file, 5, async (frameBlob, rank, totalFrames) => {
                 const reader2 = new FileReader();
                 reader2.onload = (evt) => { // TODO 传 toId，视频作为分组，次数作为抽取帧数
-                  callback(frameBlob, reader2.result, file.name + '-' + rank + '.jpg', frameBlob.size, frameBlob.width, frameBlob.height, -1, rank)
+                  var fn = file.name + '-' + rank + '.jpg'
+                  callback(new File([frameBlob], fn), reader2.result, fn, frameBlob.size, frameBlob.width, frameBlob.height, -1, rank)
                 }
                 reader2.readAsDataURL(frameBlob);
               });
