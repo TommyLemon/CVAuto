@@ -38,6 +38,9 @@
 * **人脸识别**：根据脸部特征 识别出具体是谁
 * **旋转校正**：对有直边的物体 校正歪斜角度
 
+![CVAuto-report-Excel](https://github.com/user-attachments/assets/630fee9d-43e6-421c-b1e3-e17ba2b605e1)
+
+
 **本项目基于 机器学习零代码自动化接口工具 APIAuto 定制，原理和使用可参考相关文档及视频** 
 
 ### 演讲稿件
@@ -230,6 +233,7 @@ https://github.com/TommyLemon/CVAuto/commits
 ### 我要赞赏
 **创作不易、坚持更难，右上角点亮 ⭐ Star 收藏/支持下本项目吧，谢谢 ^_^** <br />
 https://github.com/TommyLemon/CVAuto
+
 
 
 
