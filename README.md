@@ -2,7 +2,7 @@
   CVAuto
 </h1>
  
-<p align="center">👁 <b>零代码零标注 CV AI 自动化测试平台</b> 🚀 <br><b>零代码快速自动化测试 CV 计算机视觉 AI 人工智能图像识别算法的功能、效果、性能</b><br>适合 算法 应用/开发 工程师/专家、算法测试 工程师/专家、AI/机器学习/算法 工程师/专家/研究员/科学家 等</p>
+<p align="center">👁 <b>零代码零标注 CV AI 自动化测试工具</b> 🚀 <br><b>零代码快速自动化测试 CV 计算机视觉 AI 人工智能图像识别算法的功能、效果、性能</b><br>适合 算法 应用/开发 工程师/专家、算法测试 工程师/专家、AI/机器学习/算法 工程师/专家/研究员/科学家 等</p>
 
 <p align="center" >
   <a href="https://deepwiki.com/TommyLemon/CVAuto">English</a>
@@ -16,7 +16,7 @@
 ---
 
 **不用提前标注画框及标签**等作为 Ground Truth 这种工作量巨大的人工手动繁琐耗时操作， <br/>
-**只需上传测试图片**，一键通过 HTTP API 调用算法模型得到推理后返回的 JSON 响应结果， <br/>
+**只需上传图片/视频**，一键通过 HTTP API 调用算法模型得到推理后返回的 JSON 响应结果， <br/>
 然后**自动在图上绘制** label 标签、box 画框、line 连线、point 关键点、polygon 多边形等， <br/>
 **自动断言**画框是否正确，**可点边框附近来调整 ✓ 对 X 错**，一键上传可作为基准的本次结果， <br/>
 **自动统计**正确数、误报数、漏检数、召回率、精准率、F1 Score 等指标，**自动对比前后效果**。 <br/>
@@ -230,5 +230,6 @@ https://github.com/TommyLemon/CVAuto/commits
 ### 我要赞赏
 **创作不易、坚持更难，右上角点亮 ⭐ Star 收藏/支持下本项目吧，谢谢 ^_^** <br />
 https://github.com/TommyLemon/CVAuto
+
 
 
