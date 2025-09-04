@@ -43,7 +43,7 @@
 **一键下载测试报告，包含 头部统计指标 和 每张图明细数据** 
 ![CVAuto-report-Excel](https://github.com/user-attachments/assets/630fee9d-43e6-421c-b1e3-e17ba2b605e1)
 
-**一键下载训练和测试数据集，加速模型迭代训练及效果提升** 
+**一键导出训练和测试数据集，加速模型迭代训练及效果提升** 
 ![CVAuto-export-dataset](https://github.com/user-attachments/assets/f22ccdc9-ee08-49a0-83cf-fcb3e0e4b428)
 
 <br/>
@@ -240,6 +240,7 @@ https://github.com/TommyLemon/CVAuto/commits
 ### 我要赞赏
 **创作不易、坚持更难，右上角点亮 ⭐ Star 收藏/支持下本项目吧，谢谢 ^_^** <br />
 https://github.com/TommyLemon/CVAuto
+
 
 
 
