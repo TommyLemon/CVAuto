@@ -2659,6 +2659,7 @@ https://github.com/Tencent/APIJSON/issues
           this.visiblePaths = []
           this.missTruth = {}
           this.sameIds = []
+          this.reportId = null
         }
 
         this.currentRemoteItem = item
@@ -2948,7 +2949,7 @@ https://github.com/Tencent/APIJSON/issues
           }
           else if (this.isRandomShow && this.isRandomListShow) {
             var id = this.reportId || this.getCurrentDocumentId()
-            window.open(this.server + '/download/dataset/auto/' + id)
+            window.open(this.server + '/download/dataset/' + id + "?ratio=20")
           }
           else if (this.view == 'markdown' || this.view == 'output') { //model
             var clazz = StringUtil.trim(this.exTxt.name)
