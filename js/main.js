@@ -1233,7 +1233,16 @@ https://github.com/Tencent/APIJSON/issues
       }],
       isColorPickerShow: false,
       colorPickerPosition: { x: 0, y: 0 },
-      // tempColor: {hexString: '#FF6B6B'}, // 临时选择的颜色
+      // 拖拉和旋转相关状态变量
+      isDragging: false,        // 是否正在拖拉
+      isResizing: false,        // 是否正在缩放
+      isRotating: false,        // 是否正在旋转
+      dragMode: '',             // 操作模式: 'move', 'resize', 'rotate'
+      dragStartX: 0,            // 拖拉开始时的鼠标X坐标
+      dragStartY: 0,            // 拖拉开始时的鼠标Y坐标
+      originalBox: null,        // 原始框数据备份
+      currentCorner: '',        // 当前操作的角点: 'tl', 'tr', 'bl', 'br'
+      rotationCenter: {x: 0, y: 0}, // 旋转中心点
       detection: {
         isShowNum: false,
         total: 10,
@@ -7718,6 +7727,8 @@ https://github.com/Tencent/APIJSON/issues
           // }
           const ind = isDiff ? item['@index'] : i;
 
+          //TODO 当左上角、右下角的拖动球 和 右上角、左下角 的旋转球 显示时，点击球开始 缩放/旋转
+
           // 其它情况，检测是否点击到框内
           if (ind != null && ind >= 0 && JSONResponse.isOnBorder(x, y, [bx, by, bw, bh], range)) {
             // item.correct = item.correct === false ? true : false;
@@ -7760,26 +7771,9 @@ https://github.com/Tencent/APIJSON/issues
           return;
         }
         
-        const [x, y] = this.getCanvasXY(stage, event);
-        this.isDrawingBox = true;
-        this.drawingBox = { startX: x, startY: y, endX: x, endY: y };
-        
-        event.preventDefault();
-      },
-      onMousemove: function(stage, event) {
-        // 画框时的实时更新
-        const [x, y] = this.getCanvasXY(stage, event);
-        if (this.isDrawingBox && stage === 'after') {
-          var drawingBox = this.drawingBox = this.drawingBox || {};
-          drawingBox.endX = x;
-          drawingBox.endY = y;
-
-          this.draw(stage);
-          return;
-        }
-
         const img = this.imgMap[stage];
         const canvas = this.canvasMap[stage];
+        const [x, y] = this.getCanvasXY(stage, event);
 
         const height = canvas.height || (img || {}).height;
         const width = canvas.width || (img || {}).width;
@@ -7789,6 +7783,8 @@ https://github.com/Tencent/APIJSON/issues
         const yRate = nh < 1 ? 1 : height/nh;
 
         let found = null;
+        let foundItem = null;
+        let foundBbox = null;
         var bboxes = JSONResponse.getBboxes(this.detection[stage]) || []
         let len = bboxes.length;
         var range = (height || 240) * (len <= 1 ? 0.5 : (len <= 5 ? 0.1/len : 0.02));
@@ -7801,29 +7797,293 @@ https://github.com/Tencent/APIJSON/issues
           var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
           if (JSONResponse.isOnBorder(x, y, [bx, by, bw, bh, bd], range)) {
             found = i;
+            foundItem = item;
+            foundBbox = [bx, by, bw, bh, bd];
             break;
           }
         }
 
-        if (found == this.hoverIds[stage]) {
-          return
-        }
-
-        this.hoverIds[stage] = found;
-        this.draw(stage);
-      },
-      // 鼠标松开结束画框并显示弹窗
-      onMouseup: function(stage, event) {
-        if (stage != 'after' || ! this.isDrawingBox) {
+        if (found == null || found < 0) {
+          // 没有点击到现有框，开始画新框
+          this.isDragging = false;
+          this.isResizing = false;
+          this.isRotating = false;
+          this.dragMode = '';
+          this.isDrawingBox = true;
+          this.drawingBox = {startX: x, startY: y, endX: x, endY: y};
+          event.preventDefault();
           return;
         }
 
+        // 点击到了现有框，准备操作模式
+        this.hoverIds[stage] = found;
+        this.originalBox = {
+          startX: foundBbox[0],
+          startY: foundBbox[1],
+          endX: foundBbox[0] + foundBbox[2],
+          endY: foundBbox[1] + foundBbox[3],
+          degree: foundBbox[4] || 0
+        };
+
+        // 未点中某个框时：当光标在左上角、右下角的拖动球 或 右上角、左下角 的旋转球范围内时，显示对应球；已点中某个框时：根据球的类型来 缩放/旋转 框
+        // 检测操作类型
+        const corners = this.getBoxCorners(foundBbox[0], foundBbox[1], foundBbox[2], foundBbox[3]);
+        const rotationHandles = [
+          {x: foundBbox[0] + foundBbox[2], y: foundBbox[1]}, // 右上
+          {x: foundBbox[0], y: foundBbox[1] + foundBbox[3]}  // 左下
+        ];
+
+        // 检查是否点击旋转球
+        for (let i = 0; i < rotationHandles.length; i++) {
+          const handle = rotationHandles[i];
+          const distance = Math.sqrt(Math.pow(x - handle.x, 2) + Math.pow(y - handle.y, 2));
+          if (distance <= 15) { // 旋转球检测范围
+            this.isRotating = true;
+            this.dragMode = 'rotate';
+            this.rotationCenter = {
+              x: foundBbox[0] + foundBbox[2] / 2,
+              y: foundBbox[1] + foundBbox[3] / 2
+            };
+            this.dragStartX = x;
+            this.dragStartY = y;
+            break;
+          }
+        }
+
+        if (! this.isRotating) {
+          // 检查是否点击角点（用于缩放）
+          if (this.isNearCorner(x, y, corners.tl, range)) {
+            this.isResizing = true;
+            this.dragMode = 'resize';
+            this.currentCorner = 'tl';
+          } else if (this.isNearCorner(x, y, corners.tr, range)) {
+            this.isResizing = true;
+            this.dragMode = 'resize';
+            this.currentCorner = 'tr';
+          } else if (this.isNearCorner(x, y, corners.bl, range)) {
+            this.isResizing = true;
+            this.dragMode = 'resize';
+            this.currentCorner = 'bl';
+          } else if (this.isNearCorner(x, y, corners.br, range)) {
+            this.isResizing = true;
+            this.dragMode = 'resize';
+            this.currentCorner = 'br';
+          } else {
+            // 点击框内部或边框，执行拖拉
+            this.isDragging = true;
+            this.dragMode = 'move';
+          }
+        }
+
+        if (this.isDragging || this.isResizing || this.isRotating) {
+          this.dragStartX = x;
+          this.dragStartY = y;
+        }
+
         this.isDrawingBox = false;
+        event.preventDefault();  
+      },
+      onMousemove: function(stage, event) {
+        // 画框时的实时更新
+        const canvas = this.canvasMap[stage];
+        const [x, y] = this.getCanvasXY(stage, event);
+        const height = canvas.height || (img || {}).height;
+        var bboxes = JSONResponse.getBboxes(this.detection[stage]) || []
+        let len = bboxes.length;
+        var range = (height || 240) * (len <= 1 ? 0.5 : (len <= 5 ? 0.1/len : 0.02));
+
+        const img = this.imgMap[stage];
+        const width = canvas.width || (img || {}).width;
+        const nw = img == null ? 0 : (img.naturalWidth || 0);
+        const nh = img == null ? 0 : (img.naturalHeight || 0);
+        const xRate = nw < 1 ? 1 : width/nw;
+        const yRate = nh < 1 ? 1 : height/nh;
+
+        let found = null;
+        let foundItem = null;
+        let foundBbox = null;
+        for (let i = 0; i < len; i++) {
+          const item = bboxes[i];
+          if (item == null) {
+            continue;
+          }
+
+          let [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
+          if (JSONResponse.isOnBorder(x, y, [bx, by, bw, bh, bd], range)) {
+            found = i;
+            foundItem = item;
+            foundBbox = [bx, by, bw, bh, bd];
+            break;
+          }
+        }
+
+        var changed = found !== this.hoverIds[stage];
+        // if (changed) {
+        this.hoverIds[stage] = found;
+        // }
+
+        if (stage === 'after') {
+          let drawingBox = this.drawingBox = this.drawingBox || {};
+          if (this.isDrawingBox) {
+            drawingBox.endX = x;
+            drawingBox.endY = y;
+            this.draw(stage);
+            return;
+          }
+
+          // 未点中某个框时：当光标在左上角、右下角的拖动球 或 右上角、左下角 的旋转球范围内时，显示对应球；已点中某个框时：根据球的类型来 缩放/旋转 框
+          // 检测操作类型
+          const corners = foundBbox == null || (this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating)
+              ? null : this.getBoxCorners(foundBbox[0], foundBbox[1], foundBbox[2], foundBbox[3]);
+          // 检查是否点击角点（用于缩放）
+          let isDragging = this.isDragging;
+          let isResizing = this.isResizing;
+          let isRotating = this.isRotating;
+          if (corners != null) {
+            if (this.isNearCorner(x, y, corners.tl, range)) {
+              this.dragMode = 'resize';
+              this.currentCorner = 'tl';
+              isResizing = true;
+            } else if (this.isNearCorner(x, y, corners.tr, range)) {
+              this.dragMode = 'resize';
+              this.currentCorner = 'tr';
+              isRotating = true;
+            } else if (this.isNearCorner(x, y, corners.bl, range)) {
+              this.dragMode = 'resize';
+              this.currentCorner = 'bl';
+              isRotating = true;
+            } else if (this.isNearCorner(x, y, corners.br, range)) {
+              this.dragMode = 'resize';
+              this.currentCorner = 'br';
+              isResizing = true;
+            // } else if (found != null) {
+            //   isDragging = true;
+            }
+          }
+
+          let originalBox = this.originalBox;
+          if (isDragging && originalBox != null) {
+            // 拖拉模式：更新框的位置
+            const deltaX = x - this.dragStartX;
+            const deltaY = y - this.dragStartY;
+
+            drawingBox.startX = originalBox.startX + deltaX;
+            drawingBox.startY = originalBox.startY + deltaY;
+            drawingBox.endX = originalBox.endX + deltaX;
+            drawingBox.endY = originalBox.endY + deltaY;
+            drawingBox.degree = originalBox.degree;
+
+            this.draw(stage);
+            return;
+          }
+
+          if (isResizing) {
+            // 缩放模式：根据角点调整框的大小
+            const original = this.originalBox || {};
+
+            switch (this.currentCorner) {
+              case 'tl': // 左上角
+                drawingBox.startX = Math.min(x, original.endX - range);
+                drawingBox.startY = Math.min(y, original.endY - range);
+                drawingBox.endX = original.endX;
+                drawingBox.endY = original.endY;
+                break;
+              case 'tr': // 右上角
+                drawingBox.startX = original.startX;
+                drawingBox.startY = Math.min(y, original.endY - range);
+                drawingBox.endX = Math.max(x, original.startX + range);
+                drawingBox.endY = original.endY;
+                break;
+              case 'bl': // 左下角
+                drawingBox.startX = Math.min(x, original.endX - range);
+                drawingBox.startY = original.startY;
+                drawingBox.endX = original.endX;
+                drawingBox.endY = Math.max(y, original.startY + range);
+                break;
+              case 'br': // 右下角
+                drawingBox.startX = original.startX;
+                drawingBox.startY = original.startY;
+                drawingBox.endX = Math.max(x, original.startX + range);
+                drawingBox.endY = Math.max(y, original.startY + range);
+                break;
+            }
+
+            drawingBox.degree = original.degree;
+            this.draw(stage);
+            return;
+          }
+
+          if (isRotating && originalBox != null) {
+            // 旋转模式：计算旋转角度
+            const centerX = this.rotationCenter.x;
+            const centerY = this.rotationCenter.y;
+
+            const startAngle = Math.atan2(this.dragStartY - centerY, this.dragStartX - centerX);
+            const currentAngle = Math.atan2(y - centerY, x - centerX);
+
+            const deltaAngle = currentAngle - startAngle;
+            drawingBox.degree = (originalBox.degree + deltaAngle * 180 / Math.PI) % 360;
+
+            // 保持框的原始大小和位置
+            drawingBox.startX = originalBox.startX;
+            drawingBox.startY = originalBox.startY;
+            drawingBox.endX = originalBox.endX;
+            drawingBox.endY = originalBox.endY;
+
+            this.draw(stage);
+            return;
+          }
+
+        }
+
+        let hasBall = StringUtil.isNotEmpty(this.currentCorner, true);
+        if (changed || hasBall) {
+          this.draw(stage);
+          // if (hasBall) {
+          //   this.drawDrawingBox(stage);
+          // }
+        }
+      },
+      // 鼠标松开结束画框并显示弹窗
+      onMouseup: function(stage, event) {
+        if (stage != 'after' || ! (this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating)) {
+          return;
+        }
+
+        var drawingBox = this.drawingBox;
+        if (drawingBox == null) {
+          return;
+        }
+
+        if (this.isDragging || this.isResizing || this.isRotating) {
+          // 保存修改后的框数据
+          var hoverId = this.hoverIds[stage];
+          var detection = this.detection = this.detection || {};
+          var after = detection.after = detection.after || {};
+          var bboxes = after.bboxes = after.bboxes || [];
+          var item = bboxes[hoverId] || {};
+          var bbox = item.bbox || {};
+
+          const minX = Math.min(drawingBox.startX || bbox[0], drawingBox.endX || bbox[2]);
+          const maxX = Math.max(drawingBox.startX || bbox[0], drawingBox.endX || bbox[2]);
+          const minY = Math.min(drawingBox.startY || bbox[1], drawingBox.endY || bbox[3]);
+          const maxY = Math.max(drawingBox.startY || bbox[1], drawingBox.endY || bbox[3]);
+
+          bbox.bbox = [minX, minY, maxX - minX, maxY - minY, drawingBox.degree || bbox[4]];
+
+          // 重置操作状态
+          this.isDragging = false;
+          this.isResizing = false;
+          this.isRotating = false;
+          this.dragMode = '';
+          this.originalBox = null;
+
+          this.draw(stage);
+          event.preventDefault();
+          return;
+        }
 
         const [x, y] = this.getCanvasXY(stage, event);
-
-        var drawingBox = this.drawingBox = this.drawingBox || {};
-
         var startX = drawingBox.startX;
         var startY = drawingBox.startY;
         var endX = drawingBox.endX = x;
@@ -7834,7 +8094,10 @@ https://github.com/Tencent/APIJSON/issues
         const maxX = Math.max(startX, endX);
         const minY = Math.min(startY, endY);
         const maxY = Math.max(startY, endY);
-        
+
+        this.isDrawingBox = false;
+        this.isDragging = false;
+
         // 如果框太小，忽略
         if (maxX - minX < 10 || maxY - minY < 10) {
           this.draw(stage);
@@ -7848,12 +8111,12 @@ https://github.com/Tencent/APIJSON/issues
 
       // 绘制正在画的框
       drawDrawingBox: function(stage) {
-        if (! this.isDrawingBox || stage !== 'after') {
+        if (stage != 'after') { // || ! (this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating)) {
           return;
         }
         
         const canvas = this.canvasMap[stage];
-        if (!canvas) {
+        if (! canvas) {
           return;
         }
         
@@ -7862,22 +8125,128 @@ https://github.com/Tencent/APIJSON/issues
           return;
         }
 
-        var drawingBox = this.drawingBox = this.drawingBox || {};
+        var drawingBox = this.drawingBox; // = this.drawingBox || {};
+        if (drawingBox == null) {
+          return;
+        }
+
         var startX = drawingBox.startX;
         var startY = drawingBox.startY;
         var endX = drawingBox.endX;
         var endY = drawingBox.endY;
+        var degree = drawingBox.degree || 0;
 
         const minX = Math.min(startX, endX);
         const maxX = Math.max(startX, endX);
         const minY = Math.min(startY, endY);
         const maxY = Math.max(startY, endY);
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const centerX = minX + width / 2;
+        const centerY = minY + height / 2;
+
+        ctx.save();
         
+        // 如果有旋转，应用旋转变换
+        if (degree !== 0) {
+          ctx.translate(centerX, centerY);
+          ctx.rotate(degree * Math.PI / 180);
+          ctx.translate(-centerX, -centerY);
+        }
+
+        // 设置绘制样式
         ctx.strokeStyle = '#FF6B6B';
         ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        ctx.setLineDash(this.isDrawingBox ? [5, 5] : []);
+        ctx.strokeRect(minX, minY, width, height);
         ctx.setLineDash([]);
+
+        // 绘制角点
+        if (!this.isDrawingBox) {
+          ctx.fillStyle = '#FF6B6B';
+          const corners = [
+            {x: minX, y: minY},           // 左上
+            {x: maxX, y: minY},           // 右上
+            {x: minX, y: maxY},           // 左下
+            {x: maxX, y: maxY}            // 右下
+          ];
+          
+          corners.forEach(corner => {
+            ctx.beginPath();
+            ctx.arc(corner.x, corner.y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+          });
+
+          // 绘制旋转球
+          const rotationHandles = [
+            {x: maxX, y: minY},           // 右上
+            {x: minX, y: maxY}            // 左下
+          ];
+          
+          ctx.strokeStyle = '#4ECDC4';
+          ctx.lineWidth = 2;
+          rotationHandles.forEach(handle => {
+            ctx.beginPath();
+            ctx.arc(handle.x, handle.y, 8, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            // 绘制旋转指示线
+            ctx.beginPath();
+            ctx.moveTo(handle.x, handle.y - 12);
+            ctx.lineTo(handle.x, handle.y - 20);
+            ctx.stroke();
+          });
+        }
+
+        ctx.restore();
+      },
+
+            // 获取框的四个角点坐标
+      getBoxCorners: function(x, y, width, height) {
+        return {
+          tl: {x: x, y: y},                    // 左上
+          tr: {x: x + width, y: y},            // 右上
+          bl: {x: x, y: y + height},           // 左下
+          br: {x: x + width, y: y + height}    // 右下
+        };
+      },
+
+      // 检测鼠标是否靠近指定点
+      isNearCorner: function(mouseX, mouseY, corner, threshold = 10) {
+        const distance = Math.sqrt(
+          Math.pow(mouseX - corner.x, 2) + Math.pow(mouseY - corner.y, 2)
+        );
+        return distance <= threshold;
+      },
+
+      // 检测鼠标是否靠近旋转球
+      isNearRotationHandle: function(mouseX, mouseY, handle, threshold = 15) {
+        const distance = Math.sqrt(
+          Math.pow(mouseX - handle.x, 2) + Math.pow(mouseY - handle.y, 2)
+        );
+        return distance <= threshold;
+      },
+
+      // 计算两点之间的角度（用于旋转）
+      calculateAngle: function(centerX, centerY, pointX, pointY) {
+        return Math.atan2(pointY - centerY, pointX - centerX);
+      },
+
+      // 应用旋转变换到坐标
+      applyRotation: function(x, y, centerX, centerY, angle) {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        const translatedX = x - centerX;
+        const translatedY = y - centerY;
+        
+        const rotatedX = translatedX * cos - translatedY * sin;
+        const rotatedY = translatedX * sin + translatedY * cos;
+        
+        return {
+          x: rotatedX + centerX,
+          y: rotatedY + centerY
+        };
       },
 
       // 显示标签弹窗
@@ -8054,7 +8423,7 @@ https://github.com/Tencent/APIJSON/issues
         
         this.hideLabelModal();
         this.draw('after');
-        this.draw('diff');
+        // this.draw('diff');
         this.compute();
       },
       
