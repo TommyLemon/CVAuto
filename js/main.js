@@ -2147,8 +2147,9 @@ https://github.com/Tencent/APIJSON/issues
             }
 
             else if (this.isRandomShow && this.isRandomListShow) {
-              this.exTxt.name = 'CVAuto_report_' + (this.reportId || 0) + '.xlsx'
-              window.open(this.server + '/download/cv/report/' + (this.reportId || 0))
+              var id = this.reportId || this.getCurrentDocumentId()
+              this.exTxt.name = 'CVAuto_dataset_' + id + '.zip'
+              window.open(this.server + '/download/cv/report/' + id)
             }
             else if (this.view == 'markdown' || this.view == 'output') {
               var suffix
@@ -2946,7 +2947,8 @@ https://github.com/Tencent/APIJSON/issues
               , this.exTxt.name + '.txt')
           }
           else if (this.isRandomShow && this.isRandomListShow) {
-            window.open(this.server + '/download/cv/report/' + (this.reportId || 0))
+            var id = this.reportId || this.getCurrentDocumentId()
+            window.open(this.server + '/download/dataset/auto/' + id)
           }
           else if (this.view == 'markdown' || this.view == 'output') { //model
             var clazz = StringUtil.trim(this.exTxt.name)
@@ -8060,13 +8062,15 @@ https://github.com/Tencent/APIJSON/issues
             req = newReq
           }
 
-          axios.interceptors.request.use(function (config) {
+          var interceptors = axios.interceptors
+          if (interceptors) {
+              interceptors.request.use(function (config) {
             config.metadata = { startTime: new Date().getTime()}
             return config;
           }, function (error) {
             return Promise.reject(error);
-          });
-          axios.interceptors.response.use(function (response) {
+              })
+              interceptors.response.use(function (response) {
             response.config.metadata.endTime = new Date().getTime()
             response.duration = response.config.metadata.endTime - response.config.metadata.startTime
             return response;
@@ -8074,7 +8078,8 @@ https://github.com/Tencent/APIJSON/issues
             error.config.metadata.endTime = new Date().getTime();
             error.duration = error.config.metadata.endTime - error.config.metadata.startTime;
             return Promise.reject(error);
-          });
+              })
+          }
 
           // axios.defaults.withcredentials = true
           axios({
