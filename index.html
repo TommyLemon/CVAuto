@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CVAuto-零代码 CV AI 自动化测试平台</title>
+    <title>CVAuto-零代码 CV AI 自动化测试平台</title>
     <meta charset="utf-8" />
-  <meta name="keywords" content="apijson,api,json,auto,cv,ai,cvauto,计算机视觉,自动化CV回归测试,机器学习CV回归测试,回归测试,机器学习,CV测试,自动化,CV自动化,功能测试,功能自动化,录制回放,零代码,低代码"/>
-  <meta name="description" content="👁 零代码 CV AI 自动化测试平台 🚀 零代码、自动化测试 CV 计算机视觉 AI 人工智能图像识别算法：行人检测、动物分类、文本 OCR 识别等"/>
+    <meta name="keywords" content="apijson,api,json,auto,cv,ai,cvauto,计算机视觉,自动化CV回归测试,机器学习CV回归测试,回归测试,机器学习,CV测试,自动化,CV自动化,功能测试,功能自动化,录制回放,零代码,低代码"/>
+    <meta name="description" content="👁 零代码 CV AI 自动化测试平台 🚀 零代码、自动化测试 CV 计算机视觉 AI 人工智能图像识别算法：行人检测、动物分类、文本 OCR 识别等"/>
 
     <!-- 登录 <<<<<<<<<<<<<<<<<<<< -->
     <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.min.css">
@@ -414,7 +414,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                         </div>
                         <div style="min-width: 240px; height: 100%; top: 25px; left: 0px; position: absolute;">
                             <img id="vAfter" :src="img" ref="vAfterImg" @load="syncCanvasSize('after')" style="min-width: 240px; height: 100%; position: absolute;" />
-                            <canvas id="vAfterCanvas" ref="vAfterCanvas" style="min-width: 240px; height: 100%; position: absolute;" @mousemove="onMousemove('after', $event)" @click="onClick('after', $event)" />
+                            <canvas id="vAfterCanvas" ref="vAfterCanvas" style="min-width: 240px; height: 100%; position: absolute;" @click="onClick('after', $event)" @mousemove="onMousemove('after', $event)" @mousedown="onMousedown('after', $event)" @mouseup="onMouseup('after', $event)" />
                         </div>
                     </div>
                     <div style="min-width: 240px; position: relative; top: 25px" :style="{'height': isFullScreen ? '80%' : '30%' }">
@@ -424,7 +424,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                         </div>
                         <div style="min-width: 240px; height: 100%; top: 25px; left: 0px; position: absolute;">
                             <img id="vDiff" :src="img" ref="vDiffImg" @load="syncCanvasSize('diff')" style="min-width: 240px; height: 100%; position: absolute;" />
-                            <canvas id="vDiffCanvas" ref="vDiffCanvas" style="min-width: 240px; height: 100%; position: absolute;" @mousemove="onMousemove('diff', $event)"  @click="onClick('diff', $event)" />
+                            <canvas id="vDiffCanvas" ref="vDiffCanvas" style="min-width: 240px; height: 100%; position: absolute;" @click="onClick('diff', $event)" @mousemove="onMousemove('diff', $event)" />
                         </div>
                     </div>
                     <div style="min-width: 240px; position: relative; top: 50px" :style="{'height': isFullScreen ? '80%' : '30%' }">
@@ -892,6 +892,57 @@ fun(true, 1, 'a'..);
     </div>
 
 
+    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+    <!-- 标签弹窗 -->
+    <div v-show="isLabelModalShow" class="label-modal-overlay" @click="hideLabelModal">
+        <div class="label-modal" :style="{ left: labelModalPosition.x + 'px', top: labelModalPosition.y + 'px' }" @click.stop>
+            <!-- 顶部：颜色选择器和标签输入框 -->
+            <div class="label-modal-header">
+                <div class="color-picker" :style="{ backgroundColor: selectedColor.hexString }" @click="showColorPickerModal(-1)"></div>
+                <div class="label-input-container">
+                    <input id="labelInput" v-model="newLabelText" type="text" placeholder="输入标签，按回车添加" @keyup.enter="addLabel" class="label-input" />
+                    <button @click="addLabel" class="add-label-btn">+</button>
+                </div>
+            </div>
+
+            <!-- 下方：已有标签列表 -->
+            <div class="label-list">
+                <div v-for="(label, index) in boxLabels" :key="index" class="label-item" @click="saveBoxLabel(label, index)" >
+                    <div class="color-picker" :style="{ backgroundColor: label.color }" @click="showColorPickerModal(index)"></div>
+                    <span class="label-text" :style="{ color: index == this.labelIndex ? 'black' : 'gray' }">{{ label.text }}</span>
+                    <span class="label-remove" @click="removeLabel(index)">×</span>
+                </div>
+            </div>
+
+<!--            &lt;!&ndash; 保存按钮 &ndash;&gt;-->
+<!--            <div class="label-modal-footer">-->
+<!--                <button @click="saveBoxLabels" class="save-btn">保存</button>-->
+<!--                <button @click="hideLabelModal" class="cancel-btn">取消</button>-->
+<!--            </div>-->
+        </div>
+    </div>
+
+    <!-- 颜色选择器弹窗 -->
+    <div v-show="isColorPickerShow" class="color-picker-modal-overlay" @click="hideColorPickerModal">
+        <div class="color-picker-modal" @click.stop>
+            <div class="color-picker-header">
+                <h4>选择颜色</h4>
+                <button @click="hideColorPickerModal" class="close-btn">×</button>
+            </div>
+            <div class="color-picker-body">
+                <div id="color-picker-container"></div>
+                <div class="color-info">
+                    <div class="current-color" :style="{ backgroundColor: selectedColor.hexString }"></div>
+                    <span>{{ selectedColor.hexString }}</span>
+                </div>
+            </div>
+<!--            <div class="color-picker-footer">-->
+<!--                <button @click="confirmColor" class="confirm-btn">确定</button>-->
+<!--                <button @click="hideColorPickerModal" class="cancel-btn">取消</button>-->
+<!--            </div>-->
+        </div>
+    </div>
+
     <!-- 登录 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -->
     <div class="my-login-page" v-show="isLoginShow">
         <section class="h-100">
@@ -968,10 +1019,6 @@ fun(true, 1, 'a'..);
 <!--用于移动的时候遮住文本域 避免被选中-->
 <div class="widnow-cover">
 </div>
-
-
-
-
 
 
 <!--最外层根结构-->
@@ -1057,8 +1104,6 @@ fun(true, 1, 'a'..);
         </svg>
       </span>
 </script>
-
-
 
 
 <script src="js/vue.min.js"></script>

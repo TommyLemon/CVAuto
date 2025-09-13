@@ -1217,6 +1217,23 @@ https://github.com/Tencent/APIJSON/issues
       sameIds: [],
       missTruth: {},
       compareRandomIds: null, // [],
+      isDrawingBox: false,
+      drawingBox: { startX: 0, startY: 0, endX: 0, endY: 0 },
+      isLabelModalShow: false,
+      labelModalPosition: { x: 0, y: 0 },
+      selectedColor: {hexString: '#FF6B6B'},
+      newLabelText: '',
+      currentLabel: {
+        text: 'object',
+        color: 'blue'
+      },
+      boxLabels: [{
+        text: 'object',
+        color: 'blue'
+      }],
+      isColorPickerShow: false,
+      colorPickerPosition: { x: 0, y: 0 },
+      // tempColor: {hexString: '#FF6B6B'}, // 临时选择的颜色
       detection: {
         isShowNum: false,
         total: 10,
@@ -2648,7 +2665,7 @@ https://github.com/Tencent/APIJSON/issues
       },
       // 根据测试用例/历史记录恢复数据
       restoreRemoteAndTest: function (index, item) {
-        this.restoreRemote(index, item, true)
+        this.restoreRemote(index, item, true, true)
       },
       // 根据测试用例/历史记录恢复数据
       restoreRemote: function (index, item, test, showRandom) {
@@ -7099,6 +7116,8 @@ https://github.com/Tencent/APIJSON/issues
             return { color: JSONResponse.adjustBrightness(box.color, isBefore ? 'brighten' : 'darken', isBefore ? 1.2 : 0.8) };  // 暗移，透明度放大20%；亮移，透明度缩小 20%
           } : null
         }, img);
+
+        this.drawDrawingBox(stage);
       },
       drawAll: function() {
         ['before', 'diff', 'after'].forEach(stage => this.draw(stage));
@@ -7631,42 +7650,6 @@ https://github.com/Tencent/APIJSON/issues
         return [x, y];
       },
 
-      onMousemove: function(stage, event) {
-        const img = this.imgMap[stage];
-        const canvas = this.canvasMap[stage];
-        const [x, y] = this.getCanvasXY(stage, event);
-
-        const height = canvas.height || (img || {}).height;
-        const width = canvas.width || (img || {}).width;
-        const nw = img == null ? 0 : (img.naturalWidth || 0);
-        const nh = img == null ? 0 : (img.naturalHeight || 0);
-        const xRate = nw < 1 ? 1 : width/nw;
-        const yRate = nh < 1 ? 1 : height/nh;
-
-        let found = null;
-        var bboxes = JSONResponse.getBboxes(this.detection[stage]) || []
-        let len = bboxes.length;
-        var range = (height || 240) * (len <= 1 ? 0.5 : (len <= 5 ? 0.1/len : 0.02));
-        for (var i = 0; i < len; i++) {
-          const item = bboxes[i];
-          if (item == null) {
-            continue;
-          }
-
-          var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
-          if (JSONResponse.isOnBorder(x, y, [bx, by, bw, bh, bd], range)) {
-            found = i;
-            break;
-          }
-        }
-
-        if (found == this.hoverIds[stage]) {
-          return
-        }
-
-        this.hoverIds[stage] = found;
-        this.draw(stage);
-      },
       onClickFullScreen: function(event) {
         var isFullScreen = this.isFullScreen = ! this.isFullScreen;
         this.isRandomShow = ! isFullScreen;
@@ -7682,6 +7665,10 @@ https://github.com/Tencent/APIJSON/issues
        * 例如点击 √ / × 时：
        */
       onClick: function(stage, event) {
+        if (this.isDrawingBox) {
+          return;
+        }
+
         const detection = this.detection;
         const isDiff = stage == 'diff';
         const img = this.imgMap[stage];
@@ -7767,6 +7754,310 @@ https://github.com/Tencent/APIJSON/issues
         }
       },
 
+      // 鼠标按下开始画框
+      onMousedown: function(stage, event) {
+        if (stage != 'after') {
+          return;
+        }
+        
+        const [x, y] = this.getCanvasXY(stage, event);
+        this.isDrawingBox = true;
+        this.drawingBox = { startX: x, startY: y, endX: x, endY: y };
+        
+        event.preventDefault();
+      },
+      onMousemove: function(stage, event) {
+        // 画框时的实时更新
+        const [x, y] = this.getCanvasXY(stage, event);
+        if (this.isDrawingBox && stage === 'after') {
+          var drawingBox = this.drawingBox = this.drawingBox || {};
+          drawingBox.endX = x;
+          drawingBox.endY = y;
+
+          this.draw(stage);
+          return;
+        }
+
+        const img = this.imgMap[stage];
+        const canvas = this.canvasMap[stage];
+
+        const height = canvas.height || (img || {}).height;
+        const width = canvas.width || (img || {}).width;
+        const nw = img == null ? 0 : (img.naturalWidth || 0);
+        const nh = img == null ? 0 : (img.naturalHeight || 0);
+        const xRate = nw < 1 ? 1 : width/nw;
+        const yRate = nh < 1 ? 1 : height/nh;
+
+        let found = null;
+        var bboxes = JSONResponse.getBboxes(this.detection[stage]) || []
+        let len = bboxes.length;
+        var range = (height || 240) * (len <= 1 ? 0.5 : (len <= 5 ? 0.1/len : 0.02));
+        for (var i = 0; i < len; i++) {
+          const item = bboxes[i];
+          if (item == null) {
+            continue;
+          }
+
+          var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
+          if (JSONResponse.isOnBorder(x, y, [bx, by, bw, bh, bd], range)) {
+            found = i;
+            break;
+          }
+        }
+
+        if (found == this.hoverIds[stage]) {
+          return
+        }
+
+        this.hoverIds[stage] = found;
+        this.draw(stage);
+      },
+      // 鼠标松开结束画框并显示弹窗
+      onMouseup: function(stage, event) {
+        if (stage != 'after' || ! this.isDrawingBox) {
+          return;
+        }
+
+        this.isDrawingBox = false;
+
+        const [x, y] = this.getCanvasXY(stage, event);
+
+        var drawingBox = this.drawingBox = this.drawingBox || {};
+
+        var startX = drawingBox.startX;
+        var startY = drawingBox.startY;
+        var endX = drawingBox.endX = x;
+        var endY = drawingBox.endY = y;
+        
+        // 计算框的实际坐标（确保左上角和右下角正确）
+        const minX = Math.min(startX, endX);
+        const maxX = Math.max(startX, endX);
+        const minY = Math.min(startY, endY);
+        const maxY = Math.max(startY, endY);
+        
+        // 如果框太小，忽略
+        if (maxX - minX < 10 || maxY - minY < 10) {
+          this.draw(stage);
+          return;
+        }
+
+        this.showLabelModal(event.clientX, event.clientY); // 位置总是在右下角 this.showLabelModal(stage, maxX, maxY);
+        
+        event.preventDefault();
+      },
+
+      // 绘制正在画的框
+      drawDrawingBox: function(stage) {
+        if (! this.isDrawingBox || stage !== 'after') {
+          return;
+        }
+        
+        const canvas = this.canvasMap[stage];
+        if (!canvas) {
+          return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        if (! ctx) {
+          return;
+        }
+
+        var drawingBox = this.drawingBox = this.drawingBox || {};
+        var startX = drawingBox.startX;
+        var startY = drawingBox.startY;
+        var endX = drawingBox.endX;
+        var endY = drawingBox.endY;
+
+        const minX = Math.min(startX, endX);
+        const maxX = Math.max(startX, endX);
+        const minY = Math.min(startY, endY);
+        const maxY = Math.max(startY, endY);
+        
+        ctx.strokeStyle = '#FF6B6B';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        ctx.setLineDash([]);
+      },
+
+      // 显示标签弹窗
+      showLabelModal: function(clientX, clientY) {
+        // 直接使用鼠标事件的页面坐标
+        let x = clientX + 10;
+        let y = clientY + 10;
+        
+        // 边界检查，确保弹窗不会超出屏幕
+        const modalWidth = 300;  // 弹窗宽度
+        const modalHeight = 200; // 弹窗高度
+        
+        if (x + modalWidth > window.innerWidth) {
+          x = clientX - modalWidth - 10;
+        }
+        
+        if (y + modalHeight > window.innerHeight) {
+          y = clientY - modalHeight - 10;
+        }
+        
+        this.labelModalPosition = {
+          x: Math.max(10, x),  // 确保不会超出左边界
+          y: Math.max(10, y)   // 确保不会超出上边界
+        };
+
+        this.isLabelModalShow = true;
+        // this.labelIndex = -1;
+        // this.boxLabels = [];
+        
+        // 聚焦到输入框
+        this.$nextTick(() => {
+          const input = document.getElementById('labelInput');
+          if (input) input.focus();
+        });
+      },
+
+      // 隐藏标签弹窗
+      hideLabelModal: function() {
+        this.isLabelModalShow = false;
+        this.newLabelText = '';
+        this.draw('after');
+      },
+
+      // 添加标签
+      addLabel: function() {
+        var txt = StringUtil.trim(this.newLabelText);
+        if (StringUtil.isEmpty(txt)) {
+          return;
+        }
+
+        var boxLabels = this.boxLabels = this.boxLabels || [];
+        var color = this.selectedColor = this.selectedColor || {};
+        var rgba = [color.red, color.blue, color.green, color.alpha];
+        for (let i = 0; i < boxLabels.length; i++) {
+          var label = boxLabels[i];
+          if (label == null) {
+            continue
+          }
+
+          if (label.text == txt) {
+            alert('标签名与第 ' + i + ' 个标签重复，请重新输入！');
+            return;
+          }
+          if (label.color == rgba) {
+            alert('标签颜色与第 ' + i + ' 个标签重复，请重新选择！');
+            return;
+          }
+        }
+
+        this.currentLabel = {
+          text: txt,
+          color: rgba
+        };
+        this.newLabelText = '';
+        boxLabels.unshift(this.currentLabel);
+        this.labelIndex = 0;
+        this.saveBoxLabel(this.currentLabel, this.labelIndex);
+      },
+
+      // 删除标签
+      removeLabel: function(index) {
+        this.boxLabels.splice(index, 1);
+      },
+
+      // 选择标签颜色
+      selectLabelColor: function(color) {
+        this.selectedColor = color;
+      },
+
+      // 显示颜色选择器弹窗
+      showColorPickerModal: function(index, label) {
+        this.isColorPickerShow = true;
+        // this.tempColor = this.selectedColor;
+        this.labelIndex = index;
+        this.currentLabel = label || this.boxLabels[index];
+
+        this.$nextTick(() => {
+            this.initColorPicker();
+        });
+      },
+      // 隐藏颜色选择器弹窗
+      hideColorPickerModal: function() {
+        this.isColorPickerShow = false;
+      },
+      // 初始化颜色选择器
+      initColorPicker: function() {
+        const colorPickerContainer = document.getElementById('color-picker-container');
+        if (! colorPickerContainer || this.colorPicker) return;
+        
+        this.colorPicker = new iro.ColorPicker('#color-picker-container', {
+            width: 250,
+            color: this.selectedColor.hexString,
+            layout: [
+                {
+                    component: iro.ui.Wheel,
+                    options: {}
+                },
+                {
+                    component: iro.ui.Slider,
+                    options: {
+                        sliderType: 'hue'
+                    }
+                }
+            ]
+        });
+        
+        this.colorPicker.on('color:change', (color) => {
+            this.selectedColor = color; // .hexString;
+            var label = this.currentLabel || this.boxLabels[this.labelIndex] || {}
+            label.color = [color.red, color.blue, color.green, color.alpha];
+        });
+      },
+
+      // 确认选择颜色
+      confirmColor: function() {
+        // this.selectedColor = this.tempColor;
+        this.hideColorPickerModal();
+      },
+
+      // 保存框的标签到检测结果中
+      saveBoxLabel: function(label, index) {
+        var boxLabels = this.boxLabels || [];
+        if (boxLabels.length <= 0) {
+          this.hideLabelModal();
+          return;
+        }
+
+        const detection = this.detection;
+        const after = detection.after = detection.after || {};
+        const bboxes = after.bboxes = after.bboxes || [];
+
+        var drawingBox = this.drawingBox = this.drawingBox || {};
+        var startX = drawingBox.startX;
+        var startY = drawingBox.startY;
+        var endX = drawingBox.endX;
+        var endY = drawingBox.endY;
+
+        const minX = Math.min(startX, endX);
+        const maxX = Math.max(startX, endX);
+        const minY = Math.min(startY, endY);
+        const maxY = Math.max(startY, endY);
+
+        this.labelIndex = index || 0;
+        this.currentLabel = label = label || boxLabels[index] || {}
+        // 创建新的框对象
+        const newBox = {
+          bbox: [minX, minY, maxX - minX, maxY - minY],
+          label: label.text,
+          color: label.color,
+          score: 1
+        };
+        
+        bboxes.push(newBox);
+        
+        this.hideLabelModal();
+        this.draw('after');
+        this.draw('diff');
+        this.compute();
+      },
+      
       showAndSend: function (branchUrl, req, isAdminOperation, callback) {
         this.showUrl(isAdminOperation, branchUrl)
         vInput.value = JSON.stringify(req, null, '    ')
