@@ -1240,7 +1240,7 @@ https://github.com/Tencent/APIJSON/issues
       dragMode: '',             // 操作模式: 'move', 'resize', 'rotate'
       dragStartX: 0,            // 拖拉开始时的鼠标X坐标
       dragStartY: 0,            // 拖拉开始时的鼠标Y坐标
-      originalBox: null,        // 原始框数据备份
+      originBox: null,        // 原始框数据备份
       currentCorner: '',        // 当前操作的角点: 'tl', 'tr', 'bl', 'br'
       rotationCenter: {x: 0, y: 0}, // 旋转中心点
       detection: {
@@ -7674,7 +7674,7 @@ https://github.com/Tencent/APIJSON/issues
        * 例如点击 √ / × 时：
        */
       onClick: function(stage, event) {
-        if (this.isDrawingBox) {
+        if (this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating) {
           return;
         }
 
@@ -7817,7 +7817,7 @@ https://github.com/Tencent/APIJSON/issues
 
         // 点击到了现有框，准备操作模式
         this.hoverIds[stage] = found;
-        this.originalBox = {
+        this.originBox = {
           startX: foundBbox[0],
           startY: foundBbox[1],
           endX: foundBbox[0] + foundBbox[2],
@@ -7918,9 +7918,9 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         var changed = found !== this.hoverIds[stage];
-        // if (changed) {
-        this.hoverIds[stage] = found;
-        // }
+        if (changed && ! (this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating)) {
+          this.hoverIds[stage] = found;
+        }
 
         if (stage === 'after') {
           let drawingBox = this.drawingBox = this.drawingBox || {};
@@ -7961,59 +7961,59 @@ https://github.com/Tencent/APIJSON/issues
             }
           }
 
-          let originalBox = this.originalBox;
-          if (isDragging && originalBox != null) {
+          let originBox = this.originBox; // = this.originBox || {};
+          if (isDragging && originBox != null) {
             // 拖拉模式：更新框的位置
             const deltaX = x - this.dragStartX;
             const deltaY = y - this.dragStartY;
 
-            drawingBox.startX = originalBox.startX + deltaX;
-            drawingBox.startY = originalBox.startY + deltaY;
-            drawingBox.endX = originalBox.endX + deltaX;
-            drawingBox.endY = originalBox.endY + deltaY;
-            drawingBox.degree = originalBox.degree;
+            let originBox = this.originBox = this.originBox || {};
+            drawingBox.startX = originBox.startX + deltaX;
+            drawingBox.startY = originBox.startY + deltaY;
+            drawingBox.endX = originBox.endX + deltaX;
+            drawingBox.endY = originBox.endY + deltaY;
+            drawingBox.degree = originBox.degree;
 
             this.draw(stage);
             return;
           }
 
-          if (isResizing) {
+          if (isResizing && originBox != null) {
             // 缩放模式：根据角点调整框的大小
-            const original = this.originalBox || {};
 
             switch (this.currentCorner) {
               case 'tl': // 左上角
-                drawingBox.startX = Math.min(x, original.endX - range);
-                drawingBox.startY = Math.min(y, original.endY - range);
-                drawingBox.endX = original.endX;
-                drawingBox.endY = original.endY;
+                drawingBox.startX = Math.min(x, originBox.endX - range);
+                drawingBox.startY = Math.min(y, originBox.endY - range);
+                drawingBox.endX = originBox.endX;
+                drawingBox.endY = originBox.endY;
                 break;
               case 'tr': // 右上角
-                drawingBox.startX = original.startX;
-                drawingBox.startY = Math.min(y, original.endY - range);
-                drawingBox.endX = Math.max(x, original.startX + range);
-                drawingBox.endY = original.endY;
+                drawingBox.startX = originBox.startX;
+                drawingBox.startY = Math.min(y, originBox.endY - range);
+                drawingBox.endX = Math.max(x, originBox.startX + range);
+                drawingBox.endY = originBox.endY;
                 break;
               case 'bl': // 左下角
-                drawingBox.startX = Math.min(x, original.endX - range);
-                drawingBox.startY = original.startY;
-                drawingBox.endX = original.endX;
-                drawingBox.endY = Math.max(y, original.startY + range);
+                drawingBox.startX = Math.min(x, originBox.endX - range);
+                drawingBox.startY = originBox.startY;
+                drawingBox.endX = originBox.endX;
+                drawingBox.endY = Math.max(y, originBox.startY + range);
                 break;
               case 'br': // 右下角
-                drawingBox.startX = original.startX;
-                drawingBox.startY = original.startY;
-                drawingBox.endX = Math.max(x, original.startX + range);
-                drawingBox.endY = Math.max(y, original.startY + range);
+                drawingBox.startX = originBox.startX;
+                drawingBox.startY = originBox.startY;
+                drawingBox.endX = Math.max(x, originBox.startX + range);
+                drawingBox.endY = Math.max(y, originBox.startY + range);
                 break;
             }
 
-            drawingBox.degree = original.degree;
+            drawingBox.degree = originBox.degree;
             this.draw(stage);
             return;
           }
 
-          if (isRotating && originalBox != null) {
+          if (isRotating && originBox != null) {
             // 旋转模式：计算旋转角度
             const centerX = this.rotationCenter.x;
             const centerY = this.rotationCenter.y;
@@ -8022,13 +8022,14 @@ https://github.com/Tencent/APIJSON/issues
             const currentAngle = Math.atan2(y - centerY, x - centerX);
 
             const deltaAngle = currentAngle - startAngle;
-            drawingBox.degree = (originalBox.degree + deltaAngle * 180 / Math.PI) % 360;
+            let originBox = this.originBox || {};
+            drawingBox.degree = (originBox.degree + deltaAngle * 180 / Math.PI) % 360;
 
             // 保持框的原始大小和位置
-            drawingBox.startX = originalBox.startX;
-            drawingBox.startY = originalBox.startY;
-            drawingBox.endX = originalBox.endX;
-            drawingBox.endY = originalBox.endY;
+            drawingBox.startX = originBox.startX;
+            drawingBox.startY = originBox.startY;
+            drawingBox.endX = originBox.endX;
+            drawingBox.endY = originBox.endY;
 
             this.draw(stage);
             return;
@@ -8036,12 +8037,8 @@ https://github.com/Tencent/APIJSON/issues
 
         }
 
-        let hasBall = StringUtil.isNotEmpty(this.currentCorner, true);
-        if (changed || hasBall) {
+        if (changed || StringUtil.isNotEmpty(this.currentCorner, true)) {
           this.draw(stage);
-          // if (hasBall) {
-          //   this.drawDrawingBox(stage);
-          // }
         }
       },
       // 鼠标松开结束画框并显示弹窗
@@ -8050,40 +8047,44 @@ https://github.com/Tencent/APIJSON/issues
           return;
         }
 
-        var drawingBox = this.drawingBox;
-        if (drawingBox == null) {
-          return;
-        }
+        const img = this.imgMap[stage];
+        const canvas = this.canvasMap[stage];
+        const [x, y] = this.getCanvasXY(stage, event);
+        const height = canvas.height || (img || {}).height;
+        var detection = this.detection = this.detection || {};
+        var bboxes = JSONResponse.getBboxes(detection.after) || []
+        let len = bboxes.length;
+        var range = (height || 240) * (len <= 1 ? 0.5 : (len <= 5 ? 0.1/len : 0.02));
+
+        var drawingBox = this.drawingBox = this.drawingBox || {};
 
         if (this.isDragging || this.isResizing || this.isRotating) {
           // 保存修改后的框数据
           var hoverId = this.hoverIds[stage];
-          var detection = this.detection = this.detection || {};
-          var after = detection.after = detection.after || {};
-          var bboxes = after.bboxes = after.bboxes || [];
-          var item = bboxes[hoverId] || {};
-          var bbox = item.bbox || {};
+          var bbox = bboxes[hoverId] || {};
 
-          const minX = Math.min(drawingBox.startX || bbox[0], drawingBox.endX || bbox[2]);
-          const maxX = Math.max(drawingBox.startX || bbox[0], drawingBox.endX || bbox[2]);
-          const minY = Math.min(drawingBox.startY || bbox[1], drawingBox.endY || bbox[3]);
-          const maxY = Math.max(drawingBox.startY || bbox[1], drawingBox.endY || bbox[3]);
+          const minX = Math.min(drawingBox.startX, drawingBox.endX);
+          const maxX = Math.max(drawingBox.startX, drawingBox.endX);
+          const minY = Math.min(drawingBox.startY, drawingBox.endY);
+          const maxY = Math.max(drawingBox.startY, drawingBox.endY);
 
-          bbox.bbox = [minX, minY, maxX - minX, maxY - minY, drawingBox.degree || bbox[4]];
+          if (maxX - minX >= 2*range && maxY - minY >= 2*range) {
+            let degree = (drawingBox.degree || 0)%360;
+            bbox.bbox = [minX, minY, maxX - minX, maxY - minY, degree >= 0 ? degree : degree + 360];
+          }
 
           // 重置操作状态
           this.isDragging = false;
           this.isResizing = false;
           this.isRotating = false;
           this.dragMode = '';
-          this.originalBox = null;
+          this.originBox = null;
 
           this.draw(stage);
           event.preventDefault();
           return;
         }
 
-        const [x, y] = this.getCanvasXY(stage, event);
         var startX = drawingBox.startX;
         var startY = drawingBox.startY;
         var endX = drawingBox.endX = x;
@@ -8099,7 +8100,7 @@ https://github.com/Tencent/APIJSON/issues
         this.isDragging = false;
 
         // 如果框太小，忽略
-        if (maxX - minX < 10 || maxY - minY < 10) {
+        if (maxX - minX < 2*range || maxY - minY < 2*range) {
           this.draw(stage);
           return;
         }
@@ -8111,7 +8112,8 @@ https://github.com/Tencent/APIJSON/issues
 
       // 绘制正在画的框
       drawDrawingBox: function(stage) {
-        if (stage != 'after') { // || ! (this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating)) {
+        var hoverId = this.hoverIds[stage];
+        if (stage != 'after' || ! (hoverId != null || this.isDrawingBox || this.isDragging || this.isResizing || this.isRotating)) {
           return;
         }
         
@@ -8125,16 +8127,37 @@ https://github.com/Tencent/APIJSON/issues
           return;
         }
 
-        var drawingBox = this.drawingBox; // = this.drawingBox || {};
-        if (drawingBox == null) {
-          return;
-        }
-
+        var drawingBox = this.drawingBox = this.drawingBox || {};
         var startX = drawingBox.startX;
         var startY = drawingBox.startY;
         var endX = drawingBox.endX;
         var endY = drawingBox.endY;
         var degree = drawingBox.degree || 0;
+
+        // 如果正在操作现有框，使用操作中的框坐标
+        if (this.isDragging || this.isResizing || this.isRotating) {
+          // 使用drawingBox的坐标
+        } else if (hoverId != null) {
+          // 如果鼠标悬停在框上，显示该框的角点
+          const img = this.imgMap[stage];
+          const height = canvas.height || (img || {}).height;
+          const width = canvas.width || (img || {}).width;
+          const nw = img == null ? 0 : (img.naturalWidth || 0);
+          const nh = img == null ? 0 : (img.naturalHeight || 0);
+          const xRate = nw < 1 ? 1 : width/nw;
+          const yRate = nh < 1 ? 1 : height/nh;
+
+          var bboxes = JSONResponse.getBboxes(this.detection[stage]) || [];
+          const item = bboxes[this.hoverIds[stage]];
+          if (item) {
+            var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
+            startX = bx;
+            startY = by;
+            endX = bx + bw;
+            endY = by + bh;
+            degree = bd || 0;
+          }
+        }
 
         const minX = Math.min(startX, endX);
         const maxX = Math.max(startX, endX);
@@ -8162,7 +8185,7 @@ https://github.com/Tencent/APIJSON/issues
         ctx.setLineDash([]);
 
         // 绘制角点
-        if (!this.isDrawingBox) {
+        if (! this.isDrawingBox) {
           ctx.fillStyle = '#FF6B6B';
           const corners = [
             {x: minX, y: minY},           // 左上
