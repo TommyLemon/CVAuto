@@ -21,7 +21,7 @@
 **自动断言**画框是否正确，**可点边框附近来调整 ✓ 对 X 错**，一键上传可作为基准的本次结果， <br/>
 **自动统计**正确数、误报数、漏检数、召回率、精准率、F1 Score 等指标，**自动对比前后效果**。 <br/>
 
-![CVAuto-with-AIServer](https://github.com/user-attachments/assets/847bff1c-bd7d-4ac9-ad7c-7b95f2fa9850)
+![CVAuto-with-AIServer-MacOS](https://github.com/user-attachments/assets/19a561cc-ca13-41d4-831f-ac3360b3ce27)
 
 上图左侧是工具网页，右侧是模拟被测试的 YOLO 检测、姿态、分割 等算法模型 Python AI 推理服务；<br/>
 左侧分别有 本次、对比差异、之前 的推理后画框及标签等渲染图，差异中的 + 表示新增，- 表示减少；<br/>
@@ -240,6 +240,7 @@ https://github.com/TommyLemon/CVAuto/commits
 ### 我要赞赏
 **创作不易、坚持更难，右上角点亮 ⭐ Star 收藏/支持下本项目吧，谢谢 ^_^** <br />
 https://github.com/TommyLemon/CVAuto
+
 
 
 
