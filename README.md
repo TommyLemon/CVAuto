@@ -234,12 +234,15 @@ https://github.com/TommyLemon/APIAuto/issues
 
 [UIGO](https://github.com/TommyLemon/UIGO) 📱 零代码快准稳 UI 智能录制回放平台 🚀 3 像素内自动精准定位，2 毫秒内自动精准等待，用户包含腾讯，微信团队邀请分享
 
+[UIGOX](https://github.com/TommyLemon/UIGOX) UIGO 的 AndroidX 版 📱 零代码快准稳 UI 智能录制回放平台 🚀 3 像素内自动精准定位，2 毫秒内自动精准等待
+
 ### 持续更新
 https://github.com/TommyLemon/CVAuto/commits
 
 ### 我要赞赏
 **创作不易、坚持更难，右上角点亮 ⭐ Star 收藏/支持下本项目吧，谢谢 ^_^** <br />
 https://github.com/TommyLemon/CVAuto
+
 
 
 
