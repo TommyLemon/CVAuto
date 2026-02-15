@@ -1,15 +1,15 @@
 <h1 align="center" style="text-align:center;">
-  CVAuto
+  AutoUI
 </h1>
  
 <p align="center">👁 <b>零代码零标注 CV AI 自动化测试工具</b> 🚀 <br><b>零代码快速自动化测试 CV 计算机视觉 AI 人工智能图像识别算法的功能、效果、性能</b><br>适合 算法 应用/开发 工程师/专家、算法测试 工程师/专家、AI/机器学习/算法 工程师/专家/研究员/科学家 等</p>
 
 <p align="center" >
-  <a href="https://deepwiki.com/TommyLemon/CVAuto">English</a>
-  <a href="https://github.com/TommyLemon/CVAuto#%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B">快速上手</a>
+  <a href="https://deepwiki.com/TommyLemon/AutoUI">English</a>
+  <a href="https://github.com/TommyLemon/AutoUI#%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B">快速上手</a>
   <a href="https://search.bilibili.com/all?keyword=APIAuto">视频教程</a>
   <a href="http://apijson.cn:8080/cv/index.html">在线体验</a>
-  <a href="https://deepwiki.com/TommyLemon/CVAuto">AI 问答</a>
+  <a href="https://deepwiki.com/TommyLemon/AutoUI">AI 问答</a>
 </p>
 
 
@@ -21,7 +21,7 @@
 **自动断言**画框是否正确，**可点边框附近来调整 ✓ 对 X 错**，一键上传可作为基准的本次结果， <br/>
 **自动统计**正确数、误报数、漏检数、召回率、精准率、F1 Score 等指标，**自动对比前后效果**。 <br/>
 
-![CVAuto-with-AIServer-MacOS](https://github.com/user-attachments/assets/19a561cc-ca13-41d4-831f-ac3360b3ce27)
+![AutoUI-with-AIServer-MacOS](https://github.com/user-attachments/assets/19a561cc-ca13-41d4-831f-ac3360b3ce27)
 
 上图左侧是工具网页，右侧是模拟被测试的 YOLO 检测、姿态、分割 等算法模型 Python AI 推理服务；<br/>
 左侧分别有 本次、对比差异、之前 的推理后画框及标签等渲染图，差异中的 + 表示新增，- 表示减少；<br/>
@@ -41,10 +41,10 @@
 <br/>
 
 **一键下载测试报告，包含 头部统计指标 和 每张图明细数据** 
-![CVAuto-report-Excel](https://github.com/user-attachments/assets/630fee9d-43e6-421c-b1e3-e17ba2b605e1)
+![AutoUI-report-Excel](https://github.com/user-attachments/assets/630fee9d-43e6-421c-b1e3-e17ba2b605e1)
 
 **一键导出训练和测试数据集，加速模型迭代训练及效果提升** 
-![CVAuto-export-dataset](https://github.com/user-attachments/assets/f22ccdc9-ee08-49a0-83cf-fcb3e0e4b428)
+![AutoUI-export-dataset](https://github.com/user-attachments/assets/f22ccdc9-ee08-49a0-83cf-fcb3e0e4b428)
 
 <br/>
 
@@ -71,7 +71,7 @@ Bilibili：https://search.bilibili.com/all?keyword=APIAuto
 ### 百度、搜狗、抖音公网接口调用演示<br />
 因为这些接口不支持 CORS 跨域，所以需要开启托管服务代理。<br />
 可以复制 Chrome 等浏览器、Charles 等抓包工具的请求文本，<br />
-粘贴到 CVAuto 的 URL 输入框，会自动填充 URL, JSON, Header 等。<br />
+粘贴到 AutoUI 的 URL 输入框，会自动填充 URL, JSON, Header 等。<br />
 https://github.com/TommyLemon/APIAuto/issues/16 
 
 #### 百度
@@ -108,12 +108,12 @@ https://www.bilibili.com/video/BV1JZ4y1d7c8
 <br />
 
 **图片推理预测服务接口 可使用贵公司已部署的，或者在你的电脑部署本项目示例推理服务 AIServer：** <br /> 
-https://github.com/TommyLemon/CVAuto/tree/main/AIServer
+https://github.com/TommyLemon/AutoUI/tree/main/AIServer
 
 **自动生成文档、自动管理测试用例 这两个功能 需要部署 APIJSON 后端，建议用 APIJSONBoot 系列之一 Demo，见** <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 
-**建议使用已 [内置 CVAuto](https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource/src/main/resources/static) 的 [APIJSONBoot-MultiDataSource](https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource)，可以避免以下常见问题 1, 3, 4**
+**建议使用已 [内置 AutoUI](https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource/src/main/resources/static) 的 [APIJSONBoot-MultiDataSource](https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource)，可以避免以下常见问题 1, 3, 4**
 
 <br />
 
@@ -125,7 +125,7 @@ https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 点右上角登录 > 点右上角设置 > 导入第三方文档(平台 URL) > 如果默认设置不符你的需求，可以在弹窗内修改 > 点上传按钮
 
 #### 2.从浏览器 Network 接口信息界面或 Charles 等抓包工具复制后粘贴到 URL 输入框
-https://github.com/TommyLemon/CVAuto#%E7%99%BE%E5%BA%A6%E6%90%9C%E7%8B%97%E6%8A%96%E9%9F%B3%E5%85%AC%E7%BD%91%E6%8E%A5%E5%8F%A3%E8%B0%83%E7%94%A8%E6%BC%94%E7%A4%BA
+https://github.com/TommyLemon/AutoUI#%E7%99%BE%E5%BA%A6%E6%90%9C%E7%8B%97%E6%8A%96%E9%9F%B3%E5%85%AC%E7%BD%91%E6%8E%A5%E5%8F%A3%E8%B0%83%E7%94%A8%E6%BC%94%E7%A4%BA
 
 #### 3.调用 /delegate 代理接口来录制请求的方法、参数、Header、响应等信息
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource#%E4%BB%A3%E7%90%86%E6%8E%A5%E5%8F%A3%E5%8F%8A%E5%BD%95%E5%88%B6%E6%B5%81%E9%87%8F
@@ -181,12 +181,12 @@ npm i xxx
 很多问题都不需要看文档/视频，可以直接通过把光标放上去等简单尝试来得到解答**
 
 #### 1.无法访问接口
-如果是 CVAuto 本身调用的后端接口，则一般是 Chrome 90+ 对 CORS 请求禁止携带 Cookie  <br />
+如果是 AutoUI 本身调用的后端接口，则一般是 Chrome 90+ 对 CORS 请求禁止携带 Cookie  <br />
 或 Chrome 80-89 强制 same-site Cookie 的策略导致，打开以下链接查看解决方法 <br />
 https://github.com/TommyLemon/APIAuto/issues/9
 
 如果是其它接口，则一般是以上原因或者被接口不支持 CORS 跨域，可以改为支持， <br />
-或者在 CVAuto 右上角设置开启托管服务器代理，通过后端代理访问接口， <br />
+或者在 AutoUI 右上角设置开启托管服务器代理，通过后端代理访问接口， <br />
 注意默认是官网的托管服务器 http://apijson.cn:8080 ，仅支持公网， <br />
 如果是贵公司内网，请按以上 [部署方法](https://github.com/TommyLemon/APIAuto#%E9%83%A8%E7%BD%B2%E6%96%B9%E6%B3%95) 文档来部署 APIJSON 后端到内网，并修改托管服务器地址。
 
@@ -237,11 +237,11 @@ https://github.com/TommyLemon/APIAuto/issues
 [UIGOX](https://github.com/TommyLemon/UIGOX) UIGO 的 AndroidX 版 📱 零代码快准稳 UI 智能录制回放平台 🚀 3 像素内自动精准定位，2 毫秒内自动精准等待
 
 ### 持续更新
-https://github.com/TommyLemon/CVAuto/commits
+https://github.com/TommyLemon/AutoUI/commits
 
 ### 我要赞赏
 **创作不易、坚持更难，右上角点亮 ⭐ Star 收藏/支持下本项目吧，谢谢 ^_^** <br />
-https://github.com/TommyLemon/CVAuto
+https://github.com/TommyLemon/AutoUI
 
 
 

@@ -1,4 +1,4 @@
-/*Copyright ©2025 TommyLemon(https://github.com/TommyLemon/CVAuto)
+/*Copyright ©2025 TommyLemon(https://github.com/TommyLemon/AutoUI)
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use FileUtil file except in compliance with the License.

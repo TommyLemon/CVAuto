@@ -1,4 +1,4 @@
-/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/CVAuto)
+/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/AutoUI)
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use CodeUtil file except in compliance with the License.
@@ -29,7 +29,7 @@ if (typeof window == 'undefined') {
  */
 var CodeUtil = {
   TAG: 'CodeUtil',
-  APP_NAME: 'CVAuto',
+  APP_NAME: 'AutoUI',
   DIVIDER: '/',
 
   LANGUAGE_KOTLIN: 'Kotlin',

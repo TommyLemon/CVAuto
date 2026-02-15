@@ -1958,7 +1958,7 @@ https://github.com/Tencent/APIJSON/issues
 
             var val = item2.substring(index + 1, item2.length)
 
-            var ind = val.indexOf('(')  //一定要有函数是为了避免里面是一个简短单词和 CVAuto 代码中变量冲突
+            var ind = val.indexOf('(')  //一定要有函数是为了避免里面是一个简短单词和 AutoUI 代码中变量冲突
             if (ind > 0 && val.indexOf(')') > ind) {  //不从 0 开始是为了保证是函数，且不是 (1) 这种单纯限制作用域的括号
               try {
                 val = eval(val)
@@ -1975,7 +1975,7 @@ https://github.com/Tencent/APIJSON/issues
         return header
       },
 
-      // 分享 CVAuto 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
+      // 分享 AutoUI 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
       shareLink: function (isRandom) {
         var settingStr = null
         try {
@@ -4422,7 +4422,7 @@ https://github.com/Tencent/APIJSON/issues
         return null
       },
 
-      //上传第三方平台的 API 至 CVAuto
+      //上传第三方平台的 API 至 AutoUI
       uploadThirdPartyApi: function(method, type, name, url, parameters, json, header, description, creator, data) {
         if (typeof json == 'string') {
           json = parseJSON(json)
@@ -5733,10 +5733,10 @@ https://github.com/Tencent/APIJSON/issues
       saveCache: function (url, key, value) {
         var cache = this.getCache(url);
         cache[key] = value
-        localStorage.setItem('CVAuto:' + url, JSON.stringify(cache))
+        localStorage.setItem('AutoUI:' + url, JSON.stringify(cache))
       },
       getCache: function (url, key, defaultValue) {
-        var cache = localStorage.getItem('CVAuto:' + url)
+        var cache = localStorage.getItem('AutoUI:' + url)
         try {
           cache = parseJSON(cache)
         } catch(e) {
@@ -9393,7 +9393,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               }
 
               var answer = StringUtil.get(typeof data2 == 'string' ? data2 : (data instanceof Array ? data2.join() : JSON.stringify(data2)))
-                .replaceAll('/wiki/Tencent/APIJSON#', 'https://deepwiki.com/Tencent/APIJSON/').replaceAll('/wiki/TommyLemon/CVAuto#', 'https://deepwiki.com/TommyLemon/CVAuto/');
+                .replaceAll('/wiki/Tencent/APIJSON#', 'https://deepwiki.com/Tencent/APIJSON/').replaceAll('/wiki/TommyLemon/AutoUI#', 'https://deepwiki.com/TommyLemon/AutoUI/');
               App.view = 'markdown';
               vOutput.value += answer;
               markdownToHTML(vOutput.value)
@@ -9427,7 +9427,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                       }
 
                       answer += '\n' + StringUtil.trim(typeof data2 == 'string' ? data2 : (data2 instanceof Array ? data2.join() : JSON.stringify(data2)))
-                        .replaceAll('/wiki/Tencent/APIJSON#', 'https://deepwiki.com/Tencent/APIJSON/').replaceAll('/wiki/TommyLemon/CVAuto#', 'https://deepwiki.com/TommyLemon/CVAuto/');
+                        .replaceAll('/wiki/Tencent/APIJSON#', 'https://deepwiki.com/Tencent/APIJSON/').replaceAll('/wiki/TommyLemon/AutoUI#', 'https://deepwiki.com/TommyLemon/AutoUI/');
                     }
 
                     answer += '\n<br/>\n';
@@ -9501,11 +9501,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             this.request(true, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, 'https://api.devin.ai/ada/query', {
               "engine_id": vDeepSearch.checked ? "agent" : "multihop",
-              "user_query": "<relevant_context>" + (isRes ? "这是用 HTTP 接口工具 TommyLemon/CVAuto 发请求后的响应结果，分析并" : "") + "用中文回答：</relevant_context><br/>\n" + user_query,
+              "user_query": "<relevant_context>" + (isRes ? "这是用 HTTP 接口工具 TommyLemon/AutoUI 发请求后的响应结果，分析并" : "") + "用中文回答：</relevant_context><br/>\n" + user_query,
               "keywords": [],
               "repo_names": JSONObject.isAPIJSONPath(this.getMethod()) ? [
-                "Tencent/APIJSON", "TommyLemon/CVAuto"
-              ] : ["TommyLemon/CVAuto"],
+                "Tencent/APIJSON", "TommyLemon/AutoUI"
+              ] : ["TommyLemon/AutoUI"],
               "additional_context": "",
               "query_id": this.uuid,
               "use_notes": false,
