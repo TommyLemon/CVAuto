@@ -24,6 +24,7 @@ from PIL import Image
 import ssl
 # pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org easyocr
 import easyocr  # FIXME 不需要或者按以上方式也安装不了依赖的话可以注释掉
+from gemini_conf_util import calculate_dynamic_thresholds
 
 ssl._create_default_https_context = ssl._create_unverified_context  # 解决 easyocr 在线下载模型报错 http ssl cert error
 reader = easyocr.Reader(['ch_sim', 'en'])  # FIXME 不需要或者安装不了 easyocr 依赖的话可以注释掉
@@ -31,6 +32,7 @@ reader = easyocr.Reader(['ch_sim', 'en'])  # FIXME 不需要或者安装不了 e
 # DEBUG = false
 DEBUG = true
 MIN_IOU = 0.8
+IS_GEMINI = true
 
 app = Flask(__name__)
 CORS(app)
@@ -246,6 +248,45 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
     ocr_time_detail = null
 
     total_start_time = cur_time_in_millis()
+
+    # 2. 将所有可能的参数从 'data' 聚合到 config 字典中
+    config = {
+        # --- 基础置信度 ---
+        'conf': data.get('conf', 0.2),
+        'max_conf': data.get('max_conf', 0.8),
+
+        # --- 策略一：透视变换 (最高优先级) ---
+        'enable_perspective_adjustment': data.get('enable_perspective_adjustment', False),
+        'pixel_points': data.get('pixel_points', []),
+        'world_points': data.get('world_points', []),
+        'distance_near': data.get('distance_near', 5.0),  # (米)
+        'distance_far': data.get('distance_far', 50.0),  # (米)
+
+        # --- 策略二：物理几何模型 ---
+        'enable_geometric_adjustment': data.get('enable_geometric_adjustment', False),
+        'height': data.get('height', 0.0),  # (米)
+        'width': data.get('width', 0.0),  # (米)
+        'camera_vfov': data.get('camera_vfov', 0.0),  # (度)
+        'width_bottom': data.get('width_bottom', 0.0),  # (米, vfov的替代)
+
+        # --- 策略三：启发式模型开关 ---
+        'enable_distance_adjustment': data.get('enable_distance_adjustment', False),  # Y坐标
+        'enable_size_adjustment': data.get('enable_size_adjustment', False),  # 尺寸
+        'enable_horizontal_adjustment': data.get('enable_horizontal_adjustment', False),  # X坐标
+
+        # --- 启发式模型参数 ---
+        'y_pos_strategy': data.get('y_pos_strategy', 'bottom'),  # 'bottom' or 'center'
+        'avg_height_far': data.get('avg_height_far', 0.0),  # (像素)
+        'avg_height_near': data.get('avg_height_near', 0.0),  # (像素)
+        'edge_confidence_multiplier': data.get('edge_confidence_multiplier', 1.0),  # 0.0-1.0
+
+        # --- 时序平滑参数 (用于 enable_size_adjustment) ---
+        'video_id': data.get('video_id'),
+        'frame_index': data.get('frame_index'),
+        'smoothing_factor': data.get('smoothing_factor', 0.2),
+        'tracking_dist_thresh': data.get('tracking_dist_thresh', 50),
+    }
+
     with lock:
         for img in imgs:
             pose_indexes = []
@@ -274,9 +315,25 @@ def predict(is_detect=true, is_pose: bool = null, is_segment=false, is_ocr: bool
                     scores = null if is_none(xyxy) else conf.tolist()
                     labels = null if is_none(cls) else cls.tolist()
 
+                    # 3. 一次性调用工具函数，传入所有框、配置和图像形状
+                    #    获取一个从索引到动态阈值的映射
+                    threshold_map = calculate_dynamic_thresholds(
+                        all_boxes=bs,
+                        config=config,
+                        image_shape=img.shape if hasattr(img, 'shape') else None
+                    )
+
+                    # 4. 遍历所有检测框，使用动态阈值进行过滤
                     for i in range(len(bs)):
                         c = scores[i] if i < size(scores) else 0
-                        if c < min_conf:
+
+                        # 5. 从 map 中获取当前框(i)的专属阈值
+                        #    如果map中没有(例如util执行失败)，则回退到基础的 min_conf
+                        current_conf_threshold = threshold_map.get(i, config['conf'])
+
+                        if IS_GEMINI and c < current_conf_threshold:
+                            continue
+                        if c < min_conf and not IS_GEMINI:
                             continue
 
                         b = bs[i]
