@@ -41,7 +41,7 @@ var StringUtil = {
    * @return
    */
   noBlank: function(s) {
-    return s == null ? '' : s.replace(/ /g, '');
+    return StringUtil.get(s).replace(/ /g, '');
   },
 
   /**判断字符是否为空
