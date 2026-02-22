@@ -2774,7 +2774,7 @@
   }
 
   // Compute the character position closest to the given coordinates.
-  // Flow must be lineSpace-local ("div" coordinate system).
+  // Input must be lineSpace-local ("div" coordinate system).
   function coordsChar(cm, x, y) {
     var doc = cm.doc;
     y += cm.display.viewOffset;

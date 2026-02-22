@@ -1477,8 +1477,8 @@ var CodeUtil = {
     var prefix = CodeUtil.getBlank(depth);
     var nextPrefix = CodeUtil.getBlank(depth + 1);
 
-    return (depth > 0 ? "" : "rapidjson::Flow document;"
-          + "\nrapidjson::Flow::AllocatorType& allocator = document.GetAllocator();\n"
+    return (depth > 0 ? "" : "rapidjson::Document document;"
+          + "\nrapidjson::Document::AllocatorType& allocator = document.GetAllocator();\n"
       ) + CodeUtil.parseCode(name, reqObj, {
 
         onParseParentStart: function () {
@@ -2222,7 +2222,7 @@ var CodeUtil = {
 
       onParseParentStart: function () {
         return depth > 0 || StringUtil.isEmpty(name_, true) == false
-          ? '' : padding + 'rapidjson::Flow response;' + padding + 'response.Parse(resultJson);\n';
+          ? '' : padding + 'rapidjson::Document response;' + padding + 'response.Parse(resultJson);\n';
       },
 
       onParseParentEnd: function () {

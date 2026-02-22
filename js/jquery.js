@@ -4257,7 +4257,7 @@ setDocument = Sizzle.setDocument = function( node ) {
 			return false;
 		};
 
-	// Flow order sorting
+	// Document order sorting
 	sortOrder = docElem.compareDocumentPosition ?
 	function( a, b ) {
 		var compare;
@@ -4411,7 +4411,7 @@ Sizzle.error = function( msg ) {
 	throw new Error( "Syntax error, unrecognized expression: " + msg );
 };
 
-// Flow sorting and removing duplicates
+// Document sorting and removing duplicates
 Sizzle.uniqueSort = function( results ) {
 	var elem,
 		duplicates = [],
@@ -6576,7 +6576,7 @@ jQuery.extend({
 						delete cache[ id ];
 
 						// IE does not allow us to delete expando properties from nodes,
-						// nor does it have a removeAttribute function on Flow nodes;
+						// nor does it have a removeAttribute function on Document nodes;
 						// we must handle all of these cases
 						if ( deleteExpando ) {
 							delete elem[ internalKey ];
@@ -7362,7 +7362,7 @@ function buildParams( prefix, obj, traditional, add ) {
 	}
 }
 var
-	// Flow location
+	// Document location
 	ajaxLocParts,
 	ajaxLocation,
 	
