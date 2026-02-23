@@ -194,7 +194,7 @@ const InputUtil = {
         return this.HTTP_ACTION_NAME_LIST.indexOf(action);
     },
     getHTTPActionName(action) {
-        return this.HTTP_ACTION_NAME_LIST[action];
+        return this.HTTP_ACTION_NAME_LIST[action] || 'GET';
     },
     getKeyCodeName(keyCode) {
         var s = StringUtil.trim(KeyEvent.keyCodeToString(keyCode));
@@ -302,7 +302,6 @@ const InputUtil = {
     isLeft: function (ballGravity) {
         return ballGravity == this.GRAVITY_RATIO_LEFT || ballGravity == this.GRAVITY_TOP_LEFT || ballGravity == this.GRAVITY_BOTTOM_LEFT;
     },
-
     getShowName: function (input) {
         if (input == null) {
             return null
@@ -312,18 +311,55 @@ const InputUtil = {
         var action = input.action || 0
         var obj = input || {}
         if (type == InputUtil.EVENT_TYPE_TOUCH) {
-            return InputUtil.getTouchActionName(action)
+            return InputUtil.getTouchActionName(action) + " [" + Math.round(obj.x || 0) + ", " + Math.round(obj.y || 0) + ']'
+        }
+
+        if (type == InputUtil.EVENT_TYPE_KEY) {
+            if (obj.edit) {
+                return "EDIT " + EditTextEvent.getWhenName(obj.when) + " [" + (obj.selectStart || 0) + ", " + (obj.selectEnd || 0) + "] " + StringUtil.trim(obj.text)
+            }
+
+            return InputUtil.getKeyActionName(action) + ' ' + InputUtil.getKeyCodeName(obj.keyCode)
+        }
+
+        if (type == InputUtil.EVENT_TYPE_UI) {
+            var fragment = StringUtil.trim(obj.fragment);
+
+            return InputUtil.getUIActionName(action) + ' ' + (StringUtil.isEmpty(fragment, true) ? StringUtil.trim(obj.activity) : StringUtil.trim(fragment))
+        }
+
+        if (type == InputUtil.EVENT_TYPE_HTTP) {
+            var isReq = action >= 0 && action != InputUtil.HTTP_ACTION_RESPONSE;
+            return InputUtil.getHTTPActionName(action) + " " + StringUtil.trim(obj.format || '?') + (isReq ? '' : ' ' + (obj.status || 200)) + " " + StringUtil.trim(obj.url)
+        }
+
+        return (input.name || "UNKNOWN !!!")
+    },
+
+    getShowContent: function (input) {
+        if (input == null) {
+            return null
+        }
+
+        var time = input.time || 0
+        var type = input.type || 0
+        var action = input.action || 0
+        var obj = input || {}
+        var timeStr = new Date(time).toLocaleTimeString()
+
+        if (type == InputUtil.EVENT_TYPE_TOUCH) {
+            return timeStr + ' ' + InputUtil.getTouchActionName(action)
                 + "\npointerCount: " + (obj.pointerCount || 0) + ", x: " + Math.round(obj.x || 0) + ", y: " + Math.round(obj.y || 0)
                 + "\nsplitX: " + Math.round(obj.splitX || 0) + ", splitY: " + Math.round(obj.splitY || 0) + " " + InputUtil.getOrientationName(obj.orientation)
         }
 
         if (type == InputUtil.EVENT_TYPE_KEY) {
             if (obj.edit) {
-                return "EDIT " + EditTextEvent.getWhenName(obj.when)
+                return timeStr + ' ' + "EDIT " + EditTextEvent.getWhenName(obj.when)
                     + "\n[" + (obj.selectStart || 0) + ", " + (obj.selectEnd || 0) + "] " + StringUtil.trim(obj.text)
             }
 
-            return InputUtil.getKeyActionName(action)
+            return timeStr + ' ' + InputUtil.getKeyActionName(action)
                 + "\nrepeatCount: " + (obj.repeatCount || 0) + ", scanCode: " + InputUtil.getScanCodeName(obj.scanCode)
                 + "         " + InputUtil.getKeyCodeName(obj.keyCode)
         }
@@ -331,20 +367,20 @@ const InputUtil = {
         if (type == InputUtil.EVENT_TYPE_UI) {
             var fragment = StringUtil.trim(obj.fragment);
 
-            return InputUtil.getUIActionName(action)
+            return timeStr + ' ' + InputUtil.getUIActionName(action)
                 + "\nactivity: " + StringUtil.trim(obj.activity) + (StringUtil.isEmpty(fragment, true) ? "" : "\nfragment: " + fragment)
         }
 
         if (type == InputUtil.EVENT_TYPE_HTTP) {
             var isReq = action >= 0 && action != InputUtil.HTTP_ACTION_RESPONSE;
-            return InputUtil.getHTTPActionName(action) + " " + StringUtil.trim(obj.format)
+            return timeStr + ' ' + InputUtil.getHTTPActionName(action) + " " + StringUtil.trim(obj.format)
                 + "\nURL: " + StringUtil.trim(obj.url)
                 + "\n\nREQUEST: \n" + StringUtil.trim(obj.request)
                 + (isReq ? "" : "\n\n\nRESPONSE: \n" + StringUtil.trim(obj.response))
                 + "\n"
         }
 
-        return (input.name || "UNKNOWN !!!")
+        return timeStr + ' ' + (input.name || "UNKNOWN !!!")
     }
 
 }

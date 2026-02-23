@@ -11068,17 +11068,19 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const list = (testSubList ? App.randomSubs : App.randoms) || []
           var allCount = 0  // list.length
-          doneCount = 0
+          App.doneCount = 0
+
+          for (let i = 0; i < list.length; i++) {
+            const item = list[i]
+            const random = item == null ? null : item.Input
+            allCount += random.disable ? 0 : 1 // (random == null || random.count == null ? 0 : random.count)
+          }
+
           if (isRecord == false && allCount <= 0) {
             alert('请先获取随机配置\n点击[查看列表]按钮')
             return
           }
-          this.testRandomProcess = doneCount >= allCount ? '' : ('正在准备...')
-          for (let i = 0; i < list.length; i++) {
-            const item = list[i]
-            const random = item == null ? null : item.Input
-            allCount += (random == null || random.count == null ? 0 : random.count)
-          }
+          this.testRandomProcess = App.doneCount >= allCount ? '' : ('正在准备...')
 
           App.randomAllCount = allCount
           App.randomDoneCount = 0
@@ -11274,7 +11276,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             })
 
            if (StringUtil.isEmpty(input.name)) {
-             input.name = InputUtil.getShowName(input)
+             input.name = InputUtil.getShowContent(input)
            }
 
           }
