@@ -1797,8 +1797,7 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
-          ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + CodeUtil.getComment(this.urlComment, false, ' ')
-          + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
+          ? '' : vUrl.value+ ' // ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*') + this.urlComment
       },
 
       //设置基地址
@@ -2634,24 +2633,26 @@ https://github.com/Tencent/APIJSON/issues
            this.isRandomShow = showRandom
            this.isRandomListShow = showRandom
         }
-        this.restore((item || {}).Flow, ((item || {}).Flow || {}).log, true, test) // FIXME Output.log
+        this.restore(item, ((item || {}).Flow || {}).log, true, test) // FIXME Output.log
       },
       // 根据历史恢复数据
       restore: function (item, response, isRemote, test) {
         this.isEditResponse = false
 
         item = item || {}
-        var doc = item
+        var doc = item.Flow || item
+        var device = item.Device || {}
+        var system = item.System || {}
         var docId = doc.id || 0
 
         var scripts = item.scripts
         if (isRemote) {
             this.randoms = []
             if (this.type != OPERATE_TYPE_RECORD) {
-              this.showRandomList(true, item)
+              this.showRandomList(true, doc)
             }
 
-            if (item.logUrl != null && item.logUrl.indexOf('://') > 0) {
+            if (doc.logUrl != null && doc.logUrl.indexOf('://') > 0) {
               // App.request(false, REQUEST_TYPE_PARAM, item.logUrl, null, {'Accept:': 'text/plain;charset=UTF-8'}, function (url, res, err) {
               //   output = res.data || ''
               //   vOutput.value = output
@@ -2759,7 +2760,12 @@ https://github.com/Tencent/APIJSON/issues
           }
           item.scripts = scripts
 
-          item = doc
+          // item.brand = device.brand
+          // item.model = device.model
+          // item.width = device.width
+          // item.height = device.height
+          item.urlComment = StringUtil.trim(StringUtil.trim(device.brand) + ' ' + StringUtil.trim(device.model)) + ' ' + (device.width || 0) + 'x' + (device.height || 0) + ' ' + StringUtil.trim(StringUtil.trim(system.brand) + ' ' + StringUtil.trim(system.versionName))
+          // item = doc
           this.scripts.case[docId] = scripts
         }
         else {
@@ -2767,28 +2773,29 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         // localforage.getItem(item.key || '', function (err, value) {
-          var branch = StringUtil.get(item.url || '/get')
-          if (branch.startsWith('/') == false) {
-            branch = '/' + branch
-          }
+        //   var branch = StringUtil.get(item.url || '/get')
+        //   if (branch.startsWith('/') == false) {
+        //     branch = '/' + branch
+        //   }
 
           this.method = item.method;
           this.type = item.type;
-          this.urlComment = item.name;
+          this.urlComment = item.urlComment || StringUtil.trim(StringUtil.trim(device.brand) + ' ' + StringUtil.trim(device.model)) + ' ' + (device.width || 0) + 'x' + (device.height || 0) + ' ' + StringUtil.trim(StringUtil.trim(system.brand) + ' ' + StringUtil.trim(system.versionName))
           this.requestVersion = item.version;
-          this.showUrl(false, branch)
+          // this.showUrl(false, branch)
 
           this.showTestCase(false, this.isLocalShow)
-          vInput.value = StringUtil.get(item.request)
-          vHeader.value = StringUtil.get(item.header)
-          // vRandom.value = StringUtil.get(item.random)
+          vUrl.value = StringUtil.get(item.name || doc.name)
+          vInput.value = StringUtil.get(item.request || doc.request)
+          vHeader.value = StringUtil.get(item.header || doc.header)
+          vRandom.value = StringUtil.get(item.random || doc.random)
           this.changeScriptType(this.scriptType)
 
           this.onChange(false)
 
           if (isRemote) {
             this.randoms = []
-            this.showRandomList(this.isRandomListShow, item)
+            this.showRandomList(this.isRandomListShow, doc || item)
           }
 
           if (test) {
@@ -6332,8 +6339,7 @@ https://github.com/Tencent/APIJSON/issues
               + '                                                                                                       \n';  //解决遮挡
 
             vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
-              ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + CodeUtil.getComment(this.urlComment, false, ' ')
-              + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
+              ? '' : vUrl.value+ ' // ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*') + ' ' + this.urlComment;
 
             if (! isSingle) {
               var method = this.getMethod();  // m 已经 toUpperCase 了
@@ -6346,7 +6352,7 @@ https://github.com/Tencent/APIJSON/issues
               var name = api == null ? null : api.name;
               if (StringUtil.isEmpty(name, true) == false) {
                 this.urlComment = name;
-                vUrlComment.value = CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + CodeUtil.getComment(this.urlComment, false, ' ')
+                vUrlComment.value = vUrl.value+ ' // ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*') + ' ' + this.urlComment
               }
             }
 
@@ -6502,7 +6508,7 @@ https://github.com/Tencent/APIJSON/issues
           this.isRandomListShow = true
         }
         else {
-          App.showRandomList(true, (App.currentRemoteItem || {}).Flow)
+          this.showRandomList(true, (this.currentRemoteItem || {}).Flow)
         }
       },
 
@@ -12422,6 +12428,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var isChainShow = this.isChainShow
         baseUrl = StringUtil.trim(this.getBaseUrl())
 
+        var toTestDocIndexes = this.toTestDocIndexes = this.toTestDocIndexes || []
+
         for (var i = 0; i < list.length; i++) {
             const item = list[i]
             if (isChainShow) {
@@ -12433,120 +12441,126 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                continue
             }
 
+            toTestDocIndexes.push(i)
             this.startTestSingle(list, allCount, i, item, isRandom, accountIndex, isCross, callback)
         }
+
       },
 
       startTestSingle: function (list, allCount, index, item, isRandom, accountIndex, isCross, callback, singleCallback, ctx) {
           this.isFullAssert = false
-          try {
-            const isMLEnabled = this.isMLEnabled
-            const standardKey = isMLEnabled != true ? 'response' : 'standard'
 
-            const otherEnv = this.otherEnv;
-            const otherBaseUrl = this.isEnvCompareEnabled && StringUtil.isNotEmpty(otherEnv, true) ? this.getBaseUrl(otherEnv) : null
-            const isEnvCompare = StringUtil.isNotEmpty(otherBaseUrl, true) // 对比自己也行，看看前后两次是否幂等  && otherBaseUrl != baseUrl
+          App.deepDoneCount = 0;
+          this.startRandomTest4Doc(list, this.toTestDocIndexes, 0, list.length, accountIndex, isCross)
 
-            const document = item == null ? null : item.Flow
-            if (document == null || document.name == null) {
-              if (isRandom) {
-                App.randomDoneCount ++
-              } else {
-                App.doneCount ++
-              }
-
-              return
-            }
-            if (document.url == '/login' || document.url == '/logout') { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
-              this.log('startTestSingle  document.url == "/login" || document.url == "/logout" >> continue')
-              if (isRandom) {
-                App.randomDoneCount ++
-              } else {
-                App.doneCount ++
-              }
-
-              return
-            }
-
-            if (DEBUG) {
-              this.log('startTestSingle  document = ' + JSON.stringify(document, null, '  '))
-            }
-
-            var hdr = null
-            try {
-              hdr = this.getHeader(document.header)
-            } catch (e) {
-              this.log('startTestSingle try { header = this.getHeader(document.header) } catch (e) { \n' + e.message)
-            }
-            const header = hdr
-
-            const caseScript = {
-              pre: (item['Script:pre'] || {}),
-              post: (item['Script:post'] || {})
-            }
-
-            const method = document.method
-            const type = document.type
-            const req = this.getRequest(document.request, null, true)
-            const otherEnvUrl = isEnvCompare ? (otherBaseUrl + document.url) : null
-            const curEnvUrl = baseUrl + document.url
-            const cur = item
-            const pre = list[index - 1] || {} // item.pre = item.pre || list[index - 1] || {}
-//            const ctx = item.ctx = item.ctx || {}
-
-            var random = item.Input || {}
-            this.parseRandom(req, random.config, random.id, true, false, false, function(randomName, constConfig, constJson) {
-                App.request(false, method, type, isEnvCompare ? otherEnvUrl : curEnvUrl, constJson, header, function (url, res, err) {
-                  try {
-                    App.onResponse(url, res, err)
-                    if (DEBUG) {
-                      App.log('startTestSingle  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
-                    }
-                  } catch (e) {
-                    App.log('startTestSingle  App.request >> } catch (e) {\n' + e.message)
-                  }
-
-                  if (isEnvCompare != true) {
-                    App.compareResponse(res, allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross, callback, singleCallback)
-                    return
-                  }
-
-                  const otherErr = err
-                  const rsp = App.removeDebugInfo(res.data)
-                  const rspStr = JSON.stringify(rsp)
-                  const tr = item.TestRecord || {}
-                  if (isMLEnabled) {
-                    tr.response = rspStr
-                  }
-                  tr[standardKey] = isMLEnabled ? JSON.stringify(JSONResponse.updateFullStandard({}, rsp, isMLEnabled)) : rspStr // res.data
-                  item.TestRecord = tr
-
-                  App.request(false, method, type, curEnvUrl, constJson, header, function (url, res, err) {
-                    try {
-                      App.onResponse(url, res, err)
-                      if (DEBUG) {
-                        App.log('startTestSingle  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
-                      }
-                    } catch (e) {
-                      App.log('startTestSingle  App.request >> } catch (e) {\n' + e.message)
-                    }
-
-                    App.compareResponse(res, allCount, list, index, item, res.data, isRandom, accountIndex, false, err || otherErr, null, isCross, callback, singleCallback)
-                  }, caseScript)
-
-                }, caseScript)
-            }, (caseScript.pre || {}).script, {
-                list: list,
-                allCount: allCount,
-                index: index,
-                cur: cur,
-                pre: pre,
-                ctx: ctx
-            })
-          }
-          catch(e) {
-            this.compareResponse(null, allCount, list, index, item, null, isRandom, accountIndex, false, e, null, isCross, callback, singleCallback)
-          }
+//           try {
+//             const isMLEnabled = this.isMLEnabled
+//             const standardKey = isMLEnabled != true ? 'response' : 'standard'
+//
+//             const otherEnv = this.otherEnv;
+//             const otherBaseUrl = this.isEnvCompareEnabled && StringUtil.isNotEmpty(otherEnv, true) ? this.getBaseUrl(otherEnv) : null
+//             const isEnvCompare = StringUtil.isNotEmpty(otherBaseUrl, true) // 对比自己也行，看看前后两次是否幂等  && otherBaseUrl != baseUrl
+//
+//             const document = item == null ? null : item.Flow
+//             if (document == null || document.name == null) {
+//               if (isRandom) {
+//                 App.randomDoneCount ++
+//               } else {
+//                 App.doneCount ++
+//               }
+//
+//               return
+//             }
+//             if (document.url == '/login' || document.url == '/logout') { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
+//               this.log('startTestSingle  document.url == "/login" || document.url == "/logout" >> continue')
+//               if (isRandom) {
+//                 App.randomDoneCount ++
+//               } else {
+//                 App.doneCount ++
+//               }
+//
+//               return
+//             }
+//
+//             if (DEBUG) {
+//               this.log('startTestSingle  document = ' + JSON.stringify(document, null, '  '))
+//             }
+//
+//             var hdr = null
+//             try {
+//               hdr = this.getHeader(document.header)
+//             } catch (e) {
+//               this.log('startTestSingle try { header = this.getHeader(document.header) } catch (e) { \n' + e.message)
+//             }
+//             const header = hdr
+//
+//             const caseScript = {
+//               pre: (item['Script:pre'] || {}),
+//               post: (item['Script:post'] || {})
+//             }
+//
+//             const method = document.method
+//             const type = document.type
+//             const req = this.getRequest(document.request, null, true)
+//             const otherEnvUrl = isEnvCompare ? (otherBaseUrl + document.url) : null
+//             const curEnvUrl = baseUrl + document.url
+//             const cur = item
+//             const pre = list[index - 1] || {} // item.pre = item.pre || list[index - 1] || {}
+// //            const ctx = item.ctx = item.ctx || {}
+//
+//             var random = item.Input || {}
+//             this.parseRandom(req, random.config, random.id, true, false, false, function(randomName, constConfig, constJson) {
+//                 App.request(false, method, type, isEnvCompare ? otherEnvUrl : curEnvUrl, constJson, header, function (url, res, err) {
+//                   try {
+//                     App.onResponse(url, res, err)
+//                     if (DEBUG) {
+//                       App.log('startTestSingle  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+//                     }
+//                   } catch (e) {
+//                     App.log('startTestSingle  App.request >> } catch (e) {\n' + e.message)
+//                   }
+//
+//                   if (isEnvCompare != true) {
+//                     App.compareResponse(res, allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross, callback, singleCallback)
+//                     return
+//                   }
+//
+//                   const otherErr = err
+//                   const rsp = App.removeDebugInfo(res.data)
+//                   const rspStr = JSON.stringify(rsp)
+//                   const tr = item.TestRecord || {}
+//                   if (isMLEnabled) {
+//                     tr.response = rspStr
+//                   }
+//                   tr[standardKey] = isMLEnabled ? JSON.stringify(JSONResponse.updateFullStandard({}, rsp, isMLEnabled)) : rspStr // res.data
+//                   item.TestRecord = tr
+//
+//                   App.request(false, method, type, curEnvUrl, constJson, header, function (url, res, err) {
+//                     try {
+//                       App.onResponse(url, res, err)
+//                       if (DEBUG) {
+//                         App.log('startTestSingle  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+//                       }
+//                     } catch (e) {
+//                       App.log('startTestSingle  App.request >> } catch (e) {\n' + e.message)
+//                     }
+//
+//                     App.compareResponse(res, allCount, list, index, item, res.data, isRandom, accountIndex, false, err || otherErr, null, isCross, callback, singleCallback)
+//                   }, caseScript)
+//
+//                 }, caseScript)
+//             }, (caseScript.pre || {}).script, {
+//                 list: list,
+//                 allCount: allCount,
+//                 index: index,
+//                 cur: cur,
+//                 pre: pre,
+//                 ctx: ctx
+//             })
+//           }
+//           catch(e) {
+//             this.compareResponse(null, allCount, list, index, item, null, isRandom, accountIndex, false, e, null, isCross, callback, singleCallback)
+//           }
 
       },
 
@@ -14958,8 +14972,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         var methods = this.getCache('', 'methods')
         this.methods = methods instanceof Array ? methods : StringUtil.split(methods, ',', true)
-        var types = this.getCache('', 'types')
-        this.types = types instanceof Array ? types : StringUtil.split(types, ',', true)
+        // var types = this.getCache('', 'types')
+        // this.types = (types instanceof Array ? types : StringUtil.split(types, ',', true)) || this.types
 
         var otherEnv = this.getCache('', 'otherEnv')
         if (StringUtil.isEmpty(otherEnv, true) == false) {

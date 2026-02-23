@@ -267,10 +267,10 @@
 <!--                                <button class="hint&#45;&#45;right" :data-hint="(item.Flow || {}).request" v-show="isShowType()" style="width: 48px;margin-right: 6px;padding: 0px" id="vDocType" @click="restoreRemoteAndTest(index, item)">{{ getTypeName((item.Flow || {}).type, (item.Flow || {}).method) }}</button>-->
 <!--                                <a class="hint&#45;&#45;rounded hint&#45;&#45;no-animate" ref="testCaseTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }"> {{(((item.Flow || {}).version || 0) > 0 ? 'V' + item.Flow.version : 'V*') + ' ' + (item.Flow || {}).name  + '    ' + (item.Flow || {}).url}}</a>-->
 		                        
-								<img width="90" height="195" src="img/Screenshot_2020-11-07-16-38-20-932_apijson.demo.jpg" style="width: 90px; min-height: 160px; height: 100%; margin: 4px; position: relative;" @click="restoreRemote(item)" href="javascript:void(0)"/>
+								<img width="90" height="195" src="img/Screenshot_2020-11-07-16-38-20-932_apijson.demo.jpg" style="width: 90px; min-height: 160px; height: 100%; margin: 4px; position: relative;" @click="restoreRemote(index, item)" href="javascript:void(0)"/>
 								<a style="width: 75%; min-width: 90px; align-content: flex-start; position: absolute; left: 118px; top: 14px; font-size: medium; color: black" >{{ (item.Flow || {}).name }}</a>
 
-								<a style="white-space: pre-wrap; display: inline-flex; height: 100%; position: absolute; left: 118px; top: 40px; font-size: small; color: dimgray" @click="restoreRemote(item)" href="javascript:void(0)">{{
+								<a style="white-space: pre-wrap; display: inline-flex; height: 100%; position: absolute; left: 118px; top: 40px; font-size: small; color: dimgray" @click="restoreRemote(index, item)" href="javascript:void(0)">{{
 		                          '时间：' + (item.Flow.time == null ? '?' : item.Flow.time)
 		                          + '\n品牌：' + ((item.Device || {}).brand || '?')
 		                          + '\n机型：' + ((item.Device || {}).model || '?')
@@ -287,13 +287,13 @@
                                         <!-- 只能写成一行来消除间隙，不能换行、空格 -->
                                         <a style="background: transparent; color: black; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ (item.totalCount || 0) + ':' }}</a><a style="background: white; color: black; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ item.whiteCount || 0 }}</a><a style="background: green; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ item.greenCount || 0 }}</a><a style="background: blue; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ item.blueCount || 0 }}</a><a style="background: orange; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ item.orangeCount || 0 }}</a><a style="background: red; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ item.redCount || 0 }}</a>
                                     </div>
-                                    <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="display: inline-block">
-                                        <button class="hint--left" ref="testResultButtons" @mouseover="setTestHint(index, item)" v-show="item.compareType != null" @click="handleTest(false, index, item)" style="position: relative;">{{ StringUtil.limitLength(item.compareMessage, 30, 'middle') + (item.showType == 'before' ? '-前' : '-后') }}</button>
-                                        <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item)">
-                                            <use xlink:href="svg/icon.svg#export-txt"></use>
-                                        </svg>   <!-- 中间 button 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
-                                        <button class="hint--left" ref="testHandleButtons" @mouseover="setTestHint(index, item, null, null, true)" v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button><button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button><button style="padding-left: 1px; padding-right: 1px; width: 50px" :style="{ color: item.durationColor }" class="hint--left" ref="testResultDurationButtons" @mouseover="setTestHint(index, item, false, true)" @click="handleTest(true, index, item, null, false, true)">{{ (item.showType == 'before' ? item.durationBeforeShowStr : item.durationShowStr) || '?' }}</button>
-                                    </div>
+<!--                                    <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="display: inline-block">-->
+<!--                                        <button class="hint&#45;&#45;left" ref="testResultButtons" @mouseover="setTestHint(index, item)" v-show="item.compareType != null" @click="handleTest(false, index, item)" style="position: relative;">{{ StringUtil.limitLength(item.compareMessage, 30, 'middle') + (item.showType == 'before' ? '-前' : '-后') }}</button>-->
+<!--                                        <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item)">-->
+<!--                                            <use xlink:href="svg/icon.svg#export-txt"></use>-->
+<!--                                        </svg>   &lt;!&ndash; 中间 button 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 &ndash;&gt;-->
+<!--                                        <button class="hint&#45;&#45;left" ref="testHandleButtons" @mouseover="setTestHint(index, item, null, null, true)" v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button><button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button><button style="padding-left: 1px; padding-right: 1px; width: 50px" :style="{ color: item.durationColor }" class="hint&#45;&#45;left" ref="testResultDurationButtons" @mouseover="setTestHint(index, item, false, true)" @click="handleTest(true, index, item, null, false, true)">{{ (item.showType == 'before' ? item.durationBeforeShowStr : item.durationShowStr) || '?' }}</button>-->
+<!--                                    </div>-->
                                 </div>
                                 <svg v-show="isLocalShow || (item.Flow != null && item.Flow.userId == User.id)" class="icon" style="background-color: white; width: 33px; height: 18px; right: -2px; padding-left: 5px; padding-right: 8px; padding-top: 2px; padding-bottom: 2px; top: 13px;" @click="remove(item, index, true)">
                                     <use xlink:href="svg/icon.svg#trash"></use>
@@ -477,7 +477,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                             <a v-show="isRandomListShow != true && isRandomSubListShow != true" style="margin-left: 4px;">次</a>
                             <a style="display: flex;flex-grow: 1;padding-left: 10px;padding-right: 2px;font-size: medium;color: black" >{{ (isRandomListShow || StringUtil.isEmpty(randomTestTitle, true) ? '事件 Event' : randomTestTitle) + (isRandomListShow || isRandomSubListShow ? '(' + ((isRandomListShow ? randoms : randomSubs) || []).length + ')' : '') }}
                                 <a v-show="isRandomListShow != true && (currentRemoteItem || {}).Flow != null" style="padding-right: 6px;padding-top: 2px" href="javascript:void(0)" @click="showRandomList(true, (currentRemoteItem || {}).Flow)">
-                                    步骤列表 Step List
+                                    事件列表 Event List
                                 </a>
                                 <a style="padding-right: 4px">
                                   {{ testRandomProcess }}
