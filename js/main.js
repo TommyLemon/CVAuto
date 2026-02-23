@@ -11085,15 +11085,22 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           //   return
           // }
 
-          const list = (testSubList ? App.randomSubs : App.randoms) || []
+          const fullList = (testSubList ? App.randomSubs : App.randoms) || []
           var allCount = 0  // list.length
           App.doneCount = 0
 
-          for (let i = 0; i < list.length; i++) {
-            const item = list[i]
+          // const list = fullList // []
+          const list = []
+          for (let i = 0; i < fullList.length; i++) {
+            const item = fullList[i]
             const random = item == null ? null : item.Input
-            allCount += random.disable ? 0 : 1 // (random == null || random.count == null ? 0 : random.count)
+            // allCount += random.disable ? 0 : 1 // (random == null || random.count == null ? 0 : random.count)
+            if (random != null && ! random.disable) {
+              list.push(item)
+            }
           }
+
+          allCount = list.length;
 
           if (isRecord == false && allCount <= 0) {
             alert('请先获取随机配置\n点击[查看列表]按钮')
