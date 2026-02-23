@@ -1504,15 +1504,15 @@ https://github.com/Tencent/APIJSON/issues
       otherEnv: 'http://localhost:8080',  // 其它环境服务地址，用来对比当前的
       server: 'http://apijson.cn:8080', // 'http://localhost:8080', //  Chrome 90+ 跨域问题非常难搞，开发模式启动都不行了
       // server: 'http://47.74.39.68:9090',  // apijson.org
-      projectHost: {host: 'http://apijson.cn:8080', project: 'APIJSON.cn'},  // apijson.cn
+      projectHost: {host: 'http://192.168.31.5:8080', project: 'APIJSON'},  // apijson.cn
       thirdParty: 'SWAGGER /v2/api-docs',  //apijson.cn
       // thirdParty: 'RAP /repository/joined /repository/get',
       // thirdParty: 'YAPI /api/interface/list_menu /api/interface/get',
       projectHosts: [
-         {host: 'http://localhost:5000', project: 'Localhost'},
-         {host: 'http://localhost:8080', project: 'Localhost'},
-         {host: 'http://apijson.cn:8080', project: 'APIJSON.cn'},
-         {host: 'http://apijson.cn:9090', project: 'APIJSON.cn:9090'}
+        {host: 'http://192.168.31.5:8080', project: 'APIJSON'},
+        {host: 'http://apijson.cn:8080', project: 'APIJSON-UIGO'},
+        {host: 'http://192.168.31.5:8080', project: 'UIGOX'},
+        {host: 'http://192.168.12.345:8080', project: 'UIGO'}
       ],
       language: CodeUtil.LANGUAGE_KOTLIN,
       header: {},
@@ -1785,7 +1785,7 @@ https://github.com/Tencent/APIJSON/issues
       showUrl: function (isAdminOperation, branchUrl) {
         if (StringUtil.isEmpty(this.host, true)) {  //显示(可编辑)URL Host
           if (isAdminOperation != true) {
-            baseUrl = this.getBaseUrl(vUrl.value, true)
+            baseUrl = this.getBaseUrl(this.projectHost.host, true)
           }
           vUrl.value = (isAdminOperation ? this.server : baseUrl) + branchUrl
         }
@@ -1806,7 +1806,7 @@ https://github.com/Tencent/APIJSON/issues
           return
         }
         // 重新拉取文档
-        var bu = this.getBaseUrl(vUrl.value, true)
+        var bu = this.getBaseUrl(this.projectHost.host, true)
         if (baseUrl != bu) {
           baseUrl = bu
           // doc = null //这个是本地的数据库字典及非开放请求文档
@@ -1855,7 +1855,7 @@ https://github.com/Tencent/APIJSON/issues
       },
       //获取基地址
       getBaseUrl: function (url_, fixed) {
-        var url = StringUtil.trim(url_ != undefined ? url_ : vUrl.value)
+        var url = StringUtil.trim(url_ != undefined ? url_ : baseUrl || this.projectHost.host) // vUrl.value)
         var length = this.getBaseUrlLength(url)
         if (length <= 0 && url_ == undefined) {
           var account = this.getCurrentAccount()
@@ -2293,7 +2293,7 @@ https://github.com/Tencent/APIJSON/issues
             case 15:
             case 16:
               this.exTxt.name = index == 0 ? this.database : (index == 1 ? this.schema : (index == 2 ? this.language
-                  : (index == 3 ? this.host : (index == 6 ? this.server : (index == 8 ? this.project : (index == 15 ? this.otherEnv
+                  : (index == 3 ? this.host : (index == 6 ? this.server : (index == 8 ? this.projectHost.host : (index == 15 ? this.otherEnv
                    : (index == 16 ? (this.methods || []).join() : (this.types || []).join())))))))
               this.isConfigShow = true
 
@@ -2310,14 +2310,13 @@ https://github.com/Tencent/APIJSON/issues
                 alert('多个类型用 , 隔开，可填类型:\nPARAM(GET ?a=1&b=c&key=value),\nJSON(POST application/json),\nFORM(POST x-www-form-urlencoded),\nDATA(POST form-data),\nGRPC(POST application/json 需要 GRPC 服务开启反射)')
               }
               else if (index == 10) {
-                vInput.value = App.getCache(App.project, 'request4MethodList') || '{'
+                vInput.value = App.getCache(baseUrl, 'request4MethodList') || '{'
                   + '\n    "mock": true,  // 生成模拟参数值'
                   + '\n    "package": "' + App.getPackage() + '",  // 包名，不填默认全部'
                   + '\n    "class": "' + App.getClass() + '"  // 类名，不填默认全部'
                   + '\n}'
                 App.onChange(false)
-                App.request(false, REQUEST_TYPE_JSON, App.project + App.exTxt.name
-                  , App.getRequest(vInput.value), App.getHeader(vHeader.value))
+                App.requestPost(false, App.exTxt.name, App.getRequest(vInput.value), App.getHeader(vHeader.value))
               }
               else if (index == 8) {
                 alert('先在 App UI 录制回放管理页启动服务，然后复制地址填到这里，例如 http://192.168.12.345:8080')
@@ -2638,6 +2637,7 @@ https://github.com/Tencent/APIJSON/issues
       // 根据历史恢复数据
       restore: function (item, response, isRemote, test) {
         this.isEditResponse = false
+        this.type = OPERATE_TYPE_REPLAY
 
         item = item || {}
         var doc = item.Flow || item
@@ -2814,9 +2814,9 @@ https://github.com/Tencent/APIJSON/issues
       },
 
       onClickHost: function(index, item) {
-        this.projectHost = item = item || {}
-        this.project = baseUrl = item.host
+        this.projectHost = item = item || {host: baseUrl}
         this.isTestCaseShow = false
+        baseUrl = item.host || baseUrl
 
         // this.host = ''
         // var bu = this.getBranchUrl()
@@ -2825,7 +2825,6 @@ https://github.com/Tencent/APIJSON/issues
         // this.showUrl(false, bu)
 
         this.saveCache('', 'URL_BASE', baseUrl)
-        this.saveCache('', 'project', this.project)
         this.saveCache('', 'projectHost', this.projectHost)
       },
 
@@ -3747,8 +3746,7 @@ https://github.com/Tencent/APIJSON/issues
             this.saveCache('', 'otherEnv', this.otherEnv)
             break
           case 8:
-            this.project = baseUrl = this.exTxt.name
-            this.saveCache('', 'project', this.project)
+            baseUrl = this.exTxt.name || baseUrl
 
             var projectHosts = this.projectHosts = this.projectHosts || []
             var find = null
@@ -4574,7 +4572,7 @@ https://github.com/Tencent/APIJSON/issues
                 }
                 else {
                   var headers = res.headers || {}
-                  baseUrl = App.getBaseUrl(vUrl.value)
+                  baseUrl = App.getBaseUrl(App.projectHost.host)
 
                   item.baseUrl = item.baseUrl || baseUrl
                   item.id = user.id || user.userId || user.user_id || user.userid  // TODO 工具函数直接遍历 key 判断可能的名称
@@ -4727,7 +4725,7 @@ https://github.com/Tencent/APIJSON/issues
         var isMLEnabled = this.isMLEnabled
         var userId = this.User.id
         var project = this.projectHost.project
-        baseUrl = this.getBaseUrl(vUrl.value, true)
+        baseUrl = this.getBaseUrl(this.projectHost.host, true)
 
         var key = groupId + ''
         var page = this.chainGroupPage = this.chainGroupPages[key] || 0
@@ -5467,7 +5465,7 @@ https://github.com/Tencent/APIJSON/issues
             ? null : '%' + StringUtil.trim(this.randomSearch) + '%')
 
           var url = this.server + '/get'
-          baseUrl = this.getBaseUrl(vUrl.value, true)
+          baseUrl = this.getBaseUrl(this.projectHost.host, true)
           const cri = this.currentRemoteItem || {}
           const chain = cri.Chain || {}
           const cId = chain.id || 0
@@ -5781,7 +5779,7 @@ https://github.com/Tencent/APIJSON/issues
           this.prevScript = vScript.value
 
           this.method = REQUEST_TYPE_POST
-          this.type = REQUEST_TYPE_JSON
+          // this.type = REQUEST_TYPE_JSON
           this.showUrl(isAdmin, '/login')
           vInput.value = JSON.stringify(req, null, '    ')
 
@@ -5791,7 +5789,7 @@ https://github.com/Tencent/APIJSON/issues
 
         this.scripts = newDefaultScript()
         this.method = REQUEST_TYPE_POST
-        this.type = REQUEST_TYPE_JSON
+        // this.type = REQUEST_TYPE_JSON
         this.showTestCase(false, this.isLocalShow)
         if (IS_BROWSER) {
           this.onChange(false)
@@ -5849,7 +5847,7 @@ https://github.com/Tencent/APIJSON/issues
 
             if (App.prevUrl != null) {
               App.method = App.prevMethod || REQUEST_TYPE_POST
-              App.type = App.prevType || REQUEST_TYPE_JSON
+              // App.type = App.prevType || REQUEST_TYPE_JSON
 
               vUrl.value = App.prevUrl || (URL_BASE + '/get')
               vUrlComment.value = App.prevUrlComment || ''
@@ -5903,7 +5901,7 @@ https://github.com/Tencent/APIJSON/issues
 
             if (App.prevUrl != null) {
               App.method = App.prevMethod || REQUEST_TYPE_POST
-              App.type = App.prevType || REQUEST_TYPE_JSON
+              // App.type = App.prevType || REQUEST_TYPE_JSON
 
               vUrl.value = App.prevUrl || (URL_BASE + '/get')
               vUrlComment.value = App.prevUrlComment || ''
@@ -6139,7 +6137,7 @@ https://github.com/Tencent/APIJSON/issues
           this.showUrl(isAdminOperation, '/logout')
           vInput.value = JSON.stringify(req, null, '    ')
           this.method = REQUEST_TYPE_POST
-          this.type = REQUEST_TYPE_JSON
+          // this.type = REQUEST_TYPE_JSON
           this.showTestCase(false, this.isLocalShow)
           this.onChange(false)
           this.send(isAdminOperation, function (url, res, err) {
@@ -6487,16 +6485,18 @@ https://github.com/Tencent/APIJSON/issues
       /**获取显示的请求类型名称
        */
       getTypeName: function (type) {
+        type = type || OPERATE_TYPE_REPLAY
         return type == OPERATE_TYPE_REVIEW ? '查看' : (type == OPERATE_TYPE_REPLAY ? '回放' : '录制')
       },
       /**请求类型切换
        */
       changeType: function () {
-        var count = this.types == null ? 0 : this.types.length
+        var types = this.types || [OPERATE_TYPE_RECORD, OPERATE_TYPE_REVIEW, OPERATE_TYPE_REPLAY]
+        var count = types.length
         if (count > 1) {
-          var index = this.types.indexOf(this.type)
+          var index = types.indexOf(this.type)
           index++;
-          this.type = this.types[index % count]
+          this.type = types[index % count]
         }
 
         CodeUtil.type = this.type;
@@ -8256,7 +8256,7 @@ https://github.com/Tencent/APIJSON/issues
        */
       send: function(isAdminOperation, callback, caseScript_, accountScript_, globalScript_, ignorePreScript) {
         
-        if (this.type == OPERATE_TYPE_RECORD || this.type == OPERATE_TYPE_REPLAY) {
+        if (this.type == null || this.type == OPERATE_TYPE_RECORD || this.type == OPERATE_TYPE_REPLAY) {
           this.onClickTestRandom()
           return
         }
@@ -8266,116 +8266,120 @@ https://github.com/Tencent/APIJSON/issues
           return
         }
 
-        if (StringUtil.isEmpty(this.host, true)) {
-          var url = StringUtil.get(vUrl.value)
-          if (url.startsWith('/') != true && url.startsWith('http://') != true && url.startsWith('https://') != true) {
-            alert('URL 缺少 http:// 或 https:// 前缀，可能不完整或不合法，\n可能使用同域的 Host，很可能访问出错！')
-          }
-        }
-        else {
-          if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
-            alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
-          }
-        }
-
-        this.onHandle(vInput.value)
-
-        clearTimeout(handler)
-
-        if (this.isEditResponse) {
-          this.onChange(false)
-          return
-        }
-
-        var header
-        try {
-          header = this.getHeader(vHeader.value)
-        } catch (e) {
-          // alert(e.message)
-          return
-        }
-
-        var req = this.getRequest(vInput.value, {})
-
-        var url = this.getUrl()
-
-        vOutput.value = "requesting... \nURL = " + url
-
-        errHandler = function () {
-          vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
-        }
-        setTimeout(errHandler, 5000)
-        this.view = 'output';
-
-        var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
-
-        var method = this.isShowMethod() ? this.method : null
-
-        this.setBaseUrl()
-        this.request(isAdminOperation, method, this.type, url, req, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
-
-        var baseUrls = this.getCache('', 'baseUrls', [])
-        var bu = this.getBaseUrl(url)
-        if (StringUtil.isNotEmpty(bu, true) && baseUrls.indexOf(bu) < 0) {
-          baseUrls.push(bu)
-          this.saveCache('', 'baseUrls', baseUrls)
-          var projectHosts = this.projectHosts || []
-          var projectHost = this.projectHost || {}
-          var find = false
-          for (var j = 0; j < projectHosts.length; j ++) {
-              var pjt = projectHosts[j]
-              if (pjt == null || StringUtil.isEmpty(pjt.host, true)) {
-                 continue
-              }
-
-              if (pjt.url == projectHost.host) {
-                  find = true
-                  break
-              }
-          }
-
-          if (find != true) {
-             projectHosts.push({host: bu, project: projectHost.project})
-             this.projectHosts = projectHosts
-             this.saveCache('', 'projectHosts', projectHosts)
-          }
-
-        }
-
-        this.locals = this.locals || []
-        if (this.locals.length >= 1000) { //最多1000条，太多会很卡
-          this.locals.splice(900, this.locals.length - 900)
-        }
-        var path = this.getMethod()
-        this.locals.unshift({
-          'Flow': {
-            'userId': this.User.id,
-            'project': (this.projectHost || {}).project,
-            'name': this.formatDateTime() + ' ' + (this.urlComment || StringUtil.trim(req.tag)),
-            'operation': CodeUtil.getOperation(path, req),
-            'method': method,
-            'type': this.type,
-            'url': '/' + path,
-            'request': JSON.stringify(req, null, '    '),
-            'header': vHeader.value,
-            'scripts': this.scripts
-          }
-        })
-        this.saveCache('', 'locals', this.locals)
+        // if (StringUtil.isEmpty(this.host, true)) {
+        //   var url = StringUtil.get(vUrl.value)
+        //   if (url.startsWith('/') != true && url.startsWith('http://') != true && url.startsWith('https://') != true) {
+        //     alert('URL 缺少 http:// 或 https:// 前缀，可能不完整或不合法，\n可能使用同域的 Host，很可能访问出错！')
+        //   }
+        // }
+        // else {
+        //   if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
+        //     alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
+        //   }
+        // }
+        //
+        // this.onHandle(vInput.value)
+        //
+        // clearTimeout(handler)
+        //
+        // if (this.isEditResponse) {
+        //   this.onChange(false)
+        //   return
+        // }
+        //
+        // var header
+        // try {
+        //   header = this.getHeader(vHeader.value)
+        // } catch (e) {
+        //   // alert(e.message)
+        //   return
+        // }
+        //
+        // var req = this.getRequest(vInput.value, {})
+        //
+        // var url = this.getUrl()
+        //
+        // vOutput.value = "requesting... \nURL = " + url
+        //
+        // errHandler = function () {
+        //   vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
+        // }
+        // setTimeout(errHandler, 5000)
+        // this.view = 'output';
+        //
+        // var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
+        //
+        // var method = this.isShowMethod() ? this.method : null
+        //
+        // this.setBaseUrl()
+        // this.request(isAdminOperation, method, this.type, url, req, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
+        //
+        // var baseUrls = this.getCache('', 'baseUrls', [])
+        // var bu = this.getBaseUrl(url)
+        // if (StringUtil.isNotEmpty(bu, true) && baseUrls.indexOf(bu) < 0) {
+        //   baseUrls.push(bu)
+        //   this.saveCache('', 'baseUrls', baseUrls)
+        //   var projectHosts = this.projectHosts || []
+        //   var projectHost = this.projectHost || {}
+        //   var find = false
+        //   for (var j = 0; j < projectHosts.length; j ++) {
+        //       var pjt = projectHosts[j]
+        //       if (pjt == null || StringUtil.isEmpty(pjt.host, true)) {
+        //          continue
+        //       }
+        //
+        //       if (pjt.url == projectHost.host) {
+        //           find = true
+        //           break
+        //       }
+        //   }
+        //
+        //   if (find != true) {
+        //      projectHosts.push({host: bu, project: projectHost.project})
+        //      this.projectHosts = projectHosts
+        //      this.saveCache('', 'projectHosts', projectHosts)
+        //   }
+        //
+        // }
+        //
+        // this.locals = this.locals || []
+        // if (this.locals.length >= 1000) { //最多1000条，太多会很卡
+        //   this.locals.splice(900, this.locals.length - 900)
+        // }
+        // var path = this.getMethod()
+        // this.locals.unshift({
+        //   'Flow': {
+        //     'userId': this.User.id,
+        //     'project': (this.projectHost || {}).project,
+        //     'name': this.formatDateTime() + ' ' + (this.urlComment || StringUtil.trim(req.tag)),
+        //     'operation': CodeUtil.getOperation(path, req),
+        //     'method': method,
+        //     'type': this.type,
+        //     'url': '/' + path,
+        //     'request': JSON.stringify(req, null, '    '),
+        //     'header': vHeader.value,
+        //     'scripts': this.scripts
+        //   }
+        // })
+        // this.saveCache('', 'locals', this.locals)
       },
 
       adminRequest: function (url, req, header, callback) {
-        this.postRequest(true, url, req, header, callback)
+        this.requestPost(true, url, req, header, callback)
       },
-      getRequest: function (isAdminOperation, url, req, header, callback) {
+      requestGet: function (isAdminOperation, url, req, header, callback) {
         this.request(isAdminOperation, REQUEST_TYPE_GET, REQUEST_TYPE_PARAM, url, req, header, callback)
       },
-      postRequest: function (isAdminOperation, url, req, header, callback) {
+      requestPost: function (isAdminOperation, url, req, header, callback) {
         this.request(isAdminOperation, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, url, req, header, callback)
       },
       //请求
       request: function (isAdminOperation, method, type, url, req, header, callback, caseScript_, accountScript_, globalScript_, ignorePreScript, timeout_, wait_, retry_) {
         this.loadingCount ++
+
+        if (url.indexOf('://') < 0) {
+          url = (isAdminOperation ? this.server : this.getBaseUrl()) + (url.startsWith('/') ? url : '/' + url)
+        }
 
         const isEnvCompare = this.isEnvCompareEnabled
 
@@ -8554,20 +8558,35 @@ https://github.com/Tencent/APIJSON/issues
           var interceptors = axios.interceptors
           if (interceptors) {
               interceptors.request.use(function (config) {
-            config.metadata = { startTime: new Date().getTime()}
-            return config;
-          }, function (error) {
-            return Promise.reject(error);
+                config.metadata = { startTime: new Date().getTime()}
+                return config;
+              }, function (error) {
+                return Promise.reject(error);
               })
+
               interceptors.response.use(function (response) {
-            response.config.metadata.endTime = new Date().getTime()
-            response.duration = response.config.metadata.endTime - response.config.metadata.startTime
-            return response;
-          }, function (error) {
-            error.config.metadata.endTime = new Date().getTime();
-            error.duration = error.config.metadata.endTime - error.config.metadata.startTime;
-            return Promise.reject(error);
+                response.config.metadata.endTime = new Date().getTime()
+                response.duration = response.config.metadata.endTime - response.config.metadata.startTime
+                return response;
+              }, function (error) {
+                error.config.metadata.endTime = new Date().getTime();
+                error.duration = error.config.metadata.endTime - error.config.metadata.startTime;
+                return Promise.reject(error);
               })
+          }
+
+          // Object.defineProperty(req, 'constructor', {
+          //   value: 'getInstance',
+          //   enumerable: true,
+          //   configurable: false,
+          //   writable: true
+          // })
+
+          var isJSON = HTTP_JSON_TYPES.indexOf(type) >= 0;
+          if (isJSON && (req.constructor != null || req.class != null || req.prototype != null)) {
+            req = JSON.stringify(req)
+            header = header || {}
+            header['Content-Type'] = 'application/json'
           }
 
           // axios.defaults.withcredentials = true
@@ -8583,7 +8602,7 @@ https://github.com/Tencent/APIJSON/issues
                 )
             ),
             params: isParam ? req : null,
-            data: HTTP_JSON_TYPES.indexOf(type) >= 0 ? req : (HTTP_FORM_DATA_TYPES.indexOf(type) >= 0 ? toFormData(req) : null),
+            data: isJSON ? req : (HTTP_FORM_DATA_TYPES.indexOf(type) >= 0 ? toFormData(req) : null),
             headers: header,  //Accept-Encoding（HTTP Header 大小写不敏感，SpringBoot 接收后自动转小写）可能导致 Response 乱码
             withCredentials: true, //Cookie 必须要  type == REQUEST_TYPE_JSON
             // crossDomain: true
@@ -8948,13 +8967,13 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     else if (lowerKey == 'request method') {
                       value = value.toUpperCase();
                       this.method = value
-                      this.type = value == 'GET' ? 'PARAM' : (value == 'POST' ? 'JSON' : value);
+                      // this.type = value == 'GET' ? 'PARAM' : (value == 'POST' ? 'JSON' : value);
                       event.preventDefault();
                     }
                     else if (lowerKey == 'content-type') {
                       var type = vType.value != 'JSON' ? null : CONTENT_VALUE_TYPE_MAP[value];
                       if (StringUtil.isEmpty(type, true) != true) {
-                        this.type = type;
+                        // this.type = type;
                         event.preventDefault();
                       }
                     }
@@ -8984,7 +9003,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                       contentStart += lines[i].length + 1;
                       var t = m.toUpperCase()
                       this.method = t
-                      this.type = t == 'GET' ? 'PARAM' : (t == 'POST' ? 'JSON' : t);
+                      // this.type = t == 'GET' ? 'PARAM' : (t == 'POST' ? 'JSON' : t);
 
                       l = l.substring(ind).trim();
                       ind = l.indexOf(' ');
@@ -10576,7 +10595,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         this.method = REQUEST_TYPE_POST
-        this.type = REQUEST_TYPE_JSON
+        // this.type = REQUEST_TYPE_JSON
         this.showUrl(false, url)
         this.urlComment = ''
         vInput.value = StringUtil.trim(json)
@@ -11123,7 +11142,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var pkg = this.getPackage(this.host) || 'uiauto'
           var cls = this.getClass(this.host) || 'UIAutoApp'
 
-          this.request(false, REQUEST_TYPE_JSON, this.project + '/method/invoke', {
+          this.requestPost(false, baseUrl + '/method/invoke', {
             "package": pkg, // 'uiauto',
             "class": cls, // 'UIAutoApp',
             "constructor": 'getInstance',
@@ -11144,7 +11163,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
 
             App.testRandomProcess = '正在' + (isRecord ? '录制' : '回放') + '...'
-            App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', {
+            App.requestPost(false, '/method/invoke', {
               "package": pkg, // 'uiauto',
               "class": cls, // 'UIAutoApp',
               "constructor": 'getInstance',
@@ -11222,7 +11241,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         list = list || []
         var pkg = this.getPackage(this.host) || 'uiauto'
         var cls = this.getClass(this.host) || 'UIAutoApp'
-        this.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', {
+        this.requestPost(false, '/method/invoke', {
           "static": true,
           "package": pkg, // 'uiauto',
           "class": cls, // 'UIAutoApp',
@@ -11293,7 +11312,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         list = list || []
         var pkg = this.getPackage(this.host) || 'uiauto'
         var cls = this.getClass(this.host) || 'UIAutoApp'
-        this.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', {
+        this.requestPost(false, '/method/invoke', {
           "static": true,
           "package": pkg, // 'uiauto',
           "class": cls, // 'UIAutoApp',
@@ -11341,8 +11360,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           App.picDelayTime = 0
           for (var j = 0; j < outputList.length; j++) {
-            doneCount ++
-            App.testRandomProcess = doneCount >= allCount ? '' : ('已测数量: ' + doneCount)
+            App.doneCount ++
+            App.testRandomProcess = App.doneCount >= allCount ? '' : ('已测数量: ' + App.doneCount)
 
             const oj = outputList[j]
             var oInputId = oj == null ? null : oj.randomId
@@ -11497,7 +11516,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                       "methodArgs": constJson.methodArgs,
                       "static": constJson.static
                     }
-                    App.request(false, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, cb, caseScript);
+                    App.requestPost(false, '/method/invoke', httpReq, header, cb, caseScript);
                   }
                 }
 
@@ -12170,6 +12189,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.isStatisticsEnabled = true
         this.reportId = new Date().getTime()
         this.caseShowType = 1
+        this.type = OPERATE_TYPE_REPLAY
 
         this.moveSplit(0.6)
 
@@ -12199,7 +12219,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         this.coverage = {}
-        this.request(false, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, this.getBaseUrl() + '/coverage/start', {}, {}, function (url, res, err) {
+        this.requestPost(false, '/coverage/start', {}, {}, function (url, res, err) {
           try {
             App.onResponse(url, res, err)
             if (DEBUG) {
@@ -12682,7 +12702,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         var pic = ((response || {}).TestRecord || {}).screenshotUrl
         if (StringUtil.isEmpty(pic) != true) {
-          vComment.setAttribute("src", App.project + '/download?filePath=' + encodeURI(pic))
+          vComment.setAttribute("src", '/download?filePath=' + encodeURI(pic))
         }
 
         if (justRecoverTest) {
@@ -12812,7 +12832,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     autoTestCallback('已完成回归测试')
                   }
 
-                  App.request(false, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, App.getBaseUrl() + '/coverage/report', {}, {}, function (url, res, err) {
+                  App.requestPost(false, App.getBaseUrl() + '/coverage/report', {}, {}, function (url, res, err) {
                     try {
                       App.onResponse(url, res, err)
                       if (DEBUG) {
@@ -13180,7 +13200,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         axios({
           method: "get",
-          url: App.project + '/download?filePath=' + encodeURI(beforeImgUrl),
+          url: baseUrl + '/download?filePath=' + encodeURI(beforeImgUrl),
           responseType: 'arraybuffer'
         })
           .then(res => {
@@ -13191,7 +13211,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             axios({
               method: "get",
-              url: App.project + '/download?filePath=' + encodeURI(afterImgUrl),
+              url: baseUrl + '/download?filePath=' + encodeURI(afterImgUrl),
               responseType: 'arraybuffer'
             })
               .then(res2 => {
@@ -13496,7 +13516,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
 
             if (StringUtil.isEmpty(pic) != true) {
-              vComment.setAttribute("src", App.project + '/download?filePath=' + encodeURI(pic))
+              vComment.setAttribute("src", baseUrl + '/download?filePath=' + encodeURI(pic))
               this.showImgDiff(beforeImgUrl, afterImgUrl)
             }
           }
@@ -14955,10 +14975,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (StringUtil.isEmpty(server, true) == false) {
           this.server = server
         }
-        var project = this.getCache('', 'project')
-        if (StringUtil.isEmpty(project, true) == false) {
-          this.project = project
-        }
         var thirdParty = this.getCache('', 'thirdParty')
         if (StringUtil.isEmpty(thirdParty, true) == false) {
           this.thirdParty = thirdParty
@@ -15120,13 +15136,13 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
           if (StringUtil.isNotEmpty(rawReq.type, true)) {
             hasTestArg = true
-            App.type = StringUtil.toUpperCase(rawReq.type, true)
-            if (App.types == null) {
-               App.types = [App.type]
-            }
-            else if (App.types.indexOf(App.type) < 0) {
-              App.types.push(App.type)
-            }
+            // App.type = StringUtil.toUpperCase(rawReq.type, true)
+            // if (App.types == null) {
+            //    App.types = [App.type]
+            // }
+            // else if (App.types.indexOf(App.type) < 0) {
+            //   App.types.push(App.type)
+            // }
           }
 
           if (StringUtil.isNotEmpty(rawReq.url, true)) {
