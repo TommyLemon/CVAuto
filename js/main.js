@@ -7179,7 +7179,7 @@ https://github.com/Tencent/APIJSON/issues
           }
           // "@explain": true,
         }, {}, function (url, res, err) {
-          App.onResponse(url, res, err)
+          // App.onResponse(url, res, err)
 
           const data = res.data || {}
           const trs = data['TestRecord[]'] || [data['TestRecord:after'], data['TestRecord:before']];
@@ -11273,39 +11273,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               Input: input
             })
 
-//            if (StringUtil.isEmpty(input.name)) {
-              var type = input.type || 0
-              var action = input.action || 0
-              var obj = input || {}
-              if (type == InputUtil.EVENT_TYPE_TOUCH) {
-                input.name = InputUtil.getTouchActionName(action)
-                    + "\npointerCount: " + (obj.pointerCount || 0) + ", x: " + Math.round(obj.x || 0) + ", y: " + Math.round(obj.y || 0)
-                    + "\nsplitX: " + Math.round(obj.splitX || 0) + ", splitY: " + Math.round(obj.splitY || 0) + " " + InputUtil.getOrientationName(obj.orientation)
-              } else if (type == InputUtil.EVENT_TYPE_KEY) {
-                if (obj.edit) {
-                  input.name = "EDIT " + EditTextEvent.getWhenName(obj.when)
-                      + "\n[" + (obj.selectStart || 0) + ", " + (obj.selectEnd || 0) + "] " + StringUtil.trim(obj.text)
-                } else {
-                  input.name = InputUtil.getKeyActionName(action)
-                      + "\nrepeatCount: " + (obj.repeatCount || 0) + ", scanCode: " + InputUtil.getScanCodeName(obj.scanCode)
-                      + "         " + InputUtil.getKeyCodeName(obj.keyCode)
-                }
-              } else if (type == InputUtil.EVENT_TYPE_UI) {
-                var fragment = StringUtil.trim(obj.fragment);
-
-                input.name = InputUtil.getUIActionName(action)
-                    + "\nactivity: " + StringUtil.trim(obj.activity) + (StringUtil.isEmpty(fragment, true) ? "" : "\nfragment: " + fragment)
-              } else if (type == InputUtil.EVENT_TYPE_HTTP) {
-                var isReq = action >= 0 && action != InputUtil.HTTP_ACTION_RESPONSE;
-                input.name = InputUtil.getHTTPActionName(action) + " " + StringUtil.trim(obj.format)
-                    + "\nURL: " + StringUtil.trim(obj.url)
-                    + "\n\nREQUEST: \n" + StringUtil.trim(obj.request)
-                    + (isReq ? "" : "\n\n\nRESPONSE: \n" + StringUtil.trim(obj.response))
-                    + "\n"
-              } else {
-                input.name = (input.name || "UNKNOWN !!!")
-              }
-//            }
+           if (StringUtil.isEmpty(input.name)) {
+             input.name = InputUtil.getShowName(input)
+           }
 
           }
 

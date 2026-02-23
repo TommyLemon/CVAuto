@@ -62,3 +62,7 @@ const MotionEvent = {
     //     return obj || {}
     // }
 }
+
+if (typeof module == 'object') {
+    module.exports = MotionEvent;
+}

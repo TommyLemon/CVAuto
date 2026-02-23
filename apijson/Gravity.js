@@ -25,3 +25,7 @@ const Gravity = {
         "bottom,center_horizontal": this.BOTTOM | this.CENTER_HORIZONTAL,
     }
 }
+
+if (typeof module == 'object') {
+    module.exports = Gravity;
+}

@@ -1,3 +1,15 @@
+if (typeof window == 'undefined') {
+    try {
+      eval(`
+          var StringUtil = require("./StringUtil");
+          var KeyEvent = require("./KeyEvent");
+          var EditTextEvent = require("./EditTextEvent");
+      `)
+    } catch (e) {
+      console.log(e)
+    }
+}
+
 const InputUtil = {
     EVENT_TYPE_TOUCH: 0,
     EVENT_TYPE_KEY: 1,
@@ -289,6 +301,54 @@ const InputUtil = {
     
     isLeft: function (ballGravity) {
         return ballGravity == this.GRAVITY_RATIO_LEFT || ballGravity == this.GRAVITY_TOP_LEFT || ballGravity == this.GRAVITY_BOTTOM_LEFT;
+    },
+
+    getShowName: function (input) {
+        if (input == null) {
+            return null
+        }
+
+        var type = input.type || 0
+        var action = input.action || 0
+        var obj = input || {}
+        if (type == InputUtil.EVENT_TYPE_TOUCH) {
+            return InputUtil.getTouchActionName(action)
+                + "\npointerCount: " + (obj.pointerCount || 0) + ", x: " + Math.round(obj.x || 0) + ", y: " + Math.round(obj.y || 0)
+                + "\nsplitX: " + Math.round(obj.splitX || 0) + ", splitY: " + Math.round(obj.splitY || 0) + " " + InputUtil.getOrientationName(obj.orientation)
+        }
+
+        if (type == InputUtil.EVENT_TYPE_KEY) {
+            if (obj.edit) {
+                return "EDIT " + EditTextEvent.getWhenName(obj.when)
+                    + "\n[" + (obj.selectStart || 0) + ", " + (obj.selectEnd || 0) + "] " + StringUtil.trim(obj.text)
+            }
+
+            return InputUtil.getKeyActionName(action)
+                + "\nrepeatCount: " + (obj.repeatCount || 0) + ", scanCode: " + InputUtil.getScanCodeName(obj.scanCode)
+                + "         " + InputUtil.getKeyCodeName(obj.keyCode)
+        }
+
+        if (type == InputUtil.EVENT_TYPE_UI) {
+            var fragment = StringUtil.trim(obj.fragment);
+
+            return InputUtil.getUIActionName(action)
+                + "\nactivity: " + StringUtil.trim(obj.activity) + (StringUtil.isEmpty(fragment, true) ? "" : "\nfragment: " + fragment)
+        }
+
+        if (type == InputUtil.EVENT_TYPE_HTTP) {
+            var isReq = action >= 0 && action != InputUtil.HTTP_ACTION_RESPONSE;
+            return InputUtil.getHTTPActionName(action) + " " + StringUtil.trim(obj.format)
+                + "\nURL: " + StringUtil.trim(obj.url)
+                + "\n\nREQUEST: \n" + StringUtil.trim(obj.request)
+                + (isReq ? "" : "\n\n\nRESPONSE: \n" + StringUtil.trim(obj.response))
+                + "\n"
+        }
+
+        return (input.name || "UNKNOWN !!!")
     }
 
+}
+
+if (typeof module == 'object') {
+    module.exports = InputUtil;
 }

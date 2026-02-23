@@ -32,3 +32,7 @@ const R = {
         ratio_bottom: "drawable/ratio_bottom.png",
     }
 }
+
+if (typeof module == 'object') {
+    module.exports = R;
+}
