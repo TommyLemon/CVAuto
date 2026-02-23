@@ -142,7 +142,7 @@
 <!--                  <a v-show="User.id == null || User.id <= 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 16)">使用的请求方法: {{ methods == null || methods.length <= 0 ? '默认全部，点击设置' : (methods instanceof Array ? methods.join() : methods) }}</a>-->
 <!--                  <a v-show="User.id == null || User.id <= 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 7)">使用的请求类型: {{ types == null || types.length <= 0 ? '默认全部，点击设置' : (types instanceof Array ? types.join() : types) }}</a>-->
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 3)">{{ '应用入口 App Class: \n' + host }}</a>
-                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">项目服务器地址URL: {{ projectHost.project || '点击设置' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">项目服务器地址URL: {{ projectHost.host || '点击设置' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 15)">其它环境地址 URL Host: {{ otherEnv || '点击设置' }}</a>
                   <a v-show="User.id == null || User.id <= 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 6)">托管服务器地址 URL: {{ server || '点击设置' }}</a>
 <!--                  <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">导入第三方文档(平台名 URL): <br/>{{ thirdParty || '点击设置' }}</a>-->
@@ -262,11 +262,15 @@
 
                     <ul class="historys" style="width: 100%; height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 50px">
                         <li v-for="(item, index) in testCases" :id="'docItem' + index" >
-                            <div style="display: inline-table">
-                                <button class="hint--right" :data-hint="(item.Flow || {}).url" v-show="isShowMethod()" style="width: 60px; margin-right: 0px;padding: 0px;" id="vDocMethod" @click="restoreRemoteAndTest(index, item)">{{ getMethodName((item.Flow || {}).method, (item.Flow || {}).type) }}</button>
-                                <button class="hint--right" :data-hint="(item.Flow || {}).request" v-show="isShowType()" style="width: 48px;margin-right: 6px;padding: 0px" id="vDocType" @click="restoreRemoteAndTest(index, item)">{{ getTypeName((item.Flow || {}).type, (item.Flow || {}).method) }}</button>
-                                <a class="hint--rounded hint--no-animate" ref="testCaseTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }"> {{(((item.Flow || {}).version || 0) > 0 ? 'V' + item.Flow.version : 'V*') + ' ' + (item.Flow || {}).name  + '    ' + (item.Flow || {}).url}}</a>
-		                      <a style="white-space: pre-wrap; display: inline-flex; height: 100%; position: absolute; left: 118px; top: 40px; font-size: small; color: dimgray" @click="restoreRemote(item)" href="javascript:void(0)">{{
+                            <div style="display: inline-table; padding: 0px; margin: 0px" >
+<!--                                <button class="hint&#45;&#45;right" :data-hint="(item.Flow || {}).url" v-show="isShowMethod()" style="width: 60px; margin-right: 0px;padding: 0px;" id="vDocMethod" @click="restoreRemoteAndTest(index, item)">{{ getMethodName((item.Flow || {}).method, (item.Flow || {}).type) }}</button>-->
+<!--                                <button class="hint&#45;&#45;right" :data-hint="(item.Flow || {}).request" v-show="isShowType()" style="width: 48px;margin-right: 6px;padding: 0px" id="vDocType" @click="restoreRemoteAndTest(index, item)">{{ getTypeName((item.Flow || {}).type, (item.Flow || {}).method) }}</button>-->
+<!--                                <a class="hint&#45;&#45;rounded hint&#45;&#45;no-animate" ref="testCaseTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }"> {{(((item.Flow || {}).version || 0) > 0 ? 'V' + item.Flow.version : 'V*') + ' ' + (item.Flow || {}).name  + '    ' + (item.Flow || {}).url}}</a>-->
+		                        
+								<img width="90" height="195" src="img/Screenshot_2020-11-07-16-38-20-932_apijson.demo.jpg" style="width: 90px; min-height: 160px; height: 100%; margin: 4px; position: relative;" @click="restoreRemote(item)" href="javascript:void(0)"/>
+								<a style="width: 75%; min-width: 90px; align-content: flex-start; position: absolute; left: 118px; top: 14px; font-size: medium; color: black" >{{ (item.Flow || {}).name }}</a>
+
+								<a style="white-space: pre-wrap; display: inline-flex; height: 100%; position: absolute; left: 118px; top: 40px; font-size: small; color: dimgray" @click="restoreRemote(item)" href="javascript:void(0)">{{
 		                          '时间：' + (item.Flow.time == null ? '?' : item.Flow.time)
 		                          + '\n品牌：' + ((item.Device || {}).brand || '?')
 		                          + '\n机型：' + ((item.Device || {}).model || '?')
@@ -276,8 +280,7 @@
 		                          + '\n账号：' + ((item.Flow || {}).accountName || '?')
 		                          }}</a>
 
-		                      <input style="width: 75%; min-width: 90px; align-content: flex-start; position: absolute; left: 118px; bottom: 14px; right: 10px" v-model="(item.Flow || {}).note" placeholder="备注" />
-
+		                        <input style="width: 75%; min-width: 90px; align-content: flex-start; position: absolute; left: 118px; bottom: 14px; right: 10px" v-model="(item.Flow || {}).note" placeholder="备注" />
 								
 								<div v-show="isStatisticsEnabled" style="position: absolute; right: 31px; top: 9px; display: inline-flex">
                                     <div v-show="(item.totalCount || 0) > 0" style="background: lightgray; padding: 1px; margin-right: 2px; display: inline-block; position: relative" @click="restoreRemote(index, item, null, true)" >
