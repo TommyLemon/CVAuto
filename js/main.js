@@ -3296,7 +3296,18 @@ https://github.com/Tencent/APIJSON/issues
         const item = list[index]
         const input = item == null ? null : item.Input
         const inputUrl = input == null ? null : input.url
-        if (! StringUtil.isPath(inputUrl, true)) {
+        var bizUrl_ = this.getBranchUrl(inputUrl);
+        if (JSONResponse.isString(bizUrl_)) {
+          if (bizUrl_.endsWith('/')) {
+            bizUrl_ = bizUrl_.substring(0, bizUrl_.length - 1);
+          }
+          if (! bizUrl_.startsWith('/')) {
+            bizUrl_ = '/' + bizUrl_;
+          }
+        }
+
+        const bizUrl = bizUrl_;
+        if (! StringUtil.isPath(bizUrl, true)) {
           this.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
           return
         }
@@ -3310,7 +3321,6 @@ https://github.com/Tencent/APIJSON/issues
         chains = chains || []
 
         const baseUrl = this.getBaseUrl(inputUrl) || input.host;
-        const bizUrl = this.getBranchUrl(inputUrl);
         const rawInputStr = input.request
         const inputObj = this.getRequest(rawInputStr, {});
 
@@ -3576,6 +3586,9 @@ https://github.com/Tencent/APIJSON/issues
             for (var i = 0; i < value.length; i ++) {
               var cfg = this.newRandomConfig(childPath, '' + i, value[i], isRand, isBad, noDeep, isConst, isChain, url)
               config += '\n' + (StringUtil.isEmpty(cfg, true) ? 'null' : StringUtil.trim(cfg))
+              if (config.length > 400) {
+                break
+              }
             }
             return config
           }
@@ -3613,6 +3626,9 @@ https://github.com/Tencent/APIJSON/issues
               }
 
               config += '\n' + StringUtil.trim(cfg)
+              if (config.length > 400) {
+                break
+              }
             }
           }
 
@@ -3657,6 +3673,9 @@ https://github.com/Tencent/APIJSON/issues
                 return cfg
               }
               config += '\n' + cfg
+              if (config.length > 400) {
+                break
+              }
             }
           }
 
