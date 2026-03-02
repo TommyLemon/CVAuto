@@ -40,6 +40,7 @@
         var vRandomPage = {value: '0'};
         var vRandomCount = {value: '100'};
         var vRandomSearch = {value: ''};
+        var vRandomDisable = {checked: false}
         var vRandomSubPage = {value: '0'};
         var vRandomSubCount = {value: '100'};
         var vRandomSubSearch = {value: ''};
@@ -765,19 +766,20 @@ https://github.com/Tencent/APIJSON/issues
   var REQUEST_TYPE_DATA = 'DATA'  // POST form-data
   var REQUEST_TYPE_JSON = 'JSON'  // POST application/json
   var REQUEST_TYPE_GRPC = 'GRPC'  // POST application/json
-  var REQUEST_TYPE_GET = 'GET'  // GET ?a=1&b=c&key=value
-  var REQUEST_TYPE_POST = 'POST'  // POST application/json
-  var REQUEST_TYPE_PUT = 'PUT'  // PUT
-  var REQUEST_TYPE_PATCH = 'PATCH'  // PATCH
-  var REQUEST_TYPE_DELETE = 'DELETE'  // DELETE
-  var REQUEST_TYPE_HEAD = 'HEAD'  // HEAD
-  var REQUEST_TYPE_OPTIONS = 'OPTIONS'  // OPTIONS
-  var REQUEST_TYPE_TRACE = 'TRACE'  // TRACE
-  var HTTP_METHODS = [REQUEST_TYPE_GET, REQUEST_TYPE_POST, REQUEST_TYPE_PUT, REQUEST_TYPE_PATCH, REQUEST_TYPE_DELETE, REQUEST_TYPE_HEAD, REQUEST_TYPE_OPTIONS, REQUEST_TYPE_TRACE]
-  var HTTP_POST_TYPES = [REQUEST_TYPE_POST, REQUEST_TYPE_JSON, REQUEST_TYPE_FORM, REQUEST_TYPE_DATA, REQUEST_TYPE_GRPC]
-  var HTTP_URL_ARG_TYPES = [REQUEST_TYPE_GET, REQUEST_TYPE_PARAM, REQUEST_TYPE_FORM]
-  var HTTP_JSON_TYPES = [REQUEST_TYPE_POST, REQUEST_TYPE_JSON, REQUEST_TYPE_GRPC]
-  var HTTP_FORM_DATA_TYPES = [REQUEST_TYPE_DATA, REQUEST_TYPE_PUT, REQUEST_TYPE_DELETE]
+  var HTTP_METHOD_GET = 'GET'  // GET ?a=1&b=c&key=value
+  var HTTP_METHOD_POST = 'POST'  // POST application/json
+  var HTTP_METHOD_PUT = 'PUT'  // PUT
+  var HTTP_METHOD_PATCH = 'PATCH'  // PATCH
+  var HTTP_METHOD_DELETE = 'DELETE'  // DELETE
+  var HTTP_METHOD_HEAD = 'HEAD'  // HEAD
+  var HTTP_METHOD_OPTIONS = 'OPTIONS'  // OPTIONS
+  var HTTP_METHOD_TRACE = 'TRACE'  // TRACE
+  var HTTP_METHODS = [HTTP_METHOD_GET, HTTP_METHOD_POST, HTTP_METHOD_PUT, HTTP_METHOD_PATCH, HTTP_METHOD_DELETE, HTTP_METHOD_HEAD, HTTP_METHOD_OPTIONS, HTTP_METHOD_TRACE]
+  var HTTP_POST_TYPES = [HTTP_METHOD_POST, REQUEST_TYPE_JSON, REQUEST_TYPE_FORM, REQUEST_TYPE_DATA, REQUEST_TYPE_GRPC]
+  var HTTP_URL_ARG_TYPES = [HTTP_METHOD_GET, REQUEST_TYPE_PARAM, REQUEST_TYPE_FORM]
+  var HTTP_JSON_TYPES = [HTTP_METHOD_POST, REQUEST_TYPE_JSON, REQUEST_TYPE_GRPC]
+  var HTTP_FORM_TYPES = [REQUEST_TYPE_FORM, HTTP_METHOD_PUT, HTTP_METHOD_DELETE]
+  var HTTP_DATA_TYPES = [REQUEST_TYPE_DATA, HTTP_METHOD_PUT, HTTP_METHOD_DELETE]
   var HTTP_CONTENT_TYPES = [REQUEST_TYPE_PARAM, REQUEST_TYPE_FORM, REQUEST_TYPE_DATA, REQUEST_TYPE_JSON, REQUEST_TYPE_GRPC]
 
   var CONTENT_TYPE_MAP = {
@@ -1469,6 +1471,7 @@ https://github.com/Tencent/APIJSON/issues
       isEditResponse: false,
       isLocalShow: false,
       isChainShow: false,
+      isAllowDisable: false,
       uploadTotal: 0,
       uploadDoneCount: 0,
       uploadFailCount: 0,
@@ -1493,7 +1496,7 @@ https://github.com/Tencent/APIJSON/issues
         balance: null //点击更新提示需要判空 0.00
       },
       isVideoFirst: false,
-      method: REQUEST_TYPE_POST,
+      method: HTTP_METHOD_POST,
       methods: null, // HTTP_METHODS,
       type: OPERATE_TYPE_REVIEW,
       types: [ OPERATE_TYPE_RECORD, OPERATE_TYPE_REVIEW, OPERATE_TYPE_REPLAY ],
@@ -2184,7 +2187,7 @@ https://github.com/Tencent/APIJSON/issues
               return
             }
             if (isRandom) {
-              this.exTxt.name = '随机配置 ' + this.formatDateTime()
+              this.exTxt.name = this.isRandomListShow || this.isRandomSubListShow ? vUrl.value : '随机配置 ' + this.formatDateTime()
             }
             else if (isScript) { // 避免 APIJSON 启动报错  '执行脚本 ' + this.formatDateTime()
               this.exTxt.name = this.scriptType + (this.isPreScript ? 'Pre' : 'Post') + this.getCurrentScriptBelongId()
@@ -2784,11 +2787,11 @@ https://github.com/Tencent/APIJSON/issues
           this.requestVersion = item.version;
           // this.showUrl(false, branch)
 
-          this.showTestCase(false, this.isLocalShow)
           vUrl.value = StringUtil.get(item.name || doc.name)
           vInput.value = StringUtil.get(item.request || doc.request)
           vHeader.value = StringUtil.get(item.header || doc.header)
           vRandom.value = StringUtil.get(item.random || doc.random)
+          this.showTestCase(false, this.isLocalShow)
           this.changeScriptType(this.scriptType)
 
           this.onChange(false)
@@ -3061,28 +3064,8 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           const isEditResponse = this.isEditResponse
-          const isReleaseRESTful = isExportRandom && btnIndex == 1 && ! isEditResponse
 
           const path = this.getMethod();
-          const methodInfo = isReleaseRESTful ? (JSONObject.parseUri(path, true) || {}) : {};
-          if (isReleaseRESTful) {
-            var isRestful = methodInfo.isRestful;
-            var tag = methodInfo.tag;
-            var table = methodInfo.table;
-
-            if (isRestful) {
-              alert('请求 URL 格式不是 APIJSON 万能通用接口！必须为 /get/user 这种 /{method}/{tag} 格式！其中 method 只能为 [' + APIJSON_METHODS.join() + '] 中的一个，tag 不能为 Table, Table[] 这种与 APIJSON 简单接口冲突的格式！ ')
-              return
-            }
-            if (StringUtil.isEmpty(tag, true)) {
-              alert('请求 URL 缺少 tag！必须为 /get/user 这种 /{method}/{tag} 格式！其中 method 只能为 [' + APIJSON_METHODS.join() + '] 中的一个，tag 不能为 Table, Table[] 这种与 APIJSON 简单接口冲突的格式！ ')
-              return
-            }
-            if (JSONObject.isTableKey(table)) {
-              alert('请求 URL 中的字符 ' + table + ' 与 APIJSON 简单接口冲突！必须为 /get/user 这种 /{method}/{tag} 格式！其中 method 只能为 [' + APIJSON_METHODS.join() + '] 中的一个，tag 不能为 Table, Table[] 这种与 APIJSON 简单接口冲突的格式！ ')
-              return
-            }
-          }
 
           if ((isExportRandom != true || btnIndex == 1) && StringUtil.isEmpty(this.exTxt.name, true)) {
             alert('请输入接口名！')
@@ -3100,8 +3083,6 @@ https://github.com/Tencent/APIJSON/issues
 
           const after = isSingle ? this.switchQuote(inputted) : inputted;  // this.toDoubleJSON(inputted);
           const inputObj = this.getRequest(after, {});
-
-          const rawInputStr = JSON.stringify(inputObj)
 
           var commentObj = null;
           if (isExportRandom != true) {
@@ -3124,6 +3105,9 @@ https://github.com/Tencent/APIJSON/issues
             if (isEditResponse) {
               inputObj.code = code_
             }
+          } else if (this.isRandomShow || this.isRandomSubListShow) {
+            this.exportChainApiCase(this.exTxt.name, this.isRandomSubListShow, this.isRandomSubListShow ? this.randomSubs : this.randoms)
+            return
           }
 
           var rawRspStr = JSON.stringify(currentResponse || {})
@@ -3143,105 +3127,14 @@ https://github.com/Tencent/APIJSON/issues
           currentResponse.throw = thrw;
 
           var config = '' // vRandom.value;
-          const mapReq = {};
-          const mustKeys = [];
-          const typeObj = {};
-          const refuseKeys = [];
-
-          if (isReleaseRESTful) {
-            var mapReq2 = {}
-
-            var cfgLines = StringUtil.split(config, '\n', true);
-            var newCfg = '';
-            if (cfgLines != null) {
-              for (var i = 0; i < cfgLines.length; i++) {
-                var cfgLine = cfgLines[i];
-                var ind = cfgLine == null ? -1 : cfgLine.indexOf(': ');
-                if (ind <= 0) {
-                  continue;
-                }
-
-                var cInd = cfgLine.indexOf('//');
-                if (cInd >= 0 && cInd <= ind) {
-                  continue;
-                }
-
-                var k = cfgLine.substring(0, ind).replaceAll('/', '.'); // .trim();
-                var ks = StringUtil.split(k, '.')
-                var p = inputObj;
-                for (var j = 0; j < ks.length - 1; j ++) {
-                  if (p == null) {
-                    break;
-                  }
-
-                  var jk = ks[j];
-                  p = jk == null ? null : p[jk];
-                }
-
-                var v = p == null ? null : p[ks[ks.length - 1]];
-                mapReq[k] = v;
-                mapReq2[k] = v;
-
-                // 智能判断 count, @key 等
-                if (k.startsWith('@') || k.endsWith('[].count') || k.endsWith('[].query') || ['format', 'version'].indexOf(k) >= 0) {
-                  refuseKeys.push('!' + k);
-                }
-                else {
-                  mustKeys.push(k);
-                }
-
-                var t = JSONResponse.getType(v);
-                typeObj[k] = t == 'integer' ? 'NUMBER' : (t == 'number' ? 'DECIMAL' : t.toUpperCase());
-
-                newCfg += (i <= 0 ? '' : '\n') + k + ': ' + cfgLine.substring(ind+2).trim();
-              }
-
-              refuseKeys.push('!');
-              config = newCfg;
-            }
-
-            commentObj = JSONResponse.updateStandard({}, mapReq2);
-          }
 
           var callback = function (randomName, constConfig, constJson) {
-            // 用现成的测试过的更好，Response 与 Request 严格对应
-            // var mapReq = {};
-            // if (isExportRandom && btnIndex == 1) {
-            //
-            //   var mapReq2 = {}
-            //   var cfgLines = StringUtil.split(constConfig, '\n', true);
-            //   if (cfgLines != null) {
-            //     for (var i = 0; i < cfgLines.length; i++) {
-            //       var cfgLine = cfgLines[i];
-            //       var ind = cfgLine == null ? -1 : cfgLine.indexOf(': ');
-            //       if (ind <= 0) {
-            //         continue;
-            //       }
-            //
-            //       var k = cfgLine.substring(0, ind).replaceAll('/', '.'); // .trim();
-            //       var v = cfgLine.substring(ind + 1).trim();
-            //       try {
-            //         v = parseJSON(v);
-            //       }
-            //       catch (e) {
-            //         log(e)
-            //       }
-            //
-            //       mapReq[k] = v
-            //       mapReq2[k] = v
-            //     }
-            //   }
-            //
-            //   commentObj = JSONResponse.updateStandard({}, mapReq2);
-            // }
-
             const userId = App.User.id;
             const methods = App.methods;
             const method = App.isShowMethod() ? App.method : null;
             const extName = App.exTxt.name;
             const baseUrl = App.getBaseUrl();
-            const url = (isReleaseRESTful ? baseUrl : App.server) + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
-            const reqObj = btnIndex <= 0 ? constJson : mapReq
+            const url = App.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
             const req = isExportRandom && btnIndex <= 0 ? {
               format: false,
               'Input': {
@@ -3251,7 +3144,7 @@ https://github.com/Tencent/APIJSON/issues
                 chainId: cId,
                 flowId: did,
                 count: App.requestCount,
-                name: App.exTxt.name,
+                name: extName,
                 config: config
               },
               'TestRecord': {
@@ -3266,22 +3159,23 @@ https://github.com/Tencent/APIJSON/issues
               'tag': 'Input'
             } : {
               format: false,
-            'Flow': {
-              'name': App.getMethod(),
-                // 'userId': userId,
-//                'testAccountId': currentAccountId,
-//                'chainGroupId': cgId,
-              'detail': App.exTxt.name,
-              'systemId': 1,
-                // 'userId': userId,
-//                'chainGroupId': cgId,
-              'deviceId': 1,
-              'imei': 1234,
-              'screencapUrl': "http://test.url",
-              'log': (currentResponse.type || App.type) || null,
-                // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
-              },
-            'tag': 'Flow'
+              'Flow': {
+                'project': project,
+                'name': App.getMethod(),
+                  // 'userId': userId,
+  //                'testAccountId': currentAccountId,
+  //                'chainGroupId': cgId,
+                'detail': App.exTxt.name,
+                'systemId': 1,
+                  // 'userId': userId,
+  //                'chainGroupId': cgId,
+                'deviceId': 1,
+                'imei': 1234,
+                'screencapUrl': "http://test.url",
+                'log': (currentResponse.type || App.type) || null,
+                  // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
+                },
+              'tag': 'Flow'
             }
 
             App.adminRequest(url, req, {}, function (url, res, err) {
@@ -3313,52 +3207,19 @@ https://github.com/Tencent/APIJSON/issues
                     return
                   }
 
-                  if (isReleaseRESTful) {
-                    var structure = {"MUST": mustKeys.join(), "TYPE": typeObj, "REFUSE": refuseKeys.join()};
-
-                    var reqObj = {
-                      format: false,
-                      Request: {
-                        method: StringUtil.toUpperCase(methodInfo.method),
-                        tag: methodInfo.tag,
-                        structure: JSON.stringify(structure, null, '    '),
-                        detail: extName
-                      },
-                      tag: 'Request'
-                    };
-
-                    App.adminRequest(baseUrl + '/post', reqObj, {}, function (url, res, err) {
-                      if (res.data != null && res.data.Request != null && JSONResponse.isSuccess(res.data.Request)) {
-                        alert('已自动生成并上传 Request 表校验规则配置:\n' + JSON.stringify(reqObj.Request, null, '  '))
-                      }
-                      else {
-                        var reqStr = JSON.stringify(reqObj, null, '  ');
-                        console.log('已自动生成，但上传以下 Request 表校验规则配置失败，可能需要手动加表记录:\nPOST ' + baseUrl + '/post' + '\n' + reqStr)
-                        alert('已自动生成，但上传以下 Request 表校验规则配置失败，可能需要手动加表记录，如未自动复制可在控制台复制:\n' + reqStr)
-                        navigator.clipboard.writeText(reqStr);
-                      }
-                      App.onResponse(url, res, err)
-                    })
-                  }
-
                   //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
-
                   const isGenerate = StringUtil.isEmpty(config, true);
-                  var req = isGenerate != true ? null : (isReleaseRESTful ? mapReq : App.getRequest(vInput.value, {}))
+                  var req = isGenerate != true ? null : App.getRequest(vInput.value, {})
                   App.newAndUploadRandomConfig(baseUrl, req, (data.Flow || {}).id, config, App.requestCount, function (url, res, err) {
-
-
-
-                        if (res.data != null && res.data.Input != null && JSONResponse.isSuccess(res.data.Input)) {
-                          alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
-                          App.isRandomListShow = true
-                        }
-                        else {
-                          alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
-                          // vRandom.value = config
-                        }
-                        App.onResponse(url, res, err)
-                  }, isReleaseRESTful)
+                    if (res.data != null && res.data.Input != null && JSONResponse.isSuccess(res.data.Input)) {
+                      alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
+                      App.isRandomListShow = true
+                    } else {
+                      alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
+                      // vRandom.value = config
+                    }
+                    App.onResponse(url, res, err)
+                  })
                 }
               }
             })
@@ -3374,6 +3235,257 @@ https://github.com/Tencent/APIJSON/issues
 
         }
       },
+
+      exportChainApiCase: function (groupName, isSub, randoms) {
+        groupName = StringUtil.isEmpty(groupName) ? this.exTxt.name : groupName
+        isSub = isSub == null ? this.isRandomSubListShow : isSub
+        randoms = randoms != null ? randoms : (isSub ? this.randomSubs : this.randoms)
+        var isAdd = true // TODO 暂时只添加，后续支持更新
+        var groupId = new Date().getTime()
+        //修改 Chain
+        this.adminRequest((isAdd ? '/post' : '/put'), {
+          Chain: {
+            'groupName': groupName,
+            'groupId': isAdd ? groupId : null,
+            'groupId{}': isAdd ? null : [groupId]
+          },
+          tag: 'Chain-group'
+        }, {}, function (url, res, err) {
+          App.onResponse(url, res, err)
+          var data = res.data || {}
+          var isOk = JSONResponse.isSuccess(data)
+
+          var msg = isOk ? '' : ('\nmsg: ' + StringUtil.get(data.msg))
+          if (err != null) {
+            msg += '\nerr: ' + err.msg
+          }
+
+          if (! isOk) {
+            alert((isAdd ? '新增' : '修改') + (isOk ? '成功' : '失败') + (isAdd ? '! \n' : '！\ngroupId: ' + groupId) + '\ngroupName: ' + groupName + '\n' + msg)
+            return
+          }
+
+          var chain = data.Chain || {}
+          App.addApiCase2Chain({id: chain.id || groupId, name: chain.name || groupName}, randoms, 0, [])
+        })
+
+      },
+
+      addApiCase2Chain: function (group, list, index, chains, preIndex, preChain) {
+        const groupId = group == null ? null : group.id
+        if (groupId == null || groupId <= 0) {
+          alert('请选择有效的用例！')
+          return
+        }
+
+        const groupName = group.name
+        if (index >= list.length) {
+          alert('已完成导出场景接口用例：' + groupName + ' \nid: ' + groupId)
+          var settingStr = encodeURIComponent(JSON.stringify({
+            isChainShow: true, chainGroupSearch: groupName, chainGroupPage: 0, chainGroupCount: 10
+          }))
+          window.open(this.server + '/api?&setting=' + settingStr)
+          window.open(this.server + '/api/index.html?&setting=' + settingStr)
+          return
+        }
+
+        const item = list[index]
+        const input = item == null ? null : item.Input
+        const url = input == null ? null : input.url
+        if (! StringUtil.isPath(url, true)) {
+          this.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
+          return
+        }
+
+        const currentResponse = parseJSON(input.response);
+        if (StringUtil.isEmpty(currentResponse, true)) {
+          this.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
+          return
+        }
+
+        chains = chains || []
+
+        const rawInputStr = input.request
+        const inputObj = this.getRequest(rawInputStr, {});
+
+        var commentObj = null;
+        // if (isExportRandom != true) {
+          var commentStddObj = null
+          try {
+            commentStddObj = {} // parseJSON(isEditResponse ? tr.standard : doc.standard);
+          }
+          catch(e) {
+            log(e)
+          }
+
+          var code_ = inputObj[JSONResponse.KEY_CODE]
+          // if (isEditResponse) {
+          //   inputObj[JSONResponse.KEY_CODE] = typeof code_ == 'undefined' ? undefined : null  // delete inputObj.code
+          // }
+
+          commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
+
+          // if (isEditResponse) {
+          //   inputObj[JSONResponse.KEY_CODE] = code_
+          // }
+        // }
+
+        var rawRspStr = currentResponse == null ? null : JSON.stringify(currentResponse)
+        var isResObj = JSONResponse.isObject(currentResponse);
+        const code = isResObj ? currentResponse[JSONResponse.KEY_CODE] : undefined;
+        const thrw = isResObj ? currentResponse.throw : null;
+        if (isResObj) {
+          currentResponse[JSONResponse.KEY_CODE] = typeof code == 'undefined' ? undefined : null; // delete currentResponse.code; // currentResponse.code = null; //code必须一致
+          delete currentResponse.throw; // currentResponse.throw = null; // throw必须一致
+        }
+
+        const isML = this.isMLEnabled;
+        const stddObj = isML ? JSONResponse.updateStandard({}, currentResponse) : {};
+        stddObj.status = StringUtil.isNumber(input.status) ? +input.status : 200;
+        stddObj.code = code || 0;
+        stddObj.throw = thrw;
+        if (isResObj) {
+          currentResponse[JSONResponse.KEY_CODE] = code;
+          currentResponse.throw = thrw;
+        }
+
+        var config = input.config;
+        var nowStr = App.formatDateTime();
+
+        var projectHost = this.projectHost || {}
+
+        var currentAccountId = this.getCurrentAccountId()
+        var cgId = groupId; // FIXME 已有 Document，需要修改
+        var cId = null; // FIXME 已有 Document，需要修改
+        const reqObj = inputObj
+
+        var callback = function (randomName, constConfig, constJson, doc) {
+          const userId = App.User.id;
+          const baseUrl = input.host;
+          const isAdd = true
+          const req = {
+            format: false,
+            'Chain': {
+              'rank': nowStr,
+              'groupName': groupName,
+              'groupId': groupId,
+              'documentId': doc.id,
+              'documentName': doc.name
+            },
+            'Random': {
+              userId: userId,
+              toId: 0,
+              chainGroupId: cgId,
+              chainId: cId,
+              documentId: doc.id,
+              count: 1,
+              name: '[Record] 参数传递 ' + nowStr,
+              config: config
+            },
+            'tag': 'Chain+Random'
+          }
+
+          App.adminRequest('/post', req, {}, function (url, res, err) {
+            App.onResponse(url, res, err)
+            var data = res.data || {}
+            chains.push(data)
+            App.addApiCase2Chain(group, list, index + 1, chains, index, data)
+            var isOk = JSONResponse.isSuccess(data)
+            if (isOk != true) {
+              alert((isAdd ? '新增' : '修改') + (isOk ? '成功' : '失败') + (isAdd ? '! \n' :'！\ngroupId: ' + groupId) + '\ngroupName: ' + groupName + '\n' + data.msg)
+              return
+            }
+
+            //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
+            var req = parseJSON(rawInputStr)
+            const isGenerate = StringUtil.isNotEmpty(req, true);
+            App.newAndUploadRandomConfig(baseUrl, req, (data.Document || {}).id, config, 1, function (url, res, err) {
+              if (res.data != null && res.data.Random != null && JSONResponse.isSuccess(res.data.Random)) {
+                alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
+                App.isRandomListShow = true
+              } else {
+                alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
+                vRandom.value = config
+              }
+              App.onResponse(url, res, err)
+            })
+
+          })
+
+        };
+
+        this.adminRequest('/get', {
+          Document: {
+            'method': input.method,
+            'url': url,
+          }
+        }, {}, function (url, res, err) {
+          App.onResponse(url, res, err)
+          var data = res.data
+          var doc = data == null ? null : data.Document
+          var did = doc == null ? null : doc.id
+          var isAdd = did == null || did < 0
+          if (! isAdd) {
+            callback(null, null, inputObj, doc)
+            return
+          }
+
+          const userId = App.User.id;
+          const baseUrl = input.host;
+          const method = HTTP_METHODS.indexOf(input.method) >= 0 ? input.method : null;
+          const format = input.format;
+          const type = HTTP_CONTENT_TYPES.indexOf(format) >= 0 ? format : (HTTP_JSON_TYPES.indexOf(method) >= 0
+              ? "JSON" : (HTTP_DATA_TYPES.indexOf(method) >= 0 ? "DATA" : (HTTP_URL_ARG_TYPES.indexOf(method) >= 0
+                  ? "PARAM" : (HTTP_FORM_TYPES.indexOf(method) >= 0 ? "FORM" : null))
+          ));
+          const req = {
+            format: false,
+            'Document': {
+              'userId': userId,
+              'project': StringUtil.isEmpty(projectHost.project, true) ? null : projectHost.project,
+              'operation': CodeUtil.getOperation(url, reqObj),
+              'name': '[Record] ' + index + '. ' + groupName + ' ' + nowStr,
+              'method': method,
+              'type': type,
+              'url': App.getBranchUrl(url),
+              'request': rawInputStr,
+              'standard': commentObj == null ? null : JSON.stringify(commentObj, null, '    '),
+              'header': input.reqHeader || input.header
+            },
+            'TestRecord': {
+              'userId': userId,
+              'chainGroupId': cgId,
+              'chainId': cId,
+              // 'documentId': did,
+              'randomId': 0,
+              'host': App.getBaseUrl(url) || baseUrl,
+              'testAccountId': currentAccountId,
+              'response': rawRspStr,
+              'header': input.resHeader || input.header,
+              'standard': isML ? JSON.stringify(stddObj) : undefined,
+            },
+            'tag': 'Document'
+          }
+
+          App.adminRequest('/post', req, {}, function (url, res, err) {
+            App.onResponse(url, res, err)
+            var data = res.data
+            var doc = data == null ? null : data.Document
+            var did = doc == null ? null : doc.id
+            if (did == null || did <= 0) {
+              chains.push(data)
+              App.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
+              alert('新增 Document 单接口用例失败！' + data.msg + '\n' + JSON.stringify(req))
+              return
+            }
+
+            callback(null, null, inputObj, doc)
+          })
+
+        })
+
+      },
+
       newAndUploadRandomConfig: function(baseUrl, req, flowId, config, count, callback, isReleaseRESTful) {
         if (flowId == null) {
           return
@@ -3387,7 +3499,7 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           configs.push(config)
-          config2 = StringUtil.trim(this.newRandomConfig(null, '', req, true))
+          var config2 = StringUtil.trim(this.newRandomConfig(null, '', req, true))
           if (StringUtil.isNotEmpty(config2, true)) {
             configs.push(config2)
           }
@@ -3414,9 +3526,7 @@ https://github.com/Tencent/APIJSON/issues
 
       onClickAddRandom: function (randomIndex, randomSubIndex) {
          if (this.isRandomListShow || this.isRandomSubListShow) {
-            this.randomTestTitle = null;
-            this.isRandomListShow = false;
-            this.isRandomSubListShow = false;
+           this.showExport(true, true, true)
          } else if (StringUtil.isEmpty(vRandom.value, true)) {
             var req = this.getRequest(vInput.value, {})
             vRandom.value = StringUtil.trim(this.newRandomConfig(null, '', req, Math.random() >= 0.5, Math.random() >= 0.3, Math.random() >= 0.8))
@@ -4808,7 +4918,12 @@ https://github.com/Tencent/APIJSON/issues
                 'chainId': cId,
                 'flowId': isSub ? null : item.id,
                 '@order': "step+,time+,downTime+,eventTime+",
-                'name$': search
+                // "disabled": 0, // disable 这个字段会导致报错
+                // 'disable': this.type == null || this.type == OPERATE_TYPE_REPLAY ? 0 : null,
+                'name$': search,
+                // 导致奇怪的 Vue 报错 EditTextEvent is not defined
+                // 'disable': (vRandomDisable || {}).checked ? null : 0
+                // 'disabled': this.isAllowDisable ? null : 0
               },
               'TestRecord': {
                 'randomId@': '/Input/id',
@@ -5107,7 +5222,7 @@ https://github.com/Tencent/APIJSON/issues
           this.prevHeader = vHeader.value
           this.prevScript = vScript.value
 
-          this.method = REQUEST_TYPE_POST
+          this.method = HTTP_METHOD_POST
           // this.type = REQUEST_TYPE_JSON
           this.showUrl(isAdmin, '/login')
           vInput.value = JSON.stringify(req, null, '    ')
@@ -5117,7 +5232,7 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         this.scripts = newDefaultScript()
-        this.method = REQUEST_TYPE_POST
+        this.method = HTTP_METHOD_POST
         // this.type = REQUEST_TYPE_JSON
         this.showTestCase(false, this.isLocalShow)
         if (IS_BROWSER) {
@@ -5161,7 +5276,7 @@ https://github.com/Tencent/APIJSON/issues
 
         if (isAdminOperation) {
           this.isLoginShow = false
-          this.request(isAdminOperation, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, this.server + '/login', req, this.getHeader(vHeader.value), function (url, res, err) {
+          this.request(isAdminOperation, HTTP_METHOD_POST, REQUEST_TYPE_JSON, this.server + '/login', req, this.getHeader(vHeader.value), function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -5175,7 +5290,7 @@ https://github.com/Tencent/APIJSON/issues
             App.isLoginShow = false
 
             if (App.prevUrl != null) {
-              App.method = App.prevMethod || REQUEST_TYPE_POST
+              App.method = App.prevMethod || HTTP_METHOD_POST
               // App.type = App.prevType || REQUEST_TYPE_JSON
 
               vUrl.value = App.prevUrl || (URL_BASE + '/get')
@@ -5212,7 +5327,7 @@ https://github.com/Tencent/APIJSON/issues
 
           const isLoginShow = this.isLoginShow
           var curUser = this.getCurrentAccount() || {}
-          const loginMethod = (isLoginShow ? this.method : curUser.loginMethod) || REQUEST_TYPE_POST
+          const loginMethod = (isLoginShow ? this.method : curUser.loginMethod) || HTTP_METHOD_POST
           const loginType = (isLoginShow ? this.type : curUser.loginType) || REQUEST_TYPE_JSON
           const loginUrl = (isLoginShow ? this.getBranchUrl() : curUser.loginUrl) || '/login'
           const loginReq = (isLoginShow ? this.getRequest(vInput.value) : curUser.loginReq) || req
@@ -5229,7 +5344,7 @@ https://github.com/Tencent/APIJSON/issues
             }
 
             if (App.prevUrl != null) {
-              App.method = App.prevMethod || REQUEST_TYPE_POST
+              App.method = App.prevMethod || HTTP_METHOD_POST
               // App.type = App.prevType || REQUEST_TYPE_JSON
 
               vUrl.value = App.prevUrl || (URL_BASE + '/get')
@@ -5465,7 +5580,7 @@ https://github.com/Tencent/APIJSON/issues
           this.scripts = newDefaultScript()
           this.showUrl(isAdminOperation, '/logout')
           vInput.value = JSON.stringify(req, null, '    ')
-          this.method = REQUEST_TYPE_POST
+          this.method = HTTP_METHOD_POST
           // this.type = REQUEST_TYPE_JSON
           this.showTestCase(false, this.isLocalShow)
           this.onChange(false)
@@ -5477,7 +5592,7 @@ https://github.com/Tencent/APIJSON/issues
               return
             }
 
-            App.request(isAdminOperation, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, App.getBaseUrl(App.otherEnv) + '/logout'
+            App.request(isAdminOperation, HTTP_METHOD_POST, REQUEST_TYPE_JSON, App.getBaseUrl(App.otherEnv) + '/logout'
                 , req, App.getHeader(vHeader.value), function (url_, res_, err_) {
               if (callback) {
                 callback(url, res, err)
@@ -5809,7 +5924,7 @@ https://github.com/Tencent/APIJSON/issues
           return method
         }
 
-        return [REQUEST_TYPE_GET, REQUEST_TYPE_PARAM].indexOf(type) < 0 ? REQUEST_TYPE_POST : REQUEST_TYPE_GET
+        return [HTTP_METHOD_GET, REQUEST_TYPE_PARAM].indexOf(type) < 0 ? HTTP_METHOD_POST : HTTP_METHOD_GET
       },
       /**获取显示的请求类型名称
        */
@@ -7697,10 +7812,10 @@ https://github.com/Tencent/APIJSON/issues
         this.requestPost(true, url, req, header, callback)
       },
       requestGet: function (isAdminOperation, url, req, header, callback) {
-        this.request(isAdminOperation, REQUEST_TYPE_GET, REQUEST_TYPE_PARAM, url, req, header, callback)
+        this.request(isAdminOperation, HTTP_METHOD_GET, REQUEST_TYPE_PARAM, url, req, header, callback)
       },
       requestPost: function (isAdminOperation, url, req, header, callback) {
-        this.request(isAdminOperation, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, url, req, header, callback)
+        this.request(isAdminOperation, HTTP_METHOD_POST, REQUEST_TYPE_JSON, url, req, header, callback)
       },
       //请求
       request: function (isAdminOperation, method, type, url, req, header, callback, caseScript_, accountScript_, globalScript_, ignorePreScript, timeout_, wait_, retry_) {
@@ -7931,7 +8046,7 @@ https://github.com/Tencent/APIJSON/issues
                 )
             ),
             params: isParam ? req : null,
-            data: isJSON ? req : (HTTP_FORM_DATA_TYPES.indexOf(type) >= 0 ? toFormData(req) : null),
+            data: isJSON ? req : (HTTP_DATA_TYPES.indexOf(type) >= 0 ? toFormData(req) : null),
             headers: header,  //Accept-Encoding（HTTP Header 大小写不敏感，SpringBoot 接收后自动转小写）可能导致 Response 乱码
             withCredentials: true, //Cookie 必须要  type == REQUEST_TYPE_JSON
             // crossDomain: true
@@ -8553,7 +8668,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
 
             function queryResult() {
-                App.request(true, REQUEST_TYPE_GET, REQUEST_TYPE_PARAM, 'https://api.devin.ai/ada/query/' + App.uuid, {}, {}, function (url, res, err) {
+                App.request(true, HTTP_METHOD_GET, REQUEST_TYPE_PARAM, 'https://api.devin.ai/ada/query/' + App.uuid, {}, {}, function (url, res, err) {
 //                    App.onResponse(url, res, err)
                     var data = res.data || {}
 //                    var isOk = JSONResponse.isSuccess(data)
