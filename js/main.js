@@ -3212,10 +3212,14 @@ https://github.com/Tencent/APIJSON/issues
                   var req = isGenerate != true ? null : App.getRequest(vInput.value, {})
                   App.newAndUploadRandomConfig(baseUrl, req, (data.Flow || {}).id, config, App.requestCount, function (url, res, err) {
                     if (res.data != null && res.data.Input != null && JSONResponse.isSuccess(res.data.Input)) {
-                      alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
+                      if (StringUtil.isNotEmpty(config)) {
+                        alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
+                      }
                       App.isRandomListShow = true
                     } else {
-                      alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
+                      if (StringUtil.isNotEmpty(config)) {
+                        alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
+                      }
                       // vRandom.value = config
                     }
                     App.onResponse(url, res, err)
@@ -3291,8 +3295,8 @@ https://github.com/Tencent/APIJSON/issues
 
         const item = list[index]
         const input = item == null ? null : item.Input
-        const url = input == null ? null : input.url
-        if (! StringUtil.isPath(url, true)) {
+        const inputUrl = input == null ? null : input.url
+        if (! StringUtil.isPath(inputUrl, true)) {
           this.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
           return
         }
@@ -3305,6 +3309,8 @@ https://github.com/Tencent/APIJSON/issues
 
         chains = chains || []
 
+        const baseUrl = this.getBaseUrl(inputUrl) || input.host;
+        const bizUrl = this.getBranchUrl(inputUrl);
         const rawInputStr = input.request
         const inputObj = this.getRequest(rawInputStr, {});
 
@@ -3361,7 +3367,6 @@ https://github.com/Tencent/APIJSON/issues
 
         var callback = function (randomName, constConfig, constJson, doc) {
           const userId = App.User.id;
-          const baseUrl = input.host;
           const isAdd = true
           const req = {
             format: false,
@@ -3372,17 +3377,17 @@ https://github.com/Tencent/APIJSON/issues
               'documentId': doc.id,
               'documentName': doc.name
             },
-            'Random': {
-              userId: userId,
+            'Random': StringUtil.isEmpty(constConfig) ? null : {
+              // userId: userId,
               toId: 0,
               chainGroupId: cgId,
               chainId: cId,
               documentId: doc.id,
               count: 1,
               name: '[Record] 参数传递 ' + nowStr,
-              config: config
+              config: constConfig
             },
-            'tag': 'Chain+Random'
+            'tag': StringUtil.isEmpty(constConfig) ? 'Chain' : 'Chain+Random'
           }
 
           App.adminRequest('/post', req, {}, function (url, res, err) {
@@ -3396,10 +3401,12 @@ https://github.com/Tencent/APIJSON/issues
               return
             }
 
+            const chain = data.Chain || {}
+
             //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
             var req = parseJSON(rawInputStr)
             const isGenerate = StringUtil.isNotEmpty(req, true);
-            App.newAndUploadRandomConfig(baseUrl, req, (data.Document || {}).id, config, 1, function (url, res, err) {
+            App.newAndUploadRandomConfig(baseUrl, req, chain.documentId || doc.id, config, 1, function (url, res, err) {
               if (res.data != null && res.data.Random != null && JSONResponse.isSuccess(res.data.Random)) {
                 alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
                 App.isRandomListShow = true
@@ -3408,7 +3415,7 @@ https://github.com/Tencent/APIJSON/issues
                 vRandom.value = config
               }
               App.onResponse(url, res, err)
-            })
+            }, true, chain.id, chain.groupId || groupId, bizUrl)
 
           })
 
@@ -3417,7 +3424,7 @@ https://github.com/Tencent/APIJSON/issues
         this.adminRequest('/get', {
           Document: {
             'method': input.method,
-            'url': url,
+            'url': bizUrl,
           }
         }, {}, function (url, res, err) {
           App.onResponse(url, res, err)
@@ -3426,12 +3433,11 @@ https://github.com/Tencent/APIJSON/issues
           var did = doc == null ? null : doc.id
           var isAdd = did == null || did < 0
           if (! isAdd) {
-            callback(null, null, inputObj, doc)
+            callback(null, config, inputObj, doc)
             return
           }
 
           const userId = App.User.id;
-          const baseUrl = input.host;
           const method = HTTP_METHODS.indexOf(input.method) >= 0 ? input.method : null;
           const format = input.format;
           const type = HTTP_CONTENT_TYPES.indexOf(format) >= 0 ? format : (HTTP_JSON_TYPES.indexOf(method) >= 0
@@ -3443,11 +3449,11 @@ https://github.com/Tencent/APIJSON/issues
             'Document': {
               'userId': userId,
               'project': StringUtil.isEmpty(projectHost.project, true) ? null : projectHost.project,
-              'operation': CodeUtil.getOperation(url, reqObj),
+              'operation': CodeUtil.getOperation(bizUrl, reqObj),
               'name': '[Record] ' + index + '. ' + groupName + ' ' + nowStr,
               'method': method,
               'type': type,
-              'url': App.getBranchUrl(url),
+              'url': bizUrl,
               'request': rawInputStr,
               'standard': commentObj == null ? null : JSON.stringify(commentObj, null, '    '),
               'header': input.reqHeader || input.header
@@ -3458,7 +3464,7 @@ https://github.com/Tencent/APIJSON/issues
               'chainId': cId,
               // 'documentId': did,
               'randomId': 0,
-              'host': App.getBaseUrl(url) || baseUrl,
+              'host': baseUrl,
               'testAccountId': currentAccountId,
               'response': rawRspStr,
               'header': input.resHeader || input.header,
@@ -3479,27 +3485,29 @@ https://github.com/Tencent/APIJSON/issues
               return
             }
 
-            callback(null, null, inputObj, doc)
+            callback(null, config, inputObj, doc)
           })
 
         })
 
       },
 
-      newAndUploadRandomConfig: function(baseUrl, req, flowId, config, count, callback, isReleaseRESTful) {
-        if (flowId == null) {
+      newAndUploadRandomConfig: function(baseUrl, req, documentId, config, count, callback, isExportApi, chainId, chainGroupId, url) {
+        if (documentId == null) {
           return
         }
+
+        const table = isExportApi ? 'Random' : 'Input';
         const isGenerate = StringUtil.isEmpty(config, true);
         var configs = isGenerate ? [] : [config]
         if (isGenerate) {
-          var config = StringUtil.trim(this.newRandomConfig(null, '', req, false))
+          config = StringUtil.trim(this.newRandomConfig(null, '', req, false, null, null, null, isExportApi, url))
           if (StringUtil.isEmpty(config, true)) {
             return;
           }
 
           configs.push(config)
-          var config2 = StringUtil.trim(this.newRandomConfig(null, '', req, true))
+          var config2 = isExportApi ? null : StringUtil.trim(this.newRandomConfig(null, '', req, true, null, null, isExportApi, url))
           if (StringUtil.isNotEmpty(config2, true)) {
             configs.push(config2)
           }
@@ -3507,10 +3515,12 @@ https://github.com/Tencent/APIJSON/issues
 
         for (var i = 0; i < configs.length; i ++) {
           const config = configs[i]
-          this.adminRequest((isReleaseRESTful ? baseUrl : this.server) + '/post', {
+          this.adminRequest(this.server + '/post', {
             format: false,
-            Input: {
-              flowId: flowId,
+            [table]: {
+              chainGroupId: chainGroupId,
+              chainId: chainId,
+              documentId: documentId,
               count: count,
               name: '默认配置' + (isGenerate ? '(上传测试用例时自动生成)' : ''),
               config: config
@@ -3519,7 +3529,7 @@ https://github.com/Tencent/APIJSON/issues
               host: baseUrl,
               response: ''
             },
-            tag: 'Input'
+            tag: table
           }, {}, callback)
         }
       },
@@ -3541,13 +3551,17 @@ https://github.com/Tencent/APIJSON/issues
          // fileInput.click();
       },
 
-      newRandomConfig: function (path, key, value, isRand, isBad, noDeep, isConst) {
+      newRandomConfig: function (path, key, value, isRand, isBad, noDeep, isConst, isChain, url) {
         if (key == null) {
           return ''
         }
         if (path == '' && (key == 'tag' || key == 'version' || key == 'format')) {
           return ''
         }
+
+        var isChainShow = isChain == null ? this.isChainShow : isChain;
+        url = url || this.getMethod()
+        var isRestful = ! JSONObject.isAPIJSONPath(url);
 
         var config = ''
         var childPath = path == null || path == '' ? key : path + '/' + key
@@ -3558,48 +3572,48 @@ https://github.com/Tencent/APIJSON/issues
 
         if (value instanceof Array) {
           if (isConst) {
-               config += prefix + '[]'
-               for (var i = 0; i < value.length; i ++) {
-                  var cfg = this.newRandomConfig(childPath, '' + i, value[i], isRand, isBad, noDeep, isConst)
-                  config += '\n' + (StringUtil.isEmpty(cfg, true) ? 'null' : cfg.trim())
-               }
-               return config
+            config += prefix + '[]'
+            for (var i = 0; i < value.length; i ++) {
+              var cfg = this.newRandomConfig(childPath, '' + i, value[i], isRand, isBad, noDeep, isConst, isChain, url)
+              config += '\n' + (StringUtil.isEmpty(cfg, true) ? 'null' : StringUtil.trim(cfg))
+            }
+            return config
           }
           if (isBad && noDeep && StringUtil.isNotEmpty(childPath, true)) {
             return prefix + (isRand ? 'RANDOM_BAD_ARR' : 'ORDER_BAD_ARR' + offset) + '()'
           }
 
           if (Math.random() >= 7) {
-              var val
-              if (value.length <= 0) {
-                val = ''
+            var val
+            if (value.length <= 0) {
+              val = ''
+            }
+            else {
+              if (value.length <= 1) {
+                val = ', ' + JSON.stringify(value)
+              }
+              else if (value.length <= 2) {
+                val = ', ' + JSON.stringify([value[0]]) + ', ' + JSON.stringify([value[1]]) + ', ' + JSON.stringify(value)
               }
               else {
-                if (value.length <= 1) {
-                  val = ', ' + JSON.stringify(value)
-                }
-                else if (value.length <= 2) {
-                  val = ', ' + JSON.stringify([value[0]]) + ', ' + JSON.stringify([value[1]]) + ', ' + JSON.stringify(value)
-                }
-                else {
-                  val = ', ' + JSON.stringify([value[0]]) + ', ' + JSON.stringify([value[value.length - 1]]) + ', ' + JSON.stringify([value[Math.floor(value.length / 2)]]) + ', ' + JSON.stringify(value)
-                }
+                val = ', ' + JSON.stringify([value[0]]) + ', ' + JSON.stringify([value[value.length - 1]]) + ', ' + JSON.stringify([value[Math.floor(value.length / 2)]]) + ', ' + JSON.stringify(value)
               }
+            }
 
-              config += prefix + (isRand ? 'RANDOM_IN' : 'ORDER_IN') + '(undefined, null, false, true, -1025, 0, [], {}, 1, 3.14, "null", "undefined", Number.MAX_SAFE_INTEGER, "-1025", "0", "" + Number.MAX_SAFE_INTEGER, "[", "]", "{", "}", "1", "3.14", "true", "false"' + val + ')'
+            config += prefix + (isRand ? 'RANDOM_IN' : 'ORDER_IN') + '(undefined, null, false, true, -1025, 0, [], {}, 1, 3.14, "null", "undefined", Number.MAX_SAFE_INTEGER, "-1025", "0", "" + Number.MAX_SAFE_INTEGER, "[", "]", "{", "}", "1", "3.14", "true", "false"' + val + ')'
           }
           else {
-              config += prefix + '[]'
+            config += prefix + '[]'
 
-              var l = randomInt(0, 13)
-              for (var i = 0; i < l; i ++) {
-                 var cfg = this.newRandomConfig(childPath, '' + i, value[i], isRand, isBad, noDeep, isConst)
-                 if (StringUtil.isEmpty(cfg, true)) {
-                   break
-                 }
-
-                 config += '\n' + cfg.trim()
+            var l = randomInt(0, 13)
+            for (var i = 0; i < l; i ++) {
+              var cfg = this.newRandomConfig(childPath, '' + i, value[i], isRand, isBad, noDeep, isConst, isChain, url)
+              if (StringUtil.isEmpty(cfg, true)) {
+                break
               }
+
+              config += '\n' + StringUtil.trim(cfg)
+            }
           }
 
           return config
@@ -3613,7 +3627,7 @@ https://github.com/Tencent/APIJSON/issues
             var v = value[k]
 
             var isAPIJSONArray = isConst == false && v instanceof Object && v instanceof Array == false
-              && k.startsWith('@') == false && (k.endsWith('[]') || k.endsWith('@'))
+                && k.startsWith('@') == false && (k.endsWith('[]') || k.endsWith('@'))
 
             if (isAPIJSONArray) {
               if (k.endsWith('@')) {
@@ -3628,7 +3642,7 @@ https://github.com/Tencent/APIJSON/issues
               }
               if (v.hasOwnProperty('count')) {
                 config += prefix + 'count: ' + (isRand ? 'RANDOM_IN' : 'ORDER_IN') + '(undefined, null, 0, 1, 5, 10, 20'
-                  + ([0, 1, 5, 10, 20].indexOf(v.count) >= 0 ? ')' : ', ' + v.count + ')')
+                    + ([0, 1, 5, 10, 20].indexOf(v.count) >= 0 ? ')' : ', ' + v.count + ')')
                 delete v.count
               }
               if (v.hasOwnProperty('query')) {
@@ -3637,8 +3651,11 @@ https://github.com/Tencent/APIJSON/issues
               }
             }
 
-            var cfg = this.newRandomConfig(childPath, k, v, isRand, isBad, noDeep, isConst)
+            var cfg = this.newRandomConfig(childPath, k, v, isRand, isBad, noDeep, isConst, isChain, url)
             if (StringUtil.isNotEmpty(cfg, true)) {
+              if (k != null && k.toLowerCase() == 'id') {
+                return cfg
+              }
               config += '\n' + cfg
             }
           }
@@ -3654,7 +3671,223 @@ https://github.com/Tencent/APIJSON/issues
             return config
           }
 
-          if (typeof value == 'boolean') {
+          // FIXME 似乎加了自动生成场景传参配置后，空配置时点击 + 添加配置后，切换用例列表会卡死
+          if (isChainShow && StringUtil.isNotEmpty(key, true) && (typeof value != 'string' || ! key.endsWith('@'))) {
+            var keys = StringUtil.split(path, '/');
+            var table = keys == null ? '' : keys[keys.length - 1];
+            var isAPIJSONArray = childPath.indexOf('[]') >= 0;
+            var isId = key.toLowerCase() == 'id';
+            var isList = isAPIJSONArray || childPath.toLowerCase().indexOf('list') >= 0;
+
+            var tbl = StringUtil.getTableName(key)
+            tbl = StringUtil.firstCase(tbl, true)
+            var col = StringUtil.getColumnName(key)
+            col = StringUtil.firstCase(col, false)
+
+            var ks = keys == null ? [] : keys.slice(0, keys.length - 1)
+            ks.push(tbl)
+            var p = ks.join('/')
+            var cp = StringUtil.isNotEmpty(tbl) ? childPath : (StringUtil.isEmpty(p) ? '' : p + '/') + col
+            var kp = StringUtil.isEmpty(p) ? path : p;
+            var fd = StringUtil.isEmpty(kp) ? '' : kp + '/';
+
+            var ctxKey = StringUtil.isNotEmpty(tbl) ? key : StringUtil.firstCase(table, false) + StringUtil.firstCase(key, true)
+            var ctxPutPfx = ctxKey + ': '
+            var camelIdKey = StringUtil.firstCase((tbl || table) + 'Id');
+            var snakeIdKey = (tbl || table).toLowerCase() + '_id';
+
+            if (isList) {
+              if (isId) {
+                config += prefix + 'PRE_ARG("' + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + snakeIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + cp + '")';
+                if (isRestful) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+                  if (key != cp) {
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + key + '")';
+                  }
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + snakeIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + snakeIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + snakeIdKey + '")';
+                if (isRestful && ! isAPIJSONArray) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + camelIdKey + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + snakeIdKey + '")';
+                }
+              }
+              else if (StringUtil.isIdKey(key)) {
+                config += prefix + 'PRE_ARG("' + key + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("id")';
+                if (key != cp) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + cp + '")';
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + cp + '")';
+
+                var idKey = key.toLowerCase().startsWith(table.toLowerCase()) ? key : "id";
+                if (isRestful && ! isAPIJSONArray) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+                  if (key != cp) {
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + key + '")';
+                  }
+
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + key + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/' + key + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + key + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("list/0/' + key + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("list/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + (tbl || table) + '/' + (col || key) + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/' + (tbl || table) + '/' + (col || key) + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + (tbl || table) + '/' + (col || key) + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + (tbl || table) + '/' + (col || key) + '")';
+                } else {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("[]/0/' + key + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("[]/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + fd + (col || key) + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + (path || '') + '[]/0/' + key + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + (path || '') + '[]/0/id")';
+                }
+              }
+              else {
+                config += StringUtil.isEmpty(cp) ? '' : prefix + 'PRE_DATA("' + cp + '", get4Path(req,"' + childPath + '",null))';
+                config += (StringUtil.isEmpty(cp) ? '' : '\n// 可替代上面的 ') + prefix + 'PRE_DATA("' + cp + '", get4Path(req,"' + childPath + '"))';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + cp + '")';
+                if (isRestful && ! isAPIJSONArray) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+                  if (key != cp) {
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + key + '")';
+                    if (StringUtil.isNotEmpty(col)) {
+                      config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + (StringUtil.isEmpty(tbl) ? '' : tbl + '/') + col + '")';
+                      config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + col + '")';
+                    }
+                  }
+                }
+              }
+
+              config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + childPath + '")';
+              config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + cp + '")';
+              config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + ctxKey + '")';
+              if (key != childPath) {
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + key + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + ctxKey + '")';
+              }
+            } else {
+              if (isId) {
+                if (isRestful) {
+                  config += prefix + 'PRE_DATA("' + 'data/list/0/' + camelIdKey + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + 'data/0/' + snakeIdKey + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + 'list/0/' + camelIdKey + '")';
+                } else {
+                  config += prefix + 'PRE_DATA("' + kp + '[]/0/' + camelIdKey + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + kp + '[]/0/' + snakeIdKey + '")';
+                }
+
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + snakeIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + cp + '")';
+                if (isRestful) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+                  if (key != cp) {
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + key + '")';
+                  }
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + snakeIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + (StringUtil.isEmpty(path) ? '' : path + '/') + camelIdKey + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + (StringUtil.isEmpty(path) ? '' : path + '/') + snakeIdKey + '")';
+              }
+              else if (StringUtil.isIdKey(key)) {
+                if (isRestful) {
+                  config += prefix + 'PRE_DATA("data/list/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("list/0/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + fd + 'id")';
+                } else {
+                  config += prefix + 'PRE_DATA("[]/0/' + (StringUtil.isEmpty(p) ? '' : kp + '/') + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("[]/0/' + fd + (col || key) + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("[]/0/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + kp + '[]/0/' + (col || key) + '")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + kp + '[]/0/id")';
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + cp + '")';
+                if (isRestful) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+                  if (key != cp) {
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + (col || key) + '")';
+                  }
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + ctxKey + '")';
+                if (isRestful) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/id")';
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("id")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + fd + 'id")';
+                if (isRestful) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + fd + 'id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/id")';
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + fd + 'id")';
+                }
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + fd + 'id")';
+              }
+              else {
+                config += prefix + 'PRE_DATA("' + cp + '", get4Path(req,"' + key + '",null))';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + cp + '")';
+                if (isRestful) {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+                  if (key != cp) {
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + key + '")';
+                    config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + key + '")';
+                  }
+                } else {
+                  config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + key + '")';
+                }
+              }
+
+              config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + childPath + '")';
+              if (key != childPath) {
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_ARG("' + key + '")';
+              }
+
+              if (isRestful) {
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/' + cp + '")';
+              }
+              config += '\n// 可替代上面的 ' + prefix + 'CTX_GET("' + ctxKey + '")';
+              if (isRestful) {
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/list/0/' + cp + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("data/0/' + cp + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("list/0/' + cp + '")';
+                config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("[]/0/' + cp + '", "PRE_DATA")';
+                config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("data/0/' + cp + '", "PRE_DATA")';
+                config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("list/0'/ + cp + '", "PRE_DATA")';
+              } else {
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("[]/0/' + cp + '")';
+                config += '\n// 可替代上面的 ' + prefix + 'PRE_DATA("' + kp + '[]/0/' + (col || key) + '")';
+                config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("' + kp + '[]/0/' + (col || key) + '", "PRE_DATA")';
+                config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("[]/0/' + cp + '", "PRE_DATA")';
+              }
+            }
+
+            config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("' + key + '", App.getCurrentAccount())';
+            config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("' + cp + '", "PRE_DATA")';
+            config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("' + childPath + '", "PRE_ARG")';
+            if (key != childPath) {
+              config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("' + key + '", "PRE_DATA")';
+              config += '\n// 可替代上面的 ' + ctxPutPfx + 'CTX_PUT("' + key + '", "PRE_ARG")';
+            }
+          }
+          else if (typeof value == 'boolean') {
             if (isBad) {
               return prefix + (isRand ? 'RANDOM_BAD_BOOL' : 'ORDER_BAD_BOOL' + offset) + '()'
             }
@@ -3693,9 +3926,9 @@ https://github.com/Tencent/APIJSON/issues
               }
               else {
                 config += prefix + (dotIndex < 0 && value <= 10
-                      ? (isRand ? 'RANDOM_INT' : 'ORDER_INT') + '(0, 10)'
-                      : ((hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(0, ' + 100 * value + (hasDot ? ', ' + keep + ')' : ')'))
-                  )
+                        ? (isRand ? 'RANDOM_INT' : 'ORDER_INT') + '(0, 10)'
+                        : ((hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(0, ' + 100 * value + (hasDot ? ', ' + keep + ')' : ')'))
+                )
                 var hasDot = String(value).indexOf('.') >= 0
 
                 if (value < 0) {
@@ -3737,7 +3970,6 @@ https://github.com/Tencent/APIJSON/issues
 
         return config
       },
-
 
 
       // 保存配置
