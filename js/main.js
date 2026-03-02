@@ -2961,37 +2961,7 @@ https://github.com/Tencent/APIJSON/issues
             var clazz = StringUtil.trim(this.exTxt.name)
 
             var txt = '' //配合下面 +=，实现注释判断，一次全生成，方便测试
-            if (clazz.endsWith('.java')) {
-              txt += CodeUtil.parseJavaBean(docObj, clazz.substring(0, clazz.length - 5), this.database)
-            }
-            else if (clazz.endsWith('.swift')) {
-              txt += CodeUtil.parseSwiftStruct(docObj, clazz.substring(0, clazz.length - 6), this.database)
-            }
-            else if (clazz.endsWith('.kt')) {
-              txt += CodeUtil.parseKotlinDataClass(docObj, clazz.substring(0, clazz.length - 3), this.database)
-            }
-            else if  (clazz.endsWith('.m')) {
-              txt += CodeUtil.parseObjectiveCEntity(docObj, clazz.substring(0, clazz.length - 2), this.database)
-            }
-            else if  (clazz.endsWith('.cs')) {
-              txt += CodeUtil.parseCSharpEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
-            }
-            else if  (clazz.endsWith('.php')) {
-              txt += CodeUtil.parsePHPEntity(docObj, clazz.substring(0, clazz.length - 4), this.database)
-            }
-            else if  (clazz.endsWith('.go')) {
-              txt += CodeUtil.parseGoEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
-            }
-            else if  (clazz.endsWith('.cpp')) {
-              txt += CodeUtil.parseCppStruct(docObj, clazz.substring(0, clazz.length - 4), this.database)
-            }
-            else if  (clazz.endsWith('.js')) {
-              txt += CodeUtil.parseJavaScriptEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
-            }
-            else if  (clazz.endsWith('.ts')) {
-              txt += CodeUtil.parseTypeScriptEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
-            }
-            else if (clazz.endsWith('.py')) {
+            if (clazz.endsWith('.py')) {
               txt += CodeUtil.parsePythonEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else {
@@ -3010,40 +2980,6 @@ https://github.com/Tencent/APIJSON/issues
 
             var s = ''
             switch (this.language) {
-              case CodeUtil.LANGUAGE_KOTLIN:
-                s += '(Kotlin):\n\n' + CodeUtil.parseKotlinResponse('', res, 0, false, ! isSingle)
-                break;
-              case CodeUtil.LANGUAGE_JAVA:
-                s += '(Java):\n\n' + CodeUtil.parseJavaResponse('', res, 0, false, ! isSingle)
-                break;
-              case CodeUtil.LANGUAGE_C_SHARP:
-                s += '(C#):\n\n' + CodeUtil.parseCSharpResponse('', res, 0)
-                break;
-
-              case CodeUtil.LANGUAGE_SWIFT:
-                s += '(Swift):\n\n' + CodeUtil.parseSwiftResponse('', res, 0, isSingle)
-                break;
-//              case CodeUtil.LANGUAGE_OBJECTIVE_C:
-//                s += '(Objective-C):\n\n' + CodeUtil.parseObjectiveCResponse('', res, 0)
-//                break;
-
-              case CodeUtil.LANGUAGE_GO:
-                s += '(Go):\n\n' + CodeUtil.parseGoResponse('', res, 0)
-                break;
-              case CodeUtil.LANGUAGE_C_PLUS_PLUS:
-                s += '(C++):\n\n' + CodeUtil.parseCppResponse('', res, 0, isSingle)
-                break;
-
-              case CodeUtil.LANGUAGE_TYPE_SCRIPT:
-                s += '(TypeScript):\n\n' + CodeUtil.parseTypeScriptResponse('', res, 0, isSingle)
-                break;
-              case CodeUtil.LANGUAGE_JAVA_SCRIPT:
-                s += '(JavaScript):\n\n' + CodeUtil.parseJavaScriptResponse('', res, 0, isSingle)
-                break;
-
-              case CodeUtil.LANGUAGE_PHP:
-                s += '(PHP):\n\n' + CodeUtil.parsePHPResponse('', res, 0, isSingle)
-                break;
               case CodeUtil.LANGUAGE_PYTHON:
                 var isML = this.isMLEnabled
                 var tr = (this.currentRemoteItem || {}).TestRecord || {}
@@ -9100,6 +9036,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
         this.onFilterChange(type)
       },
+      onDisableChange: function ($event) {
+        this.onFilterChange('random')
+      },
       onFilterChange: function(type) {
         type = type || ''
         if (type == 'testCase' || type == 'caseGroup' || type == 'chainGroup') {
@@ -9207,77 +9146,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       getCode: function (rq) {
         var s = '\n\n\n### 请求代码(自动生成) \n';
         switch (this.language) {
-          case CodeUtil.LANGUAGE_KOTLIN:
-            s += '\n#### <= Android-Kotlin: 空对象用 HashMap&lt;String, Any&gt;()，空数组用 ArrayList&lt;Any&gt;()\n'
-              + '```kotlin \n'
-              + CodeUtil.parseKotlinRequest(null, parseJSON(rq), 0, isSingle, false, false, this.type, this.getBaseUrl(), '/' + this.getMethod(), this.urlComment)
-              + '\n ``` \n注：对象 {} 用 mapOf("key": value)，数组 [] 用 listOf(value0, value1)\n';
-            break;
-          case CodeUtil.LANGUAGE_JAVA:
-            s += '\n#### <= Android-Java: 同名变量需要重命名'
-              + ' \n ```java \n'
-              + StringUtil.trim(CodeUtil.parseJavaRequest(null, parseJSON(rq), 0, isSingle, false, false, this.type, '/' + this.getMethod(), this.urlComment))
-              + '\n ``` \n注：' + (isSingle ? '用了 APIJSON 的 JSONRequest, JSONResponse 类，也可使用其它类封装，只要 JSON 有序就行\n' : 'LinkedHashMap&lt;&gt;() 可替换为 fastjson 的 JSONObject(true) 等有序JSON构造方法\n');
-
-            var serverCode = CodeUtil.parseJavaServer(this.type, '/' + this.getMethod(), this.database, this.schema, parseJSON(rq), isSingle);
-            if (StringUtil.isEmpty(serverCode, true) != true) {
-              s += '\n#### <= Server-Java: RESTful 等非 APIJSON 规范的 API'
-                + ' \n ```java \n'
-                + serverCode
-                + '\n ``` \n注：' + (isSingle ? '分页和排序用了 Mybatis-PageHelper，如不需要可在生成代码基础上修改\n' : '使用 SSM(Spring + SpringMVC + Mybatis) 框架 \n');
-            }
-            break;
-          case CodeUtil.LANGUAGE_C_SHARP:
-            s += '\n#### <= Unity3D-C\\#: 键值对用 {"key", value}' +
-              '\n ```csharp \n'
-              + CodeUtil.parseCSharpRequest(null, parseJSON(rq), 0)
-              + '\n ``` \n注：对象 {} 用 new JObject{{"key", value}}，数组 [] 用 new JArray{value0, value1}\n';
-            break;
-
-          case CodeUtil.LANGUAGE_SWIFT:
-            s += '\n#### <= iOS-Swift: 空对象用 [ : ]'
-              + '\n ```swift \n'
-              + CodeUtil.parseSwiftRequest(null, parseJSON(rq), 0)
-              + '\n ``` \n注：对象 {} 用 ["key": value]，数组 [] 用 [value0, value1]\n';
-            break;
-//          case CodeUtil.LANGUAGE_OBJECTIVE_C:
-//            s += '\n#### <= iOS-Objective-C \n ```objective-c \n'
-//              + CodeUtil.parseObjectiveCRequest(null, parseJSON(rq))
-//              + '\n ```  \n';
-//            break;
-
-          case CodeUtil.LANGUAGE_GO:
-            s += '\n#### <= Web-Go: 对象 key: value 会被强制排序，每个 key: value 最后都要加逗号 ","'
-              + ' \n ```go \n'
-              + CodeUtil.parseGoRequest(null, parseJSON(rq), 0)
-              + '\n ``` \n注：对象 {} 用 map[string]interface{} {"key": value}，数组 [] 用 []interface{} {value0, value1}\n';
-            break;
-          case CodeUtil.LANGUAGE_C_PLUS_PLUS:
-            s += '\n#### <= Web-C++: 使用 RapidJSON'
-              + ' \n ```cpp \n'
-              + StringUtil.trim(CodeUtil.parseCppRequest(null, parseJSON(rq), 0, isSingle))
-              + '\n ``` \n注：std::string 类型值需要判断 RAPIDJSON_HAS_STDSTRING\n';
-            break;
-
-          case CodeUtil.LANGUAGE_PHP:
-            s += '\n#### <= Web-PHP: 空对象用 (object) ' + (isSingle ? '[]' : 'array()')
-              + ' \n ```php \n'
-              + CodeUtil.parsePHPRequest(null, parseJSON(rq), 0, isSingle)
-              + '\n ``` \n注：对象 {} 用 ' + (isSingle ? '[\'key\' => value]' : 'array("key" => value)') + '，数组 [] 用 ' + (isSingle ? '[value0, value1]\n' : 'array(value0, value1)\n');
-            break;
-
           case CodeUtil.LANGUAGE_PYTHON:
             s += '\n#### <= Web-Python: 注释符用 \'\\#\''
               + ' \n ```python \n'
               + CodeUtil.parsePythonRequest(null, parseJSON(rq), 0, isSingle, vInput.value)
               + '\n ``` \n注：关键词转换 null: None, false: False, true: True';
-            break;
-
-          //以下都不需要解析，直接用左侧的 JSON
-          case CodeUtil.LANGUAGE_TYPE_SCRIPT:
-          case CodeUtil.LANGUAGE_JAVA_SCRIPT:
-          //case CodeUtil.LANGUAGE_PYTHON:
-            s += '\n#### <= Web-JavaScript/TypeScript: 和左边的请求 JSON 一样 \n';
             break;
           default:
             s += '\n没有生成代码，可能生成代码(封装,解析)的语言配置错误。\n';
