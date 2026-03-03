@@ -1505,7 +1505,7 @@ https://github.com/Tencent/APIJSON/issues
       database: 'MYSQL', // 查文档必须，除非后端提供默认配置接口  // 用后端默认的，避免用户总是没有配置就问为什么没有生成文档和注释  'MYSQL',// 'POSTGRESQL',
       schema: 'sys',  // 查文档必须，除非后端提供默认配置接口  // 用后端默认的，避免用户总是没有配置就问为什么没有生成文档和注释   'sys',
       otherEnv: 'http://localhost:8080',  // 其它环境服务地址，用来对比当前的
-      server: 'http://apijson.cn:8080', // 'http://localhost:8080', //  Chrome 90+ 跨域问题非常难搞，开发模式启动都不行了
+      server: '', // 'http://apijson.cn:8080', // 'http://localhost:8080', //  Chrome 90+ 跨域问题非常难搞，开发模式启动都不行了
       // server: 'http://47.74.39.68:9090',  // apijson.org
       projectHost: {host: 'http://192.168.31.5:8080', project: 'APIJSON'},  // apijson.cn
       thirdParty: 'SWAGGER /v2/api-docs',  //apijson.cn
@@ -1942,7 +1942,7 @@ https://github.com/Tencent/APIJSON/issues
         return req == null ? null : req.tag
       },
 
-      getRequest: function (json, defaultValue, isRaw) {  // JSON5 兜底，减少修改范围  , isSingle) {
+      getRequest: function (json, defaultValue, isRaw, isTry) {  // JSON5 兜底，减少修改范围  , isSingle) {
         if (JSONResponse.isString(json) != true) {
           return json == null ? defaultValue : json
         }
@@ -1950,13 +1950,20 @@ https://github.com/Tencent/APIJSON/issues
         if (StringUtil.isEmpty(s, true)) {
           return defaultValue
         }
+
         try {
           return jsonlint.parse(s);
-        }
-        catch (e) {
+        } catch (e) {
           log('main.getRequest', 'try { return jsonlint.parse(s); \n } catch (e) {\n' + e.message)
-          log('main.getRequest', 'return JSON5.parse(s);')
-          return JSON5.parse(s);  // jsonlint.parse(this.removeComment(s));
+          try {
+            return JSON5.parse(s)  // jsonlint.parse(this.removeComment(s));
+          } catch (e2) {
+            console.log('main.getRequest  try jsonlint.parse(s) >> JSON5.parse(s) >> catch e = ' + e.message + '; e2 = ' + e2.message + '; s = ' + s)
+            if (isTry) {
+              return defaultValue
+            }
+            throw e2
+          }
         }
       },
       getExtraComment: function(json) {
@@ -3270,13 +3277,13 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           var chain = data.Chain || {}
-          App.addApiCase2Chain({id: chain.id || groupId, name: chain.name || groupName}, randoms, 0, [])
+          App.addApiCase2Chain({id: chain.id, groupId: chain.groupId || groupId, name: chain.name || groupName}, randoms, 0, [])
         })
 
       },
 
       addApiCase2Chain: function (group, list, index, chains, preIndex, preChain) {
-        const groupId = group == null ? null : group.id
+        const groupId = group == null ? null : group.groupId
         if (groupId == null || groupId <= 0) {
           alert('请选择有效的用例！')
           return
@@ -3286,10 +3293,10 @@ https://github.com/Tencent/APIJSON/issues
         if (index >= list.length) {
           alert('已完成导出场景接口用例：' + groupName + ' \nid: ' + groupId)
           var settingStr = encodeURIComponent(JSON.stringify({
-            isChainShow: true, chainGroupSearch: groupName, chainGroupPage: 0, chainGroupCount: 10
+            isChainShow: true, chainGroupPage: 0, chainGroupCount: 10, testCaseCount: 10, chainGroupSearch: groupName
           }))
-          window.open(this.server + '/api?&setting=' + settingStr)
-          window.open(this.server + '/api/index.html?&setting=' + settingStr)
+          window.open(this.server + '/api?reportId=0&setting=' + settingStr)
+          window.open(this.server + '/api/index.html?reportId=0&setting=' + settingStr)
           return
         }
 
@@ -3322,7 +3329,7 @@ https://github.com/Tencent/APIJSON/issues
 
         const baseUrl = this.getBaseUrl(inputUrl) || input.host;
         const rawInputStr = input.request
-        const inputObj = this.getRequest(rawInputStr, {});
+        const inputObj = this.getRequest(rawInputStr, {}, null, true);
 
         var commentObj = null;
         // if (isExportRandom != true) {
@@ -3414,14 +3421,14 @@ https://github.com/Tencent/APIJSON/issues
             const chain = data.Chain || {}
 
             //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
-            var req = parseJSON(rawInputStr)
+            var req = parseJSON(rawInputStr, null, true)
             const isGenerate = StringUtil.isNotEmpty(req, true);
             App.newAndUploadRandomConfig(baseUrl, req, chain.documentId || doc.id, config, 1, function (url, res, err) {
               if (res.data != null && res.data.Random != null && JSONResponse.isSuccess(res.data.Random)) {
-                alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
+                console.log('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
                 App.isRandomListShow = true
               } else {
-                alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
+                console.log((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
                 vRandom.value = config
               }
               App.onResponse(url, res, err)
@@ -13383,9 +13390,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           this.otherEnv = otherEnv
         }
         var server = this.getCache('', 'server')
-        if (StringUtil.isEmpty(server, true) == false) {
+        if (StringUtil.isNotEmpty(server, true)) {
           this.server = server
+        } else {
+          this.server = window.location.origin
         }
+
         var thirdParty = this.getCache('', 'thirdParty')
         if (StringUtil.isEmpty(thirdParty, true) == false) {
           this.thirdParty = thirdParty

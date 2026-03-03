@@ -254,21 +254,29 @@ function log(tag, msg) {
 /**将json字符串转为JSON对象
  * @param s
  */
-function parseJSON(s) {
+function parseJSON(s, defaultValue, isTry) {
   if (typeof s != "string") {
-    alertOfDebug("parseJSON  typeof json != string >> s = \"\" + s;");
+    alertOfDebug("parseJSON  typeof json != string >> s = " + s);
     return s;
   }
   // alertOfDebug("parseJSON  s = \n" + s);
 
   if (StringUtil.isEmpty(s, true)) {
-    return null;
+    return defaultValue;
   }
 
   try {
     return JSON.parse(s);
   } catch (e) {
-    return JSON5.parse(s)
+    try {
+      return JSON5.parse(s)
+    } catch (e2) {
+      console.log('parseJSON  try JSON.parse(s) >> JSON5.parse(s) >> catch e = ' + e.message + '; e2 = ' + e2.message + "; s = " + s)
+      if (isTry) {
+        return defaultValue
+      }
+      throw e2
+    }
   }
 }
 
