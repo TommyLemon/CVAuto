@@ -11452,7 +11452,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var res = {};
           var data = res.data;
           var err = null;
-          invoke(eval(StringUtil.trim(preScript) + '\n;\n(' + toEval + ')'), which, p_k, pathKeys, key, lastKeyInPath);
+          try {
+            var ret = eval(StringUtil.trim(preScript) + '\n;\n(' + toEval + ')')
+            invoke(ret, which, p_k, pathKeys, key, lastKeyInPath);
+          } catch (e) {
+            throw new Error(e.message + '\n; 第 ' + i + ' 行：' + line)
+          }
 
           // alert('> current = ' + JSON.stringify(current, null, '    '))
         }
@@ -11807,10 +11812,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (err != null) {
           var status = res == null ? null : res.status
           var rsp = (err.response || {}).data || {}
+          var message = err.message
+          var msg = StringUtil.trim(StringUtil.trim(rsp.code) + ' ' + StringUtil.trim(rsp.message || rsp.reason)) || err.message || '请求出错！'
           tr.compare = {
             code: JSONResponse.COMPARE_ERROR, //请求出错
-            msg: StringUtil.trim(StringUtil.trim(rsp.code) + ' ' + StringUtil.trim(rsp.message || rsp.reason)) || err.message || '请求出错！',
-            path: (status != null && status != 200 ? status + ' ' : '') + err.message
+            msg: msg,
+            path: (status != null && status != 200 ? status + ' ' : '') + (StringUtil.isEmpty(message) || msg.indexOf(message) >= 0 ? '' : message)
           }
         }
         else {
