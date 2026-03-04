@@ -2290,7 +2290,7 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         if (show) {
-          this.exTxt.button = index == 8 ? '上传' : '切换'
+          this.exTxt.button = '切换' // index == 8 ? '上传' : '切换'
           this.exTxt.index = index
           switch (index) {
             case 0:
@@ -2791,7 +2791,7 @@ https://github.com/Tencent/APIJSON/issues
           this.method = item.method;
           this.type = item.type;
           this.urlComment = item.urlComment || StringUtil.trim(StringUtil.trim(device.brand) + ' ' + StringUtil.trim(device.model)) + ' ' + (device.width || 0) + 'x' + (device.height || 0) + ' ' + StringUtil.trim(StringUtil.trim(system.brand) + ' ' + StringUtil.trim(system.versionName))
-          this.requestVersion = item.version;
+          this.requestVersion = item.versionCode;
           // this.showUrl(false, branch)
 
           vUrl.value = StringUtil.get(item.name || doc.name)
@@ -3217,6 +3217,9 @@ https://github.com/Tencent/APIJSON/issues
                   //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
                   const isGenerate = StringUtil.isEmpty(config, true);
                   var req = isGenerate != true ? null : App.getRequest(vInput.value, {})
+                  if (StringUtil.isEmpty(req)) {
+                    return
+                  }
                   App.newAndUploadRandomConfig(baseUrl, req, (data.Flow || {}).id, config, App.requestCount, function (url, res, err) {
                     if (res.data != null && res.data.Input != null && JSONResponse.isSuccess(res.data.Input)) {
                       if (StringUtil.isNotEmpty(config)) {
@@ -3237,7 +3240,7 @@ https://github.com/Tencent/APIJSON/issues
           };
 
           if (btnIndex == 1) {
-            // this.parseRandom(inputObj, config, null, true, true, false, callback)
+            // this.parseRandom(inputObj, header, config, null, true, true, false, callback)
             callback(null, null, inputObj)
           }
           else {
@@ -3283,7 +3286,7 @@ https://github.com/Tencent/APIJSON/issues
       },
 
       addApiCase2Chain: function (group, list, index, chains, preIndex, preChain) {
-        const groupId = group == null ? null : group.groupId
+        const groupId = group == null ? null : group.groupId || group.id
         if (groupId == null || groupId <= 0) {
           alert('请选择有效的用例！')
           return
@@ -3303,8 +3306,18 @@ https://github.com/Tencent/APIJSON/issues
         const item = list[index]
         const input = item == null ? null : item.Input
         const inputUrl = input == null ? null : input.url
-        var bizUrl_ = this.getBranchUrl(inputUrl);
+        var bizUrl_ = this.getBranchUrl(inputUrl || '');
+        var locate_ = ''
+        var query_ = ''
         if (JSONResponse.isString(bizUrl_)) {
+          var ind = bizUrl_.indexOf('?')
+          query_ = ind < 0 ? '' : bizUrl_.substring(ind + 1)
+          bizUrl_ = ind < 0 ? bizUrl_ : bizUrl_.substring(0, ind)
+
+          ind = bizUrl_.indexOf('#')
+          locate_ = ind < 0 ? '' : locate_.substring(ind + 1)
+          bizUrl_ = ind < 0 ? bizUrl_ : bizUrl_.substring(0, ind)
+
           if (bizUrl_.endsWith('/')) {
             bizUrl_ = bizUrl_.substring(0, bizUrl_.length - 1);
           }
@@ -3327,9 +3340,35 @@ https://github.com/Tencent/APIJSON/issues
 
         chains = chains || []
 
-        const baseUrl = this.getBaseUrl(inputUrl) || input.host;
-        const rawInputStr = input.request
-        const inputObj = this.getRequest(rawInputStr, {}, null, true);
+        const projectHost = this.projectHost || {}
+        const project = StringUtil.isEmpty(projectHost.project) ? null : projectHost.project
+        const baseUrl = this.getBaseUrl(inputUrl || '', true) || input.host;
+        const query = query_;
+        const request_ = input.request
+        var inputObj_;
+        try {
+          inputObj_ = this.getRequest(request_, {});
+        } catch (e) {
+          inputObj_ = getRequestFromURL('?' + request_, true)
+        }
+        const queryObj = getRequestFromURL('?' + query, true)
+        if (StringUtil.isEmpty(inputObj_) && StringUtil.isNotEmpty(queryObj)) {
+          inputObj_ = queryObj
+        }
+
+        const inputObj = inputObj_
+        const rawInputStr = StringUtil.trim(inputObj)
+        var nowStr = this.formatDateTime();
+        const userId = this.User.id
+        var accountInfo = this.getCurrentAccount() || {}
+        var currentAccountId = accountInfo.id
+
+        const method = HTTP_METHODS.indexOf(input.method) >= 0 ? input.method : null;
+        const format = input.format;
+        const type = HTTP_CONTENT_TYPES.indexOf(format) >= 0 ? format : (HTTP_JSON_TYPES.indexOf(method) >= 0
+            ? "JSON" : (HTTP_DATA_TYPES.indexOf(format) >= 0 ? "DATA" : (HTTP_URL_ARG_TYPES.indexOf(method) >= 0
+                    ? "PARAM" : (HTTP_FORM_TYPES.indexOf(format) >= 0 ? "FORM" : null))
+        ))
 
         var commentObj = null;
         // if (isExportRandom != true) {
@@ -3373,9 +3412,6 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         var config = input.config;
-        var nowStr = App.formatDateTime();
-
-        var projectHost = this.projectHost || {}
 
         var currentAccountId = this.getCurrentAccountId()
         var cgId = groupId; // FIXME 已有 Document，需要修改
@@ -3383,12 +3419,19 @@ https://github.com/Tencent/APIJSON/issues
         const reqObj = inputObj
 
         const curChain = {
+          groupId: groupId,
+          groupName: groupName,
+          testAccountId: currentAccountId,
+          account: accountInfo.account || accountInfo.phone || accountInfo.email,
+          method: method,
+          type: type,
+          host: baseUrl,
+          url: bizUrl,
           request: inputObj,
           response: currentResponse
         }
 
         var callback = function (randomName, constConfig, constJson, doc) {
-          const userId = App.User.id;
           const isAdd = true
 
           const chainReq = {
@@ -3410,6 +3453,12 @@ https://github.com/Tencent/APIJSON/issues
             config: constConfig
           }
 
+          curChain.documentId = chainReq.documentId
+          curChain.documentName = chainReq.documentName
+          curChain.randomName = randomReq.name
+          // curChain.Chain = chainReq
+          // curChain.Random = randomReq
+
           const req = {
             format: false,
             'Chain': chainReq,
@@ -3422,16 +3471,20 @@ https://github.com/Tencent/APIJSON/issues
             var data = res.data || {}
             var isOk = JSONResponse.isSuccess(data)
             if (isOk != true) {
-              alert((isAdd ? '新增' : '修改') + (isOk ? '成功' : '失败') + (isAdd ? '! \n' :'！\ngroupId: ' + groupId) + '\ngroupName: ' + groupName + '\n' + data.msg)
+              alert((isAdd ? '新增 Chain' : '修改 Chain') + (isOk ? '成功' : '失败') + (isAdd ? '! \n' :'！\ngroupId: ' + groupId) + '\ngroupName: ' + groupName + '\n' + data.msg)
             } else {
               const chain = data.Chain || {}
               const random = data.Random || {}
-              chainReq.id = chain.id
-              randomReq.id = random.id
+              curChain.chainId = chainReq.id = chain.id
+              curChain.randomId = randomReq.id = random.id
+
+              const docReqObj = parseJSON(doc.request, {}, true)
+              const reqObj = JSONResponse.deepMerge(docReqObj, JSONResponse.deepMerge(queryObj, inputObj))
 
               //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
-              const isGenerate = StringUtil.isNotEmpty(inputObj, true);
-              App.newAndUploadRandomConfig(baseUrl, inputObj, chain.documentId || doc.id, config, 1, function (url, res, err) {
+              const isGenerate = StringUtil.isNotEmpty(reqObj);
+              chain.request = reqObj
+              App.newAndUploadRandomConfig(baseUrl, reqObj, chain.documentId || doc.id, config, 1, function (url, res, err) {
                 if (res.data != null && res.data.Random != null && JSONResponse.isSuccess(res.data.Random)) {
                   console.log('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
                   App.isRandomListShow = true
@@ -3461,18 +3514,10 @@ https://github.com/Tencent/APIJSON/issues
           var did = doc == null ? null : doc.id
           var isAdd = did == null || did < 0
           if (! isAdd) {
-            curChain.Document = doc
+            // curChain.Document = doc
             callback(null, config, inputObj, doc)
             return
           }
-
-          const userId = App.User.id;
-          const method = HTTP_METHODS.indexOf(input.method) >= 0 ? input.method : null;
-          const format = input.format;
-          const type = HTTP_CONTENT_TYPES.indexOf(format) >= 0 ? format : (HTTP_JSON_TYPES.indexOf(method) >= 0
-              ? "JSON" : (HTTP_DATA_TYPES.indexOf(method) >= 0 ? "DATA" : (HTTP_URL_ARG_TYPES.indexOf(method) >= 0
-                  ? "PARAM" : (HTTP_FORM_TYPES.indexOf(method) >= 0 ? "FORM" : null))
-          ));
 
           const docReq = {
             'userId': userId,
@@ -3503,8 +3548,8 @@ https://github.com/Tencent/APIJSON/issues
           curChain.type = type
           curChain.host = baseUrl
           curChain.url = bizUrl
-          curChain.Document = docReq
-          curChain.TestRecord = trReq
+          // curChain.Document = docReq
+          // curChain.TestRecord = trReq
           const req = {
             format: false,
             'Document': docReq,
@@ -3524,7 +3569,7 @@ https://github.com/Tencent/APIJSON/issues
 
             if (did == null || did <= 0) {
               App.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
-              alert('新增 Document 单接口用例失败！' + data.msg + '\n' + JSON.stringify(req))
+              alert('新增 Document 单接口用例失败！' + data.msg + '; ' + (err || {}).message + '; req = \n' + JSON.stringify(req))
               return
             }
 
@@ -3562,13 +3607,13 @@ https://github.com/Tencent/APIJSON/issues
 
         for (var i = 0; i < configs.length; i ++) {
           const cfg = configs[i]
-          console.log('newAndUploadRandomConfig uploading cfg = \n' + cfg)
+          console.log('newAndUploadRandomConfig uploading cfg = \n' + StringUtil.get(cfg))
 
           this.adminRequest(this.server + '/post', {
             format: false,
             [table]: {
-              chainGroupId: chainGroupId,
-              chainId: chainId,
+              chainGroupId: i > 0 ? null : chainGroupId,
+              chainId: i > 0 ? null : chainId,
               documentId: documentId,
               count: count,
               name: '默认配置' + (isGenerate ? '(上传测试用例时自动生成)' : ''),
@@ -3602,13 +3647,19 @@ https://github.com/Tencent/APIJSON/issues
 
       newRandomConfig: function (path, key, value, isRand, isBad, noDeep, isConst, chainPath, chains, url, maxLen) {
         maxLen = maxLen == null ? 4500 : maxLen
-        if (key == null || maxLen <= 0) {
+        if (maxLen <= 0 || key == null || key.indexOf('/') >= 0 || key.indexOf('.') >= 0) {
           return ''
         }
-        if (path == '' && (key == 'tag' || key == 'version' || key == 'format')) {
+        var isAPIJSON = JSONObject.isAPIJSONPath(url)
+        const IGNORE_KEYS = ['page', 'count', 'query', 'pagesize', 'pagenum', 'pageno', 'page_size', 'page_num', 'page_no'
+            , 'order', 'orderby', 'order_by', 'groupby', 'group_by'
+        ]
+        var lowerKey = key.toLowerCase()
+        if (IGNORE_KEYS.indexOf(lowerKey) >= 0 || (isAPIJSON && path == '' && ['tag', 'version', 'format'].indexOf(key) >= 0)) {
           return ''
         }
 
+        var isValueEmpty = StringUtil.isEmpty(value)
         var isChainShow = chains != null || this.isChainShow;
         url = url || this.getMethod()
         var isRestful = ! JSONObject.isAPIJSONPath(url);
@@ -3723,67 +3774,92 @@ https://github.com/Tencent/APIJSON/issues
 
           // FIXME 似乎加了自动生成场景传参配置后，空配置时点击 + 添加配置后，切换用例列表会卡死
           if (isChainShow && StringUtil.isNotEmpty(key, true) && (typeof value != 'string' || ! key.endsWith('@'))) {
-            // TODO 支持 Map<method-url, {type, host, req, arg, res, data}[]>
+            var keyPath = StringUtil.isEmpty(chainPath) ? key : chainPath + '/' + StringUtil.get(key)
             var isStr = JSONResponse.isString(value)
             var isNum = JSONResponse.isNumber(value) || StringUtil.isNumber(value)
-            var first = true
+            var isUnique = (isStr && value.length >= 3) || (isNum && Math.abs(+value) > 100)
 
             if (chains instanceof Array) {
-              function findConfig(folder, k, v, ctxVar) {
-                var cp = StringUtil.isEmpty(folder) ? (StringUtil.isEmpty(k) ? '' : k) : folder + (StringUtil.isEmpty(k) ? '' : k + '/');
+              function findConfig(folder, chain, k, v, ctxVar, maxLen) {
+                if (StringUtil.isEmpty(chain)) {
+                  return ''
+                }
+                if (k == null || k.indexOf('/') >= 0 || k.indexOf('.') >= 0 || IGNORE_KEYS.indexOf(k.toLowerCase()) >= 0) {
+                  return ''
+                }
+
+                var route = ', "' + StringUtil.trim(chain.account) + '@' + StringUtil.trim(chain.host) + '/-1"'
+                var cp = StringUtil.isEmpty(folder) ? (StringUtil.isEmpty(k) ? '' : k) : folder + (StringUtil.isEmpty(k) ? '' : '/' + k);
+                var isCpEmpty = StringUtil.isEmpty(cp)
                 ctxVar = ctxVar || 'data'
+                var pfx = prefix + 'PRE_' + ctxVar.toUpperCase() + '("'
+                var sfx = '", null, "' + StringUtil.trim(chain.method) + ' ' + StringUtil.trim(chain.url) + '"'
 
                 if (v instanceof Array) {
-                  var chs = [{method: chain.method, url: chain.url, response: v[0]}]
-                  var cfg = App.newRandomConfig(path, key, value, isRand, isBad, noDeep, isConst, (cp || '') + '/', chs, url, maxLen - config.length)
-                  if (StringUtil.isEmpty(cfg, true)) {
-                    return config
+                  for (var i = 0; i < v.length; i ++) {
+                    // var chs = [{method: chain.method, url: chain.url, response: v[0]}]
+                    var ccp = isCpEmpty ? '/' : cp + '/'
+                    // var cfg = App.newRandomConfig(path, key, value, isRand, isBad, noDeep, isConst, (cp || '') + '/', chs, url, maxLen - config.length)
+                    var cfg = findConfig(ccp, chain, '', v[i], ctxVar, maxLen)
+                    if (StringUtil.isNotEmpty(cfg, true) && config.indexOf(cfg) < 0) {
+                      return cfg
+                    }
                   }
-                  config += '\n' + cfg
                 }
                 else if (v instanceof Object) {
                   if (typeof v[key] != 'undefined') {
-                    config += (first ? '' : '\n// 可替代上面的 ') + prefix + 'CTX_GET("' + StringUtil.trim(chain.method) + ' ' + StringUtil.trim(chain.url) + '/' + ctxVar + '//' + (chainPath || '') + key + '", "MAP") // key 同名';
-                    if (key.length >= 3) {
-                      return config
+                    var cfg = (StringUtil.isEmpty(config) ? '' : '\n// 可替代上面的 ') + pfx + keyPath + sfx + ') // key 同名';
+                    cfg +='\n// 可替代上面的 ' + pfx + keyPath + sfx + route + ') // key 同名';
+                    return cfg
+                  } else {
+                    var cfg2 = ''
+                    for (var k2 in v) {
+                      var v2 = v[k2]
+                      // var chs = [{method: chain.method, url: chain.url, request: v2}]
+                      // var cfg = App.newRandomConfig(path, key, value, isRand, isBad, noDeep, isConst, (cp || '') + k2 + '/', chs, url, maxLen - config.length)
+                      var cfg = findConfig(cp, chain, k2, v2, ctxVar, maxLen - cfg2.length)
+                      if (StringUtil.isEmpty(cfg, true) || config.indexOf(cfg) >= 0 || cfg2.indexOf(cfg) >= 0) {
+                        continue
+                      }
+                      cfg2 += '\n' + cfg
+                      if (cfg2.length > maxLen - 200 || k2.length >= 3) {
+                        return cfg2
+                      }
                     }
 
-                    first = false;
-                  } else {
-                    for (var k2 in val) {
-                      var v2 = data[k2]
-                      var chs = [{method: chain.method, url: chain.url, request: v2}]
-                      var cfg = App.newRandomConfig(path, key, value, isRand, isBad, noDeep, isConst, (cp || '') + k2 + '/', chs, url, maxLen - config.length)
-                      if (StringUtil.isEmpty(cfg, true)) {
-                        break
-                      }
-                      config += '\n' + cfg
-                    }
+                    return cfg2
                   }
                 }
                 else {
-                  if (k.toLowerCase().startsWith(key) || key.toLowerCase().startsWith(k)) {
-                    config += (first ? '' : '\n// 可替代上面的 ') + prefix + 'CTX_GET("' + StringUtil.trim(chain.method) + ' ' + StringUtil.trim(chain.url) + '/' + ctxVar + '//' + (cp || '') + k + '", "MAP") // key 相似';
-                    first = false;
-                  } else if (v === value && (isStr || isNum) && [0, 1, -1, 'true', 'false', 'null', '0', '1', '-1'].indexOf(v) < 0) {
-                    config += (first ? '' : '\n// 可替代上面的 ') + prefix + 'CTX_GET("' + StringUtil.trim(chain.method) + ' ' + StringUtil.trim(chain.url) + '/' + ctxVar + '//' + (cp || '') + k + '", "MAP") // value 相等';
-                    if ((isStr && value.length >= 4) || (isNum && Math.abs(+value) > 100)) {
-                      return config
+                  var isKeyMatch = StringUtil.isNotEmpty(k) && k.toLowerCase().endsWith(lowerKey) || lowerKey.endsWith(k)
+                  var isValMatch = v === value && (isStr || isNum) && (! isValueEmpty) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v) < 0
+                  if (isKeyMatch || isValMatch) { // FIXME StringUtil.endsWith(a, b, ignoreCase)
+                    var sfx2 = ') // ' + (isKeyMatch ? 'key 相似' : '') + (isValMatch ? (isKeyMatch ? ' + ' : '') + 'value 相等：' + StringUtil.limitLength(v, 20) : '');
+                    var ccp = StringUtil.isEmpty(folder) ? StringUtil.get(k) : folder + '/' + StringUtil.get(k)
+                    var cfg = (StringUtil.isEmpty(config) ? '' : '\n// 可替代上面的 ') + pfx + ccp + sfx + sfx2;
+                    cfg += '\n// 可替代上面的 ' + pfx + ccp + sfx + route + sfx2;
+                    if (isValMatch && (isKeyMatch || isUnique)) {
+                      return cfg
                     }
-
-                    first = false;
                   }
                 }
 
                 return config
               }
 
-              const last = chains.length - 1
+              const last = chains.length - 2
               for (var i = last; i >= 0; i --) {
                 var chain = chains[i] || {}
                 var req = chain.request
                 // var res = chain.response
-                findConfig(chainPath, '', req, 'arg')
+                var cfg = findConfig(chainPath, chain,'', req, 'arg')
+                if (StringUtil.isEmpty(cfg) || config.indexOf(cfg) >= 0) {
+                  continue
+                }
+                config += '\n' + cfg
+                if (config.length > maxLen - 200) {
+                  return config
+                }
               }
 
               for (var i = last; i >= 0; i --) {
@@ -3796,10 +3872,20 @@ https://github.com/Tencent/APIJSON/issues
                   chainPath = JSONResponse.KEY_DATA;
                 }
 
-                findConfig(chainPath, '', data, 'data')
+                var cfg = findConfig(chainPath, chain, '', data, 'data')
+                if (StringUtil.isEmpty(cfg) || config.indexOf(cfg) >= 0) {
+                  continue
+                }
+                config += '\n' + cfg
+                if (config.length > maxLen - 200) {
+                  return config
+                }
               }
             }
 
+            if (StringUtil.isNotEmpty(chainPath) || config.length > maxLen - 200) {
+              return config
+            }
 
             var keys = StringUtil.split(path, '/');
             var table = keys == null ? '' : keys[keys.length - 1];
@@ -4104,7 +4190,7 @@ https://github.com/Tencent/APIJSON/issues
 
       // 保存配置
       saveConfig: function () {
-        this.isConfigShow = this.exTxt.index == 8
+        this.isConfigShow = false // this.exTxt.index == 8
 
         switch (this.exTxt.index) {
           case 0:
@@ -4564,7 +4650,7 @@ https://github.com/Tencent/APIJSON/issues
               'Flow': {
                 'id@': '/Chain/documentId',
                 // '@column': 'id,userId,version,date,name,operation,method,type,url,request,apijson,standard', // ;substr(url,' + (StringUtil.length(groupUrl) + 2) + '):substr',
-                '@order': 'version-,time-',
+                '@order': 'versionCode-,time-',
                 'userId': userId,
                 'project': StringUtil.isEmpty(project, true) ? null : project,
                 'name$': search,
@@ -4999,8 +5085,8 @@ https://github.com/Tencent/APIJSON/issues
               } : null,
               'Flow': {
                 'id@': isChainShow ? '/Chain/documentId' : null,
-                // '@column': 'id,userId,version,date,name,operation,method,type,url,request,apijson,standard', // ;substr(url,' + (StringUtil.length(groupUrl) + 2) + '):substr',
-                '@order': 'version-,time-',
+                // '@column': 'id,userId,versionCode,date,name,operation,method,type,url,request,apijson,standard', // ;substr(url,' + (StringUtil.length(groupUrl) + 2) + '):substr',
+                '@order': 'versionCode-,time-',
                 'userId': userId,
                 'project': StringUtil.isEmpty(project, true) ? null : project,
                 'name$': search,
@@ -5731,7 +5817,7 @@ https://github.com/Tencent/APIJSON/issues
 
           this.scripts = newDefaultScript()
 
-          this.parseRandom(loginReq, loginRandom, 0, true, false, false, function(randomName, constConfig, constJson) {
+          this.parseRandom(loginReq, loginHeader, loginRandom, 0, true, false, false, function(randomName, constConfig, constJson) {
               App.request(isAdminOperation, loginMethod, loginType, baseUrl + loginUrl, constJson, loginHeader, function (url, res, err) {
                 if (App.isEnvCompareEnabled != true) {
                   loginCallback(url, res, err, null, loginMethod, loginType, loginUrl, constJson, loginHeader)
@@ -10609,7 +10695,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           try {
             this.parseRandom(
-              parseJSON(JSON.stringify(json)), rawConfig, random.id
+              parseJSON(JSON.stringify(json)), header, rawConfig, random.id
               , ! testSubList, testSubList && i >= existCount, testSubList && i >= existCount
               , function (randomName, constConfig, constJson) {
 
@@ -11230,24 +11316,39 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   ) + ', ' + value.substring(start + 1);
             }
             else {  //随机函数
+              var as = StringUtil.split(value.substring(start + 1, end), ', ') || []
+              var as0 = as[0] // key path
+              var as1 = as[1] // default value
+              var as2 = as[2] // GET /users
+              var as3 = as[3] // account@host/index
+              var accountHostIndexPath = StringUtil.isEmpty(as3) ? '/' : as3 + (as3.indexOf('/') < 0 ? '/' : '')
+              var isChain = StringUtil.isNotEmpty(as2)
+              var chainArr = isChain ? '((ctx || {}).map || {})[' + as2 + ']' : null; // [GET /users] = { account@host: [] }
+              if (isChain) {
+                as2 = parseJSON(as2, as2, true)
+                as.splice(2, 2)
+              }
+
               if (fun == PRE_REQ) {
-                toEval = 'get4Path(((ctx || {}).pre || {}).req, ' + (value == 'PRE_REQ()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/req")' : 'get4Path(((ctx || {}).pre || {}).req'
+                toEval = 'get4Path(' + source + ', ' + (value == 'PRE_REQ()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
               else if (fun == PRE_ARG) {
-                toEval = 'get4Path(((ctx || {}).pre || {}).arg, ' + (value == 'PRE_ARG()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/arg")' : 'get4Path(((ctx || {}).pre || {}).arg'
+                toEval = 'get4Path(' + source + ', ' + (value == 'PRE_ARG()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
               else if (fun == PRE_RES) {
-                toEval = 'get4Path(((ctx || {}).pre || {}).res, ' + (value == 'PRE_RES()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/res")' : 'get4Path(((ctx || {}).pre || {}).res'
+                toEval = 'get4Path(' + source + ', ' + (value == 'PRE_RES()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
               else if (fun == PRE_DATA) {
-                toEval = 'get4Path(((ctx || {}).pre || {}).data, ' + (value == 'PRE_DATA()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/data")' : 'get4Path(((ctx || {}).pre || {}).data'
+                toEval = 'get4Path(' + source + ', ' + (value == 'PRE_DATA()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
               else if (fun == CTX_GET) {
                 toEval = 'get4Path((ctx || {}).ctx, ' + (value == 'CTX_GET()' ? JSON.stringify(path) : '') + value.substring(start + 1);
               }
               else if (fun == CTX_PUT) {
-                var as = StringUtil.split(value.substring(start + 1, end), ', ') || []
-                var as1 = as[1]
                 as1 = parseJSON(as1, as1, true)
 
                 if (StringUtil.isEmpty(as1, true) || as1 == 'PRE_DATA') {
@@ -11589,6 +11690,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
            data: json
          }
          var header = cur.header = doc.header
+         var accountInfo = this.getCurrentAccount() || {}
+         const account = StringUtil.trim(accountInfo.account || accountInfo.phone || accountInfo.email)
 //
 //         this.parseRandom(json, rawConfig, random.id, true, false, function (randomName, constConfig, constJson) {
              this.startTestSingle(list, allCount, index, item, isRandom, accountIndex, isCross, callback
@@ -11608,7 +11711,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                cur.res = res
                cur.data = res.data
                var map = ctx.map = ctx.map || {}
-               var arr = map[method + ' ' + url] = map[method + ' ' + url] || []
+               var m = map[method + ' ' + url] = map[method + ' ' + url] || {}
+
+               const baseUrl = App.getBaseUrl(config.url)
+               const accountKey = StringUtil.trim(account) + '@' + StringUtil.trim(baseUrl)
+               var arr = m[accountKey] = m[accountKey] || []
                arr.push({
                  type: type,
                  req: req,
