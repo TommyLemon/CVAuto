@@ -10594,7 +10594,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             App.testRandomProcess = App.doneCount >= allCount ? '' : ('已测数量: ' + App.doneCount)
 
             const oj = outputList[j]
-            var oInputId = oj == null ? null : oj.randomId
+            var oInputId = oj == null ? null : oj.inputId
             if (oInputId == null || oInputId <= 0) {
               continue
             }
@@ -10605,10 +10605,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               const input = ik == null ? null : ik.Input;
               if (input != null && ik.Input.id == oInputId) {
                 const resultIndex = k
+                const response = {
+                  TestRecord: oj, code: 200, msg: 'success'
+                }
                 setTimeout(function () {  // 让图片切换更平滑，且保持和选项断言结果同时出现
-                  App.compareResponse(allCount, list, resultIndex, ik, {
-                    TestRecord: oj, code: 200, msg: 'success'
-                  }, true, App.currentAccountIndex, false, err)
+                  App.compareResponse({data: response}, allCount, list, resultIndex, ik, response, true, App.currentAccountIndex, false, err)
                   // App.compareResponse(allCount, list, k, inputList[k], App.currentOutputList[k], true, App.currentAccountIndex, false, err)
                 }, App.picDelayTime) // 200*resultIndex)
 
@@ -12723,7 +12724,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   var prevInputId = prevInput == null ? null : prevInput.id
                   if (prevInputId != null) {
                     var beforeOutput = prevItem.TestRecord || {}
-                    if (beforeOutput == null || beforeOutput.randomId != prevInputId) {
+                    if (beforeOutput == null || beforeOutput.inputId != prevInputId) {
                       continue
                     }
 
