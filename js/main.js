@@ -5366,15 +5366,17 @@ https://github.com/Tencent/APIJSON/issues
                 'chainId': cId,
                 'flowId': isSub ? null : item.id,
                 '@order': "step+,time+,downTime+,eventTime+",
-                // "disabled": 0, // disable 这个字段会导致报错
+                "disable": 0, // disable 这个字段会导致报错
                 // 'disable': this.type == null || this.type == OPERATE_TYPE_REPLAY ? 0 : null,
                 'name$': search,
                 // 导致奇怪的 Vue 报错 EditTextEvent is not defined
                 // 'disable': (vRandomDisable || {}).checked ? null : 0
-                // 'disabled': this.isAllowDisable ? null : 0
+                // 'disable': this.isAllowDisable ? null : 0
               },
               'TestRecord': {
                 'randomId@': '/Input/id',
+                // 'inputId@': '/Input/id',
+                // '@combine': 'randomId,inputId',
                 'testAccountId': this.getCurrentAccountId(),
                 'host': StringUtil.isEmpty(baseUrl, true) ? null : baseUrl,
                 '@order': 'date-'
@@ -7139,7 +7141,7 @@ https://github.com/Tencent/APIJSON/issues
         const corrects = tr.corrects = tr.corrects || [];
         const wrongs = tr.wrongs = tr.wrongs || [];
 
-        vBefore.src = vDiff.src = vAfter.src = this.img = random.img;
+        // vBefore.src = vDiff.src = vAfter.src = this.img = random.img;
         this.file = random.file;
 
         // var tests = this.tests[String(this.currentAccountIndex)] || {}
@@ -10310,15 +10312,15 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const fullList = (testSubList ? App.randomSubs : App.randoms) || []
           var allCount = 0  // list.length
-          App.doneCount = 0
-
           // const list = fullList // []
-          const list = []
+          const list = isRecord ? fullList : []
+          const stepIndexMap = this.stepIndexMap = this.stepIndexMap || []
           for (let i = 0; i < fullList.length; i++) {
             const item = fullList[i]
             const random = item == null ? null : item.Input
-            // allCount += random.disable ? 0 : 1 // (random == null || random.count == null ? 0 : random.count)
-            if (random != null && ! random.disable) {
+            // allCount += random.disable || random.type != InputUtil.EVENT_TYPE_TOUCH || random.action != MotionEvent.ACTION_DOWN ? 0 : 1 // (random == null || random.count == null ? 0 : random.count)
+            if (random != null) { // && ! random.disable) {
+              stepIndexMap[random.step || -1] = i
               list.push(item)
             }
           }
@@ -10326,15 +10328,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           allCount = list.length;
 
           if (isRecord == false && allCount <= 0) {
-            alert('请先获取随机配置\n点击[查看列表]按钮')
-            return
-          }
-          this.testRandomProcess = App.doneCount >= allCount ? '' : ('正在准备...')
-
-          App.randomAllCount = allCount
-          App.randomDoneCount = 0
-
-          if (allCount <= 0) {
             if (callback) {
               callback(true, 0, '请先获取随机配置\n点击[查看列表]按钮')
             } else {
@@ -10342,8 +10335,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
             return
           }
+          this.testRandomProcess = this.randomDoneCount >= allCount ? '' : ('正在准备...')
 
-          this.testRandomProcess = '正在测试: ' + 0 + '/' + allCount
+          App.randomAllCount = allCount
+          App.randomDoneCount = 0
+
           var summaryItem = (testSubList ? this.currentRandomItem : this.currentRemoteItem) || {}
           if (isManual) {
             this.resetCount(summaryItem, true, testSubList, this.currentAccountIndex)
@@ -10408,66 +10404,70 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               }
 
               if (isRecord) {
-                App.loopEventList(list, inputList, allCount, 0, header)
+                App.loopEventList(list, inputList, allCount, 0, header, callback)
               } else {
-                App.loopRandomTestResult(list, inputList, allCount, 0, header)
+                // setTimeout(function () {
+                  App.loopRandomTestResult(list, inputList, allCount, 0, header, null, isRecord ? function () {} : callback)
+                // }, isRecord ? 1000 : 0)
               }
             });
 
           });
-          ORDER_MAP = {}  //重置
 
-          for (var i = 0; i < (limit != null ? limit : list.length); i ++) {  //limit限制子项测试个数
-            const item = list[i]
-            const random = item == null ? null : item.Input
-            if (random == null || random.name == null) {
-              App.randomDoneCount ++
-              continue
-            }
-            if (DEBUG) {
-              this.log('test  random = ' + JSON.stringify(random, null, '  '))
-            }
-
-            const index = i
-
-            const itemAllCount = random.count || 0
-            // allCount += (itemAllCount - 1)  // 为什么减 1？因为初始化时 var allCount = list.length
-
-            // UI 往上顶出屏幕
-            // try {
-            //   document.getElementById((testSubList ?  'randomSubItem' : 'randomItem') + index).scrollIntoView()
-            // } catch (e) {
-            //   console.log(e)
-            // }
-
-            App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
-            try {
-              this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, method, type, url, json, header, isCross, isManual, function (url, res, err) {
-                var data = null
-                if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
-                  data = res.data
-                  try {
-                    App.onResponse(url, res, err)
-                    if (DEBUG) {
-                      App.log('test  App.request >> res.data = ' + (data == null ? 'null' : JSON.stringify(data, null, '  ')))
-                    }
-                  } catch (e) {
-                    App.log('test  App.request >> } catch (e) {\n' + e.message)
-                  }
-                }
-
-                App.compareResponse(res, allCount, list, index, item, data, true, App.currentAccountIndex, false, err, null, isCross, callback)
-                return true
-              })
-            }
-            catch (e) {
-              this.compareResponse(null, allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
-            }
-          }
+          // ORDER_MAP = {}  //重置
+          //
+          // for (var i = 0; i < (limit != null ? limit : list.length); i ++) {  //limit限制子项测试个数
+          //   const item = list[i]
+          //   const random = item == null ? null : item.Input
+          //   if (random == null || random.name == null) {
+          //     App.randomDoneCount ++
+          //     continue
+          //   }
+          //   if (DEBUG) {
+          //     this.log('test  random = ' + JSON.stringify(random, null, '  '))
+          //   }
+          //
+          //   const index = i
+          //
+          //   const itemAllCount = random.count || 0
+          //   // allCount += (itemAllCount - 1)  // 为什么减 1？因为初始化时 var allCount = list.length
+          //
+          //   // UI 往上顶出屏幕
+          //   // try {
+          //   //   document.getElementById((testSubList ?  'randomSubItem' : 'randomItem') + index).scrollIntoView()
+          //   // } catch (e) {
+          //   //   console.log(e)
+          //   // }
+          //
+          //   App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
+          //   try {
+          //     this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, method, type, url, json, header, isCross, isManual, function (url, res, err) {
+          //       var data = null
+          //       if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
+          //         data = res.data
+          //         try {
+          //           App.onResponse(url, res, err)
+          //           if (DEBUG) {
+          //             App.log('test  App.request >> res.data = ' + (data == null ? 'null' : JSON.stringify(data, null, '  ')))
+          //           }
+          //         } catch (e) {
+          //           App.log('test  App.request >> } catch (e) {\n' + e.message)
+          //         }
+          //       }
+          //
+          //       App.compareResponse(res, allCount, list, index, item, data, true, App.currentAccountIndex, false, err, null, isCross, callback)
+          //       return true
+          //     })
+          //   }
+          //   catch (e) {
+          //     this.compareResponse(null, allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
+          //   }
+          // }
         }
       },
 
-      loopEventList: function (list, inputList, allCount, offset, header) {
+      loopEventList: function (list, inputList, allCount, offset, header, callback) {
+        this.isRecording = true
         list = list || []
         var pkg = this.getPackage(this.host) || 'uiauto'
         var cls = this.getClass(this.host) || 'UIAutoApp'
@@ -10494,25 +10494,30 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             App.log('test  App.request >> } catch (e2) {\n' + e.message)
           }
 
-          offset = Math.max(offset, list.length || 0)
-
-          var eventList = (res.data || {})['return']
-          var count = eventList == null ? 0 : eventList.length
+          var el = (res.data || {})['return']
+          var count = el == null ? 0 : el.length
           if (count <= 0) {
-            if (err == null && eventList instanceof Array && (res.data || {}).code == 200) {
-               App.testRandomProcess = ''
-               alert("录制完成")
+            if (err == null && el instanceof Array && (res.data || {}).code == 200) {
+              App.testRandomProcess = ''
+              App.isRecording = false
+              App.randomDoneCount = StringUtil.length(App.outputList)
+              if (callback != null) {
+                callback(true, allCount, '录制完成')
+                return
+              }
+              alert("录制完成")
             }
-            else {
-              setTimeout(function () {
-                App.loopEventList(list, inputList, allCount, offset, header)
-              }, 2000)
-            }
-            return;
+            // else {
+            //   const offset_ = offset
+            //   setTimeout(function () {
+            //     App.loopEventList(list, inputList, allCount, offset_, header, callback)
+            //   }, 2000)
+            // }
+            // return;
           }
 
           for (var j = 0; j < count; j++) {
-            const input = eventList[j]
+            const input = el[j]
             if (input == null) {
               continue
             }
@@ -10524,21 +10529,21 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               Input: input
             })
 
-           if (StringUtil.isEmpty(input.name)) {
-             input.name = InputUtil.getShowContent(input)
-           }
-
+            if (StringUtil.isEmpty(input.name)) {
+              input.name = InputUtil.getShowContent(input)
+            }
           }
 
           App.randoms = list
+          const offset_ = list.length
           setTimeout(function () {
-            App.loopRandomTestResult(list, inputList, allCount, offset, header, true)
-            App.loopEventList(list, inputList, allCount, offset + count, header)
+            App.loopRandomTestResult(list, inputList, allCount, StringUtil.length(App.outputList), header, true, function() {})
+            App.loopEventList(list, inputList, allCount, offset_, header, callback)
           }, 1000)
         });
       },
 
-      loopRandomTestResult: function (list, inputList, allCount, offset, header, once) {
+      loopRandomTestResult: function (list, inputList, allCount, offset, header, once, callback) {
         list = list || []
         var pkg = this.getPackage(this.host) || 'uiauto'
         var cls = this.getClass(this.host) || 'UIAutoApp'
@@ -10565,45 +10570,53 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             App.log('test  App.request >> } catch (e2) {\n' + e.message)
           }
 
-          offset = Math.max(offset, App.outputList.length || 0)
+          // offset = Math.max(offset, App.outputList.length || 0)
 
-          var outputList = (res.data || {})['return']
-          if (outputList == null || outputList.length <= 0) {
-            if (err == null && outputList instanceof Array && (res.data || {}).code == 200) {
+          var ol = (res.data || {})['return']
+          if (StringUtil.isEmpty(ol)) {
+            if (ol instanceof Array && err == null && (res.data || {}).code == 200) {
               App.testRandomProcess = ''
-              alert("测试完成")
+              if (callback != null) {
+                callback(true, allCount, '已完成单用例测试')
+                return
+              }
+              alert("已完成单用例测试")
             }
             else if (once != true) {
+              const offset_ = offset
               setTimeout(function () {
-                App.loopRandomTestResult(list, inputList, allCount, offset, header)
+                App.loopRandomTestResult(list, inputList, allCount, offset_, header, once, callback)
               }, 2000)
             }
             return;
           }
 
-          if (App.outputList == null || App.outputList.length <= 0) {
-            App.outputList = outputList
-          }
-          else {
-            App.outputList.push(outputList)
+          var outputList = App.outputList
+          if (outputList == null || outputList.length <= 0) {
+            App.outputList = outputList = ol || []
+          } else {
+            outputList.push(ol)
           }
 
           App.picDelayTime = 0
-          for (var j = 0; j < outputList.length; j++) {
-            App.doneCount ++
-            App.testRandomProcess = App.doneCount >= allCount ? '' : ('已测数量: ' + App.doneCount)
-
-            const oj = outputList[j]
-            var oInputId = oj == null ? null : oj.inputId
-            if (oInputId == null || oInputId <= 0) {
+          for (var j = 0; j < ol.length; j++) {
+            const oj = ol[j]
+            var oInputId = oj == null ? null : oj.inputId || oj.randomId
+            if (oInputId == null || oInputId == 0) { // oInputId <= 0
               continue
+            }
+            const ind = oj.step == null ? null : App.stepIndexMap[oj.step]
+            if (! App.isRecording) {
+              App.randomDoneCount = Math.max(App.randomDoneCount, ind || offset) // compareResponse 会再加 1 次
+              App.testRandomProcess = ('正在测试: ' + App.randomDoneCount + '/')
             }
 
             // 部分非手动触发的事件(切换界面、HTTP 请求 Response 等) 导致位移不准确，必须全量匹配 var ind = j + offset
             for (var k = 0; k < list.length; k++) {
               const ik = list[k]
               const input = ik == null ? null : ik.Input;
-              if (input != null && ik.Input.id == oInputId) {
+              if (input != null && input.id == oInputId) {
+                App.currentRandomIndex = k
                 const resultIndex = k
                 const response = {
                   TestRecord: oj, code: 200, msg: 'success'
@@ -10613,24 +10626,35 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   // App.compareResponse(allCount, list, k, inputList[k], App.currentOutputList[k], true, App.currentAccountIndex, false, err)
                 }, App.picDelayTime) // 200*resultIndex)
 
-                if (StringUtil.isEmpty(oj.screenshotUrl, false) != true) {
+                var imgUrl = oj.screenshotUrl
+                if (StringUtil.isNotEmpty(imgUrl)) {
                   App.picDelayTime += 500
+                  vAfter.src = ik.img = (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
                 }
+
+                var tr = ik.TestRecord || {}
+                var beforeUrl = StringUtil.trim(tr.screenshotUrl || input.screenshotUrl)
+                vBefore.src = (beforeUrl.indexOf('://') >= 0 ? '' : App.server) + '/download?filePath=' + encodeURI(beforeUrl)
                 break
               }
             }
           }
 
-          if (allCount < 0 || offset < allCount) {
+          if (allCount < 0 || App.randomDoneCount < allCount) {
             if (once != true) {
+              const offset_ = outputList.length
               setTimeout(function () {
-                App.loopRandomTestResult(list, inputList, allCount, offset + outputList.length, header)
+                App.loopRandomTestResult(list, inputList, allCount, offset_, header, once, callback)
               }, 200)
             }
           }
           else if (allCount >= 0 && (once != true)) {
+            if (callback != null) {
+              callback(true, allCount, '已完成单用例测试')
+              return
+            }
             App.testRandomProcess = ''
-            alert("测试完成")
+            alert("已完成单用例测试")
           }
         });
       },
@@ -11922,10 +11946,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         Vue.set(list, index, it)
 
-        var pic = ((response || {}).TestRecord || {}).screenshotUrl
-        if (StringUtil.isEmpty(pic) != true) {
-          vComment.setAttribute("src", '/download?filePath=' + encodeURI(pic))
-        }
+        // var pic = ((response || {}).TestRecord || {}).screenshotUrl
+        // if (StringUtil.isEmpty(pic) != true) {
+        //   vAfter.src = '/download?filePath=' + encodeURI(pic)
+        // }
 
         if (justRecoverTest) {
           // callback(isRandom, allCount)
@@ -12558,7 +12582,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           this.currentRandomSubIndex = index
           document = this.currentRemoteItem || {}
 
-          vBefore.src = vDiff.src = vAfter.src = this.img = random.img;
+          // vBefore.src = vDiff.src = vAfter.src = this.img = random.img;
         }
         else {
           this.currentDocIndex = index
@@ -12580,6 +12604,17 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ]
 
+        var isBefore = item.showType == 'before'
+        // FIXME 向前寻找最近的
+        if (isRandom) {
+          var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? (currentResponse.TestRecord || {}).screenshotUrl : null)
+          vAfter.src = (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
+
+          var beforeUrl = StringUtil.trim(testRecord.screenshotUrl || random.screenshotUrl)
+          vBefore.src = (beforeUrl.indexOf('://') >= 0 ? '' : App.server) + '/download?filePath=' + encodeURI(beforeUrl)
+
+          item.img = isBefore ? vBefore.src : vAfter.src
+        }
 
         if (pathKeys.length > 0) {
           var curRsp = StringUtil.isEmpty(testRecord.response) ? {} : parseJSON(testRecord.response);
@@ -12593,7 +12628,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randoms : this.randomSubs) : this.testCases
 
-        var isBefore = item.showType == 'before'
         this.file = random.file;
         if (right != true) {
           item.showType = isBefore ? 'after' : 'before'
