@@ -925,18 +925,15 @@ table.diff thead th.texttitle {
   margin-top: 45px;
   position:absolute;
   inset:0;
-
   display:table-column;
   flex-direction:column;
-
   gap:12px;
-
   overflow-y:auto;
   overflow-x:hidden;
-
   background:white;
   z-index: 100;
   object-fit:contain;
+  text-align: left;
 }
 
 /* 行 */
@@ -944,6 +941,7 @@ table.diff thead th.texttitle {
   display:flex;
   gap:16px; /* 左右固定间距 */
   object-fit:contain;
+  width: auto;
 }
 
 /* 单元 */
@@ -953,6 +951,7 @@ table.diff thead th.texttitle {
   flex-direction:column;
   min-width:0;
   height: 100%;
+  width: auto;
   object-fit:contain;
 }
 
@@ -965,7 +964,7 @@ table.diff thead th.texttitle {
 /* 图片区域 */
 .vBox{
   position:relative;
-  width:100%;
+  width:auto;
   min-height:320px;
   height: 100%;
   object-fit:contain;
@@ -976,9 +975,8 @@ table.diff thead th.texttitle {
 .vBox canvas{
   position:absolute;
   inset:0;
-
-  width:100%;
+  min-width: 180px;
+  width:auto;
   height:100%;
-
   object-fit:contain;
 }
