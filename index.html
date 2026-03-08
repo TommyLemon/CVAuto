@@ -357,64 +357,46 @@ Ctrl + S 或 Command + S 保存当前用例；
                 <div id="vRequestMarkdown" v-show="isPreviewEnabled" style="width: 100%;height: 100%;position: relative;"></div>
 
                 <div id="vContainer" v-show="currentRandomIndex >= 0 && view === 'code'" class="vContainer"
-                      :style="{ height: isFullScreen ? '160%' : '100%', paddingRight: isRandomShow ? '450px' : '0px', 'display': 'grid' }" >
-<!--                    <div id="vImgDiv" style="height: 100%; display: inline-block">-->
-                        <div class="vCell" >
-                            <div id="vAfterTitle" class="vTitle" >
-                                <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.afterCorrect + ' 误报数 ' + detection.afterWrong + ' 漏检数 ' + detection.afterMiss : '召回率 ' + detection.afterRecallStr + ' 精确率 ' + detection.afterPrecisionStr + ' F1 ' + detection.afterF1Str }} </a>
-                                <a style="height: 25px; color: black; font-weight: bold; padding: 0" href="javascript:void(0)" @click="onClickFullScreen($event)" > 全屏 </a>
-                            </div>
-                            <div class="vCanvasBox" >
-                                <img id="vAfter" :src="img" ref="vAfterImg" @load="syncCanvasSize('after')" style="min-height: 320px; min-width: 180px; width:100%;" />
-                                <canvas id="vAfterCanvas" ref="vAfterCanvas" style="min-height: 320px; min-width: 180px; width:100%;" @click="onClick('after', $event)" @mousemove="onMousemove('after', $event)" @mousedown="onMousedown('after', $event)" @mouseup="onMouseup('after', $event)" />
-                            </div>
-                        </div>
-                        <div class="vCell" >
-                            <div id="vBeforeTitle" class="vTitle" >
-                                <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.beforeCorrect + ' 误报数 ' + detection.beforeWrong + ' 漏检数 ' + detection.beforeMiss : '召回率 ' + detection.beforeRecallStr + ' 精确率 ' + detection.beforePrecisionStr + ' F1 ' + detection.beforeF1Str }} </a>
-                                <a > 实际 </a><input id="vAfterTotal" v-model="detection.total" style="width: 36px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'afterTotal', true)" placeholder="总数" />
-                            </div>
-                            <div class="vCanvasBox" :style="{'aspect-ratio': imgRatio || 16/9}">
-                                <img id="vBefore" :src="img" ref="vBeforeImg" @load="syncCanvasSize('before')" style="min-height: 320px; min-width: 180px; width:100%;" />
-                                <canvas id="vBeforeCanvas" ref="vBeforeCanvas" style="min-height: 320px; min-width: 180px; width:100%;" @mousemove="onMousemove('before', $event)" />
-                            </div>
-                        </div>
-<!--                    </div>-->
+                     :style="{ 'padding-right': isRandomShow ? '450px' : '0px' }" >
 
-<!--                    <div id="vDiffDiv" style="height: 100%; display: inline-block">-->
-                        <div class="vCell" >
-                            <div id="vDiffBeforeTitle" class="vTitle" >
-                                <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" />
-                            </div>
-                            <div class="vCanvasBox" >
-                                <img id="vDiffBefore" :src="img" ref="vDiffImg" @load="syncCanvasSize('diff')" style="min-height: 320px; min-width: 180px; width:100%;" />
-                                <canvas id="vDiffBeforeCanvas" ref="vDiffBeforeCanvas" style="min-height: 320px; min-width: 180px; width:100%;" @click="onClick('diff', $event)" @mousemove="onMousemove('diff', $event)"  />
+                    <div class="vRow"  :style="{ height: isFullScreen ? '80%' : '50%' }" >
+                        <div class="vCell">
+                            <div id="vAfterTitle" class="vTitle" > <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.afterCorrect + ' 误报数 ' + detection.afterWrong + ' 漏检数 ' + detection.afterMiss : '召回率 ' + detection.afterRecallStr + ' 精确率 ' + detection.afterPrecisionStr + ' F1 ' + detection.afterF1Str }} </a> <a style="height: 25px; color: black; font-weight: bold; padding: 0" href="javascript:void(0)" @click="onClickFullScreen($event)" > 全屏 </a> </div>
+                            <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
+                                <img id="vAfter" :src="img" ref="vAfterImg" @load="syncCanvasSize('after')">
+                                <canvas id="vAfterCanvas" ref="vAfterCanvas"></canvas>
                             </div>
                         </div>
-                        <div class="vCell" >
-                            <div id="vDiffAfterTitle" class="vTitle" >
-                                <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a>
-                            </div>
-                            <div class="vCanvasBox">
-                                <img id="vDiffAfter" :src="img" ref="vDiffAfterImg" @load="syncCanvasSize('diff')" style="min-height: 320px; min-width: 180px; width:100%;" />
-                                <canvas id="vDiffAfterCanvas" ref="vDiffAfterCanvas" style="min-height: 320px; min-width: 180px; width:100%;" @click="onClick('diff', $event)" @mousemove="onMousemove('diff', $event)" />
+
+                        <div class="vCell">
+                            <div id="vBeforeTitle" class="vTitle" > <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.beforeCorrect + ' 误报数 ' + detection.beforeWrong + ' 漏检数 ' + detection.beforeMiss : '召回率 ' + detection.beforeRecallStr + ' 精确率 ' + detection.beforePrecisionStr + ' F1 ' + detection.beforeF1Str }} </a> <a > 实际 </a><input id="vAfterTotal" v-model="detection.total" style="width: 36px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'afterTotal', true)" placeholder="总数" /> </div>
+                            <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
+                                <img id="vBefore" :src="img" ref="vBeforeImg" @load="syncCanvasSize('before')">
+                                <canvas id="vBeforeCanvas" ref="vBeforeCanvas"></canvas>
                             </div>
                         </div>
-<!--                    </div>-->
+                    </div>
+
+                    <div class="vRow" :style="{ height: isFullScreen ? '80%' : '50%' }" >
+                        <div class="vCell">
+                            <div id="vDiffBeforeTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" /> </div>
+                            <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
+                                <img id="vDiffBefore"  :src="img" ref="vDiffImg" @load="syncCanvasSize('diff')">
+                                <canvas id="vDiffBeforeCanvas" ref="vDiffBeforeCanvas"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="vCell">
+                            <div id="vDiffAfterTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" /> </div>
+                            <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
+                                <img id="vDiffAfter" :src="img" ref="vDiffAfterImg" @load="syncCanvasSize('diff')">
+                                <canvas id="vDiffAfterCanvas" ref="vDiffAfterCanvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-<!--                <div id="vContainer" v-show="view === 'code'" style="width: 100%; height: 100%; padding-bottom: 36px; position: absolute; z-index: 100; display: flex; flex-direction: column">-->
-<!--                    <div v-for="stage in ['before', 'diff', 'after']" :key="stage" style="min-width: 240px; height: 33%; margin: 1px; position: relative">-->
-<!--                        <img :id="'v' + StringUtil.firstCase(stage, true)" :ref="'v' + StringUtil.firstCase(stage, true)" :src="stageImages[stage]" style="min-width: 240px; height: 100%; position: absolute;" />-->
-<!--                        <canvas-->
-<!--                                :id="'v' + StringUtil.firstCase(stage, true) + 'Canvas'"-->
-<!--                                :ref="'v' + StringUtil.firstCase(stage, true) + 'Canvas'"-->
-<!--                                style="min-width: 240px; height: 100%; position: absolute;"-->
-<!--                                @mousemove="onMousemove(stage, $event)"-->
-<!--                                @click="onClick(stage, $event)"-->
-<!--                        />-->
-<!--                    </div>-->
-<!--                </div>-->
-                
+
                 <div v-show="isRandomShow" style="position: absolute; right: 0px; width: 450px; height: 100%; z-index: 101;" >
 
                     <div v-show="isRandomShow" style="position: absolute; width: 100%; height: 100%;" wrap="off" >
