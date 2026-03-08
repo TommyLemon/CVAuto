@@ -2677,7 +2677,10 @@ var JSONResponse = {
           }
 
           // Label
-          const label = mark + (isDiff ? (isBefore ? '- ' : '+ ') : '') + `${item.ocr || item.label || ''}${item.id == null ? '' : '-' + item.id} ${((JSONResponse.getScore(item) || 0)*100).toFixed(0)}%${angle == 0 ? '' : ' ' + Math.round(angle) + '°'}`;
+          const id = item.viewIdName || item.id
+          const path = isHovered ? item.path : null
+          const gravity = item.gravity
+          const label = mark + (isDiff ? (isBefore ? '- ' : '+ ') : '') + `${item.label || ''}${id == null ? '' : '#' + id}${StringUtil.isEmpty(path) ? '' : ':' + path}`;
           // ctx.font = 'bold 36px';
           // const size = ctx.measureText(label);
           // const textHeight = size.height || height*0.1; // Math.max(height*0.1, size.height);
@@ -2842,6 +2845,145 @@ var JSONResponse = {
         }
       });
     }
+  },
+
+  INTEREST_TYPES: [
+    "TextView",
+    "ImageView",
+    "Button",
+    "EditText",
+    "CheckBox",
+    "Switch",
+    "ImageButton"
+  ],
+
+  getPx: function(v) {
+    if (!v) return 0;
+    if (typeof v === "number") return v;
+    return v.px ?? 0;
+  },
+
+  isInteresting: function(type) {
+    if (!type) return false;
+    return JSONResponse.INTEREST_TYPES.some(t => type.includes(t));
+  },
+
+  computeOffset: function(input) {
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (input.popupWindow) {
+      offsetX = input.popupWindowX ?? 0;
+      offsetY = input.popupWindowY ?? 0;
+    }
+    else if (input.dialog) {
+      offsetX = input.dialogX ?? 0;
+      offsetY = input.dialogY ?? 0;
+    }
+    else if (input.fragment) {
+      offsetX = input.fragmentX ?? 0;
+      offsetY = input.fragmentY ?? 0;
+    }
+    else {
+      offsetX = input.contentX ?? 0;
+      offsetY = input.contentY ?? 0;
+    }
+
+    return { offsetX, offsetY };
+  },
+
+  buildAssertPath: function(node) {
+    if (node.text) return "childList//text";
+    if (node.viewIdName) return "childList//viewIdName";
+    return "childList//type";
+  },
+
+  convertViewTree: function(root, input) {
+    input = input || {};
+
+    const results = [];
+    let id = 1;
+    const offset = JSONResponse.computeOffset(input);
+
+    function walk(node, parentX = 0, parentY = 0, path = "") {
+      if (! node) {
+        return;
+      }
+
+      const x = parentX + JSONResponse.getPx(node.x);
+      const y = parentY + JSONResponse.getPx(node.y);
+      let w = JSONResponse.getPx(node.width);
+      let h = JSONResponse.getPx(node.height);
+      if (w <= 0 || h <= 0) {
+        w = 0;
+        h = 0;
+      }
+
+      var viewType = node.type
+      if (StringUtil.isString(viewType)) {
+        if (viewType.startsWith('android.widget.')) {
+          viewType = viewType.substring('android.widget.'.length)
+        } else if (viewType.startsWith('android.view.')) {
+          viewType = viewType.substring('android.view.'.length)
+        } else if (viewType.startsWith('androidx.widget.')) {
+          viewType = viewType.substring('androidx.widget.'.length)
+        } else if (viewType.startsWith('androidx.view.')) {
+          viewType = viewType.substring('androidx.view.'.length)
+        }
+      }
+
+      if (w > 0 && h > 0 && JSONResponse.isInteresting(viewType)) {
+        const screenX = x + offset.offsetX;
+        const screenY = y + offset.offsetY;
+        results.push({
+          id: id++,
+          bbox: [screenX, screenY, w, h],
+          label: viewType,
+          text: node.text ?? null,
+          viewId: node.viewId ?? null,
+          viewIdName: node.viewIdName ?? null,
+          path: path,
+          assertPath: JSONResponse.buildAssertPath(node),
+          center: [screenX + w / 2, screenY + h / 2],
+          area: w * h
+        });
+      }
+
+      var arr = node.childList || []
+      if (! Array.isArray(arr)) {
+        return;
+      }
+
+      for (let i = 0; i < arr.length; i++) {
+          const child = arr[i];
+          const childPath = StringUtil.isEmpty(path) ? "childList/" + i : path + "/childList/" + i;
+          walk(child, x, y, childPath);
+      }
+    }
+
+    walk(root, 0, 0, "");
+
+    return results;
+  },
+
+  getNodeByPath: function(root, path) {
+    if (root == null || StringUtil.isEmpty(path)) {
+      return root;
+    }
+
+    const parts = path.split("/");
+    let node = root;
+
+    for (let i = 0; i < parts.length; i += 2) {
+      const key = parts[i];
+      const index = Number(parts[i + 1]);
+      node = node?.[key]?.[index];
+      if (node == null) {
+        return null;
+      }
+    }
+
+    return node;
   }
 
 };

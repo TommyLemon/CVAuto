@@ -19,6 +19,10 @@
 var StringUtil = {
   TAG: 'StringUtil',
 
+  isString: function(s) {
+    return typeof s == 'string';
+  },
+
   /**获取string,为null则返回''
    * @param s
    * @return

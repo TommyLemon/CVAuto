@@ -12959,8 +12959,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             detection.beforeRecall = testRecord.recall;
             detection.beforePrecision = testRecord.precision;
             detection.beforeF1 = testRecord.f1;
-            detection.before = before;
-            detection.after = after;
+
+            detection.before = {bboxes: JSONResponse.convertViewTree(before.viewTree, random) || {}};
+            detection.after = {bboxes: JSONResponse.convertViewTree(after.viewTree, random) || {}};
 
             this.detection = detection;
 
