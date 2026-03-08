@@ -1249,7 +1249,7 @@ https://github.com/Tencent/APIJSON/issues
       currentCorner: '',        // 当前操作的角点: 'tl', 'tr', 'bl', 'br'
       rotationCenter: {x: 0, y: 0}, // 旋转中心点
       detection: {
-        isShowNum: false,
+        isShowNum: true,
         total: 10,
         sameIds: [],
         missTruth: {},
@@ -6983,6 +6983,7 @@ https://github.com/Tencent/APIJSON/issues
         })
       },
 
+      imgRatio: 1920/1080,
       syncCanvasSize: function(stage) {
         const img = this.imgMap[stage];
         const canvas = this.canvasMap[stage];
@@ -6992,10 +6993,18 @@ https://github.com/Tencent/APIJSON/issues
 
         const realWidth = this.isFullScreen ? 0 : (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 1920);
         const maxTextWidth = realWidth <= 0 ? 0 : Math.max(vAfterTitle.clientWidth || 0, vDiffTitle.clientWidth || 0, vBeforeTitle.clientWidth || 0);
-        const imgWidth = maxTextWidth <= 0 ? 0 :  Math.max(maxTextWidth, img.width || vAfter.width || vDiff.width || vBefore.width || realWidth/(window.devicePixelRatio*3));
+        const imgWidth = maxTextWidth <= 0 ? 0 :  Math.max(maxTextWidth, img.width || vAfter.width || vDiffBefore.width || vDiffAfter.width || vBefore.width || realWidth/(window.devicePixelRatio*3));
         if (imgWidth <= 0 || imgWidth >= 700) {
           return;
         }
+        const realHeight = this.isFullScreen ? 0 : (window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight || 1920);
+        const maxTextHeight = realHeight <= 0 ? 0 : Math.max(vAfterTitle.clientHeight || 0, vDiffTitle.clientHeight || 0, vBeforeTitle.clientHeight || 0);
+        const imgHeight = maxTextHeight <= 0 ? 0 :  Math.max(maxTextHeight, img.height || vAfter.height || vDiffBefore.height || vDiffAfter.height || vBefore.height || realHeight/(window.devicePixelRatio*3));
+        if (imgHeight <= 0 || imgHeight >= 700*21/9) {
+          return;
+        }
+
+        this.imgRatio= imgWidth/imgHeight;
 
         this.moveSplit(Math.min(0.7, Math.max(0.3, (imgWidth + 450)/realWidth)));
       },
@@ -7040,7 +7049,7 @@ https://github.com/Tencent/APIJSON/issues
         this.drawDrawingBox(stage);
       },
       drawAll: function() {
-        ['before', 'diff', 'after'].forEach(stage => this.draw(stage));
+        ['before', 'after', 'diffBefore', 'diffAfter'].forEach(stage => this.draw(stage));
       },
       compute: function() {
         const detection = this.detection || {};
@@ -7573,10 +7582,9 @@ https://github.com/Tencent/APIJSON/issues
       onClickFullScreen: function(event) {
         var isFullScreen = this.isFullScreen = ! this.isFullScreen;
         this.isRandomShow = ! isFullScreen;
-        vContainer.style.display = isFullScreen ? '' : 'flex';
         const realWidth = isFullScreen ? 0 : (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 1920);
         const maxTextWidth = realWidth <= 0 ? 0 : Math.max(vAfterTitle.clientWidth || 0, vDiffTitle.clientWidth || 0, vBeforeTitle.clientWidth || 0);
-        const imgWidth = maxTextWidth <= 0 ? 0 :  Math.max(maxTextWidth, Math.min(700, vAfter.width || vDiff.width || vBefore.width || realWidth/(window.devicePixelRatio*3)));
+        const imgWidth = maxTextWidth <= 0 ? 0 :  Math.max(maxTextWidth, Math.min(700, vAfter.width || vDiffAfter.width || vDiffBefore.width || vBefore.width || realWidth/(window.devicePixelRatio*3)));
         this.moveSplit(isFullScreen ? 0.73 : Math.min(0.6, Math.max(0.3, (imgWidth + 450)/realWidth)));
         event?.preventDefault();
       },
@@ -12687,23 +12695,26 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   return
                 }
 
-                var ctx = vDiff.getContext('2d');
-                var diffImgData = ctx.createImageData(1080, 2340) // new Uint8ClampedArray(4*2340*1080)
+                [vDiffBefore, vDiffAfter].forEach(vDiff => {
+                  var ctx = vDiff.getContext('2d');
+                  var diffImgData = ctx.createImageData(1080, 2340) // new Uint8ClampedArray(4*2340*1080)
 
-                var numDiffPixels = ImgDiffUtil.pixelmatch(beforePic, afterPic, diffImgData.data, 1080, 2340, {threshold: 0.1, diffMask: true});
-                console.log('numDiffPixels = ' + numDiffPixels)
+                  var numDiffPixels = ImgDiffUtil.pixelmatch(beforePic, afterPic, diffImgData.data, 1080, 2340, {threshold: 0.1, diffMask: true});
+                  console.log('numDiffPixels = ' + numDiffPixels)
 
-                if (numDiffPixels <= 0 || diffImgData.byteLength <= 0) {
-                  vDiff.style.display = 'none'
-                }
-                else {
-                  vDiff.style.display = 'block'
+                  if (numDiffPixels <= 0 || diffImgData.byteLength <= 0) {
+                    vDiff.style.display = 'none'
+                  }
+                  else {
+                    vDiff.style.display = 'block'
 
-                  // var ctx = vDiff.getContext('2d');
-                  // var imageData = new ImageData(diffImgData, 1080, 2340);
-                  // ctx.putImageData(imageData, 0, 0);
-                  ctx.putImageData(diffImgData, 0, 0);
-                }
+                    // var ctx = vDiff.getContext('2d');
+                    // var imageData = new ImageData(diffImgData, 1080, 2340);
+                    // ctx.putImageData(imageData, 0, 0);
+                    ctx.putImageData(diffImgData, 0, 0);
+                  }
+
+                })
               })
               .catch(error2 => {
                 console.log("response: ", error2);
@@ -13899,12 +13910,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
     mounted: function () {
       this.imgMap = {
         before: vBefore || document.getElementById("vBefore"),
-        diff: vDiff || document.getElementById("vDiff"),
+        diffBefore: vDiffBefore || document.getElementById("vDiffBefore"),
+        diffAfter: vDiffAfter || document.getElementById("vDiffAfter"),
         after: vAfter || document.getElementById("vAfter")
       };
       this.canvasMap = {
         before: vBeforeCanvas || document.getElementById("vBeforeCanvas"),
-        diff: vDiffCanvas || document.getElementById("vDiffCanvas"),
+        diffBefore: vDiffBeforeCanvas || document.getElementById("vDiffBeforeCanvas"),
+        diffAfter: vDiffAfterCanvas || document.getElementById("vDiffAfterCanvas"),
         after: vAfterCanvas || document.getElementById("vAfterCanvas")
       };
     },
