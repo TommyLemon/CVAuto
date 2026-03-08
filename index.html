@@ -364,7 +364,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                             <div id="vAfterTitle" class="vTitle" > <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.afterCorrect + ' 误报数 ' + detection.afterWrong + ' 漏检数 ' + detection.afterMiss : '召回率 ' + detection.afterRecallStr + ' 精确率 ' + detection.afterPrecisionStr + ' F1 ' + detection.afterF1Str }} </a> <a style="height: 25px; color: black; font-weight: bold; padding: 0" href="javascript:void(0)" @click="onClickFullScreen($event)" > 全屏 </a> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vAfter" :src="img" ref="vAfterImg" @load="syncCanvasSize('after')">
-                                <canvas id="vAfterCanvas" ref="vAfterCanvas"></canvas>
+                                <canvas id="vAfterCanvas" ref="vAfterCanvas" @click="onClick('after', $event)" @mousemove="onMousemove('after', $event)" @mousedown="onMousedown('after', $event)" @mouseup="onMouseup('after', $event)" />
                             </div>
                         </div>
 
@@ -372,7 +372,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                             <div id="vBeforeTitle" class="vTitle" > <a style="margin-left: -6px">% {{ detection.isShowNum ? '正确数 ' + detection.beforeCorrect + ' 误报数 ' + detection.beforeWrong + ' 漏检数 ' + detection.beforeMiss : '召回率 ' + detection.beforeRecallStr + ' 精确率 ' + detection.beforePrecisionStr + ' F1 ' + detection.beforeF1Str }} </a> <a > 实际 </a><input id="vAfterTotal" v-model="detection.total" style="width: 36px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'afterTotal', true)" placeholder="总数" /> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vBefore" :src="img" ref="vBeforeImg" @load="syncCanvasSize('before')">
-                                <canvas id="vBeforeCanvas" ref="vBeforeCanvas"></canvas>
+                                <canvas id="vBeforeCanvas" ref="vBeforeCanvas" @mousemove="onMousemove('before', $event)" />
                             </div>
                         </div>
                     </div>
@@ -382,7 +382,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                             <div id="vDiffBeforeTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" /> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vDiffBefore"  :src="img" ref="vDiffImg" @load="syncCanvasSize('diff')">
-                                <canvas id="vDiffBeforeCanvas" ref="vDiffBeforeCanvas"></canvas>
+                                <canvas id="vDiffBeforeCanvas" ref="vDiffBeforeCanvas" @click="onClick('diff', $event)" @mousemove="onMousemove('diff', $event)" />
                             </div>
                         </div>
 
@@ -390,7 +390,7 @@ Ctrl + S 或 Command + S 保存当前用例；
                             <div id="vDiffAfterTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异: </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" /> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vDiffAfter" :src="img" ref="vDiffAfterImg" @load="syncCanvasSize('diff')">
-                                <canvas id="vDiffAfterCanvas" ref="vDiffAfterCanvas"></canvas>
+                                <canvas id="vDiffAfterCanvas" ref="vDiffAfterCanvas" @click="onClick('diff', $event)" @mousemove="onMousemove('diff', $event)" />
                             </div>
                         </div>
                     </div>
