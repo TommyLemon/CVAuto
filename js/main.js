@@ -6669,6 +6669,203 @@ https://github.com/Tencent/APIJSON/issues
         };
       },
 
+      transferImage: function(img, uploadUrl) {
+
+        var self = this;
+
+        var src =
+            img.currentSrc ||
+            img.src ||
+            img.getAttribute("data-src") ||
+            img.getAttribute("data-original");
+
+        if (!src) {
+          return Promise.reject("empty src");
+        }
+
+        // base64
+        if (src.indexOf("data:image") === 0) {
+
+          var blob = this.dataURLToBlob(src);
+
+          return this.resizeBlob(blob)
+              .then(function(blob){
+                return self.uploadBlob(blob, uploadUrl);
+              });
+
+        }
+
+        // canvas读取
+        return this.imgToBlob(img)
+
+            .then(function(blob){
+              return self.resizeBlob(blob);
+            })
+
+            .then(function(blob){
+              return self.uploadBlob(blob, uploadUrl);
+            })
+
+            .catch(function(){
+
+              // fetch下载
+              return fetch(src)
+                  .then(function(res){
+
+                    if (!res.ok) throw new Error();
+
+                    return res.blob();
+                  })
+                  .then(function(blob){
+                    return self.resizeBlob(blob);
+                  })
+                  .then(function(blob){
+                    return self.uploadBlob(blob, uploadUrl);
+                  });
+
+            })
+
+            .catch(function(){
+
+              // fallback url
+              var form = new FormData();
+              form.append("url", src);
+
+              return fetch(uploadUrl,{
+                method:"POST",
+                body:form
+              }).then(function(r){
+                return r.json();
+              });
+
+            });
+
+      },
+
+
+      imgToBlob: function(img){
+
+        return new Promise(function(resolve,reject){
+
+          try{
+
+            var w = img.naturalWidth;
+            var h = img.naturalHeight;
+
+            if(!w || !h){
+              reject();
+              return;
+            }
+
+            var canvas = document.createElement("canvas");
+
+            canvas.width = w;
+            canvas.height = h;
+
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img,0,0);
+
+            canvas.toBlob(function(blob){
+
+              if(blob) resolve(blob);
+              else reject();
+
+            },"image/jpeg",0.95);
+
+          }catch(e){
+            reject(e);
+          }
+
+        });
+
+      },
+
+
+      resizeBlob: function(blob){
+
+        return new Promise(function(resolve,reject){
+
+          var img = new Image();
+
+          img.onload = function(){
+
+            var w = img.width;
+            var h = img.height;
+
+            if (w > 1080) {
+
+              var ratio = 1080 / w;
+
+              w = 1080;
+              h = Math.round(h * ratio);
+            }
+
+            var canvas = document.createElement("canvas");
+
+            canvas.width = w;
+            canvas.height = h;
+
+            var ctx = canvas.getContext("2d");
+
+            ctx.drawImage(img,0,0,w,h);
+
+            canvas.toBlob(function(newBlob){
+
+              if(newBlob) resolve(newBlob);
+              else reject();
+
+            },"image/jpeg",0.9);
+
+          };
+
+          img.onerror = reject;
+
+          img.src = URL.createObjectURL(blob);
+
+        });
+
+      },
+
+
+      uploadBlob: function(blob, uploadUrl){
+
+        var form = new FormData();
+
+        form.append("file", blob, "image_"+Date.now()+".jpg");
+
+        return fetch(uploadUrl,{
+          method:"POST",
+          body:form
+        })
+            .then(function(res){
+
+              if(!res.ok){
+                throw new Error("upload failed");
+              }
+
+              return res.json();
+            });
+
+      },
+
+      dataURLToBlob: function(dataurl){
+
+        var arr = dataurl.split(",");
+        var mime = arr[0].match(/:(.*?);/)[1];
+
+        var bstr = atob(arr[1]);
+        var n = bstr.length;
+
+        var u8arr = new Uint8Array(n);
+
+        while(n--){
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+
+        return new Blob([u8arr],{type:mime});
+
+      },
+
       uploadImage: function(randomIndex, randomSubIndex) {
         const isSub = randomSubIndex != null;
         const items = (isSub ? this.randomSubs : this.randoms) || [];
@@ -6683,14 +6880,29 @@ https://github.com/Tencent/APIJSON/issues
           return;
         }
 
-        const formData = new FormData();
-        formData.append('file', item.img);
+        var vImg = this.$refs["randomImg" + ind];
+        if (Array.isArray(vImg)) {
+          vImg = vImg[0];
+        }
 
-        fetch(this.server + '/upload', {
-          method: 'POST',
-          body: formData
-        })
-            .then(response => response.json())
+        if (! vImg) {
+          console.warn("img ref not found:", ind);
+          return;
+        }
+
+        // const formData = new FormData();
+        // formData.append('file', item.img);
+
+        this.transferImage(vImg, this.server + "/upload")
+        //     .then(function(res){
+        //       console.log(res.path);
+        //     });
+        //
+        // fetch(this.server + '/upload', {
+        //   method: 'POST',
+        //   body: formData
+        // })
+        //     .then(response => response.json())
             .then(data => {
               var path = data.path;
               if (StringUtil.isEmpty(path, true) || data.size == null) {
@@ -6700,10 +6912,10 @@ https://github.com/Tencent/APIJSON/issues
               console.log('Upload successful:', data);
               item.status = 'done';
               const img = (path.startsWith('/') ? App.server + path : path) || item.img || '';
-              var keys = StringUtil.split(data.path, '/');
+              var keys = StringUtil.split(data.path, '/', false);
               var fn = keys == null ? null : keys[keys.length - 1];
-              random.name = random.file = StringUtil.isEmpty(fn, true) ? fn : random.file;
-              App.img = random.img = img;
+              random.name = random.file = StringUtil.isNotEmpty(fn) ? fn : random.file;
+              App.img = random.img = img; // FIXME 改用点击区域图标？还是在原图上画框、点击放大？
               random.size = (data.size || (StringUtil.length(img) * (3/4)) - (img.endsWith('==') ? 2 : 1));
               random.width = data.width || random.width;
               random.height = data.height || random.height;
@@ -6713,7 +6925,16 @@ https://github.com/Tencent/APIJSON/issues
                 console.error(e)
               }
 
-              App.updateRandom(random) // event 无效 App.doOnKeyUp(event, 'random', false, item)
+              // App.updateRandom(random) // event 无效 App.doOnKeyUp(event, 'random', false, item)
+              App.updateRandom({
+                id: random.id,
+                file: random.file,
+                name: random.name,
+                img: img,
+                size: random.size,
+                width: random.width,
+                height: random.height
+              }) // event 无效 App.doOnKeyUp(event, 'random', false, item)
             })
             .catch(error => {
               console.error('Upload failed:', error);
@@ -6740,6 +6961,7 @@ https://github.com/Tencent/APIJSON/issues
           Input: r,
           TestRecord: isPost ? {
             response: '',
+            screenshotUrl: r.img
           } : undefined,
           tag: 'Input'
         }, {}, function (url, res, err) {
@@ -10618,11 +10840,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               if (input != null && input.id == oInputId) {
                 App.currentRandomIndex = k
                 const resultIndex = k
-                const response = {
-                  TestRecord: oj, code: 200, msg: 'success'
-                }
+                const response = oj // {TestRecord: oj, code: 200, msg: 'success'}
                 setTimeout(function () {  // 让图片切换更平滑，且保持和选项断言结果同时出现
-                  App.compareResponse({data: response}, allCount, list, resultIndex, ik, response, true, App.currentAccountIndex, false, err)
+                  App.compareResponse({data: {TestRecord: oj, code: 200, msg: 'success'}}, allCount, list, resultIndex, ik, response, true, App.currentAccountIndex, false, err)
                   // App.compareResponse(allCount, list, k, inputList[k], App.currentOutputList[k], true, App.currentAccountIndex, false, err)
                 }, App.picDelayTime) // 200*resultIndex)
 
@@ -10633,7 +10853,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 }
 
                 var tr = ik.TestRecord || {}
-                var beforeUrl = StringUtil.trim(tr.screenshotUrl || input.screenshotUrl)
+                var beforeUrl = StringUtil.trim(tr.screenshotUrl || input.img)
                 vBefore.src = (beforeUrl.indexOf('://') >= 0 ? '' : App.server) + '/download?filePath=' + encodeURI(beforeUrl)
                 break
               }
@@ -12608,10 +12828,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         // FIXME 向前寻找最近的
         if (isRandom) {
           var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? (currentResponse.TestRecord || {}).screenshotUrl : null)
-          vAfter.src = (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
+          vAfter.src = StringUtil.isEmpty(imgUrl) ? vAfter.src : (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
 
           var beforeUrl = StringUtil.trim(testRecord.screenshotUrl || random.screenshotUrl)
-          vBefore.src = (beforeUrl.indexOf('://') >= 0 ? '' : App.server) + '/download?filePath=' + encodeURI(beforeUrl)
+          vBefore.src = StringUtil.isEmpty(beforeUrl) ? vBefore.src : (beforeUrl.indexOf('://') >= 0 ? '' : this.server) + '/download?filePath=' + encodeURI(beforeUrl)
 
           item.img = isBefore ? vBefore.src : vAfter.src
         }
@@ -12917,7 +13137,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 duration: item.duration,
                 minDuration: minDuration,
                 maxDuration: maxDuration,
-                compare: JSON.stringify(testRecord.compare || {}),
+                compare: JSON.stringify(testRecord.compare || {})
               }) : {
                 // userId: userId,
                 chainGroupId: cgId,
@@ -12941,7 +13161,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 sameIds: this.sameIds,
                 missTruth: Object.keys(missTruth).length <= 0 ? null : JSON.stringify(missTruth),
                 compare: JSON.stringify(testRecord.compare || {}),
-                response: rawRspStr,
+                response: rawRspStr || (rawRspStr == null ? '' : (StringUtil.isString(random.response) ? random.response : JSON.stringify(random.response))),
                 standard: isML ? JSON.stringify(stddObj) : null
               },
               tag: isNewRandom ? 'Input' : 'TestRecord'
@@ -12953,7 +13173,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             //     documentId: document.id
             //   }
             // }
-
+            const index_ = index
             this.adminRequest(url, req, {}, function (url, res, err) {
               App.onResponse(url, res, err)
 
@@ -12966,6 +13186,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               else {
                 if (isRandom) {
                   App.updateToRandomSummary(item, -1, App.currentAccountIndex)
+                  App.uploadImage(index_)
                 } else {
                   App.updateToSummary(item, -1, App.currentAccountIndex)
                 }
@@ -13051,7 +13272,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             'invalid': 0,
             'host': this.getBaseUrl(),
             '@order': 'date-',
-            '@column': 'id,userId,testAccountId,documentId,randomId,reportId,duration,minDuration,maxDuration,total,correct,wrong,miss,score,iou,recall,precision,f1,corrects,wrongs,sameIds,response' + (this.isMLEnabled ? ',missTruth,standard' : ''),
+            '@column': 'id,userId,testAccountId,documentId,randomId,reportId,duration,minDuration,maxDuration,screenshotUrl,total,correct,wrong,miss,score,iou,recall,precision,f1,corrects,wrongs,sameIds,response' + (this.isMLEnabled ? ',missTruth,standard' : ''),
             'standard{}': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
           }
         }, {}, function (url, res, err) {
