@@ -2860,7 +2860,7 @@ var JSONResponse = {
   getPx: function(v) {
     if (!v) return 0;
     if (typeof v === "number") return v;
-    return v.px ?? 0;
+    return (v.real || v.px) ?? 0;
   },
 
   isInteresting: function(type) {
