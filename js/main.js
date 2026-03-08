@@ -4450,7 +4450,7 @@ https://github.com/Tencent/APIJSON/issues
               this.login(false, function (url, res, err) {
                 App.onResponse(url, res, err)
 
-                var data = res.data || {}
+                var data = parseJSON(JSONResponse.getValByPath(res.data, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || res.data || {}
                 var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data
                 if (user == null) {
                   if (callback != null) {
@@ -5625,7 +5625,6 @@ https://github.com/Tencent/APIJSON/issues
         var user = isAdmin ? this.User : null  // add account   this.accounts[this.currentAccountIndex]
 
         // alert("showLogin  isAdmin = " + isAdmin + "; user = \n" + JSON.stringify(user, null, '    '))
-
         if (user == null || StringUtil.isEmpty(user.phone, true)) {
           user = {
             phone: '13000082001',
@@ -5638,8 +5637,10 @@ https://github.com/Tencent/APIJSON/issues
         this.password = user.password
 
         var schemas = StringUtil.isEmpty(this.schema, true) ? null : StringUtil.split(this.schema)
+        var pkg = (this.getPackage(this.host) || 'uigo.x') + '.activity_fragment'
+        var cls = 'LoginActivity'
 
-        const req = {
+        const req = isAdmin ? {
           type: 0, // 登录方式，非必须 0-密码 1-验证码
           // asDBAccount: ! isAdminOperation,  // 直接 /execute 接口传 account, password
           phone: this.account,
@@ -5653,10 +5654,24 @@ https://github.com/Tencent/APIJSON/issues
             '@database': StringUtil.isEmpty(this.database, true) ? undefined : this.database,
             '@schema': schemas == null || schemas.length != 1 ? undefined : this.schema
           }
+        } : {
+          "package": pkg, // 'uiauto',
+          "class": cls, // 'UIAutoApp',
+          "classArgs": [],
+          "reuse": true,
+          "method": 'login',
+          "methodArgs": ["int:0", "String:" + this.account, "String:" + this.password, {
+            'type': 'uigo.x.HttpManager$OnHttpResponseListener',
+            'value': {
+              'onHttpResponse(int,String,Throwable)': {
+                'callback': true
+              }
+            }
+          }]
         }
 
         this.isHeaderShow = true
-        this.isRandomShow = true
+        this.isRandomShow = false // true
         this.isRandomListShow = false
 
         if (IS_BROWSER && ! isAdmin) {
@@ -5674,7 +5689,7 @@ https://github.com/Tencent/APIJSON/issues
 
           this.method = HTTP_METHOD_POST
           // this.type = REQUEST_TYPE_JSON
-          this.showUrl(isAdmin, '/login')
+          this.showUrl(isAdmin, isAdmin ? '/login' : '/method/invoke')
           vInput.value = JSON.stringify(req, null, '    ')
 
           this.testRandomCount = 1
@@ -5708,7 +5723,9 @@ https://github.com/Tencent/APIJSON/issues
         this.isEditResponse = false
         var schemas = StringUtil.isEmpty(this.schema, true) ? null : StringUtil.split(this.schema)
 
-        const req = {
+        var pkg = (this.getPackage(this.host) || 'uigo.x') + '.activity_fragment'
+        var cls = 'LoginActivity'
+        const req = isAdminOperation ? {
           type: 0, // 登录方式，非必须 0-密码 1-验证码
           // asDBAccount: ! isAdminOperation,  // 直接 /execute 接口传 account, password
           phone: this.account,
@@ -5722,6 +5739,20 @@ https://github.com/Tencent/APIJSON/issues
             '@database': StringUtil.isEmpty(this.database, true) ? undefined : this.database,
             '@schema': schemas == null || schemas.length != 1 ? undefined : this.schema
           }
+        } : {
+          "package": pkg, // 'uiauto',
+          "class": cls, // 'UIAutoApp',
+          "classArgs": [],
+          "reuse": true,
+          "method": 'login',
+          "methodArgs": ["int:0", "String:" + this.account, "String:" + this.password, {
+            'type': 'uigo.x.HttpManager$OnHttpResponseListener',
+            'value': {
+              'onHttpResponse(int,String,Throwable)': {
+                'callback': true
+              }
+            }
+          }]
         }
 
         if (isAdminOperation) {
@@ -5743,7 +5774,7 @@ https://github.com/Tencent/APIJSON/issues
               App.method = App.prevMethod || HTTP_METHOD_POST
               // App.type = App.prevType || REQUEST_TYPE_JSON
 
-              vUrl.value = App.prevUrl || (URL_BASE + '/get')
+              vUrl.value = App.prevUrl || (baseUrl + '/invoke/method')
               vUrlComment.value = App.prevUrlComment || ''
               vComment.value = App.prevComment || ''
               vWarning.value = App.prevWarning || ''
@@ -5778,7 +5809,7 @@ https://github.com/Tencent/APIJSON/issues
           const isLoginShow = this.isLoginShow
           var curUser = this.getCurrentAccount() || {}
           const loginMethod = (isLoginShow ? this.method : curUser.loginMethod) || HTTP_METHOD_POST
-          const loginType = (isLoginShow ? this.type : curUser.loginType) || REQUEST_TYPE_JSON
+          const loginType = (isLoginShow ? REQUEST_TYPE_JSON : curUser.loginType) || REQUEST_TYPE_JSON
           const loginUrl = (isLoginShow ? this.getBranchUrl() : curUser.loginUrl) || '/login'
           const loginReq = (isLoginShow ? this.getRequest(vInput.value) : curUser.loginReq) || req
           // const loginRandom = (isLoginShow ? vRandom.value : curUser.loginRandom) || ''
@@ -5797,7 +5828,7 @@ https://github.com/Tencent/APIJSON/issues
               App.method = App.prevMethod || HTTP_METHOD_POST
               // App.type = App.prevType || REQUEST_TYPE_JSON
 
-              vUrl.value = App.prevUrl || (URL_BASE + '/get')
+              vUrl.value = App.prevUrl || (baseUrl + '/method/invoke')
               vUrlComment.value = App.prevUrlComment || ''
               vComment.value = App.prevComment || ''
               vWarning.value = App.prevWarning || ''
@@ -5813,13 +5844,15 @@ https://github.com/Tencent/APIJSON/issues
           if (isLoginShow) {
             this.isLoginShow = false
 
-            this.testRandomWithText(true, loginCallback)
-            return
+            // this.testRandomWithText(true, loginCallback)
+            // loginCallback()
+            // return
           }
 
           this.scripts = newDefaultScript()
+          const constJson = loginReq;
 
-          this.parseRandom(loginReq, loginHeader, loginRandom, 0, true, false, false, function(randomName, constConfig, constJson) {
+          // this.parseRandom(loginReq, loginHeader, loginRandom, 0, true, false, false, function(randomName, constConfig, constJson) {
               App.request(isAdminOperation, loginMethod, loginType, baseUrl + loginUrl, constJson, loginHeader, function (url, res, err) {
                 if (App.isEnvCompareEnabled != true) {
                   loginCallback(url, res, err, null, loginMethod, loginType, loginUrl, constJson, loginHeader)
@@ -5847,7 +5880,7 @@ https://github.com/Tencent/APIJSON/issues
                       App.onLoginResponse(isAdminOperation, req, url, res, err, loginMethod, loginType, loginUrl, constJson, loginRandom, loginHeader)
                     }, App.scripts)
               })
-          })
+          // })
         }
       },
 
@@ -5896,10 +5929,10 @@ https://github.com/Tencent/APIJSON/issues
           App.onResponse(url, res, err)
 
           //由login按钮触发，不能通过callback回调来实现以下功能
-          var data = res.data || {}
+          var data = parseJSON(JSONResponse.getValByPath(res.data, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || res.data
           if (JSONResponse.isSuccess(data)) {
             var headers = res.headers || {}
-            var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data
+            var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data || {}
             App.accounts.push({
               isLoggedIn: true,
               baseUrl: App.getBaseUrl(),
@@ -8707,7 +8740,7 @@ https://github.com/Tencent/APIJSON/issues
           // })
 
           var isJSON = HTTP_JSON_TYPES.indexOf(type) >= 0;
-          if (isJSON && (req.constructor != null || req.class != null || req.prototype != null)) {
+          if (isJSON && (req.constructor != null || req.package != null || req.class != null || req.method != null || req.prototype != null)) {
             req = JSON.stringify(req)
             header = header || {}
             header['Content-Type'] = 'application/json'

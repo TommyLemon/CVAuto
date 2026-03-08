@@ -1669,6 +1669,10 @@ var JSONResponse = {
       return null;
     }
 
+    if (StringUtil.isString(pathKeys)) {
+      pathKeys = StringUtil.split(pathKeys, '/', false)
+    }
+
     var tgt = target;
     var depth = pathKeys == null ? 0 : pathKeys.length
     if (depth <= 0) {
