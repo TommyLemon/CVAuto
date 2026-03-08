@@ -2678,9 +2678,9 @@ var JSONResponse = {
 
           // Label
           const id = item.viewIdName || item.id
-          const path = isHovered ? item.path : null
+          const viewPath = isHovered ? item.viewPath : null
           const gravity = item.gravity
-          const label = mark + (isDiff ? (isBefore ? '- ' : '+ ') : '') + `${item.label || ''}${id == null ? '' : '#' + id}${StringUtil.isEmpty(path) ? '' : ':' + path}`;
+          const label = mark + (isDiff ? (isBefore ? '- ' : '+ ') : '') + (StringUtil.isEmpty(viewPath) ? `${id == null ? '' : id + '@'}${item.label || ''}` : StringUtil.limitLength(viewPath, 30, 'start'));
           // ctx.font = 'bold 36px';
           // const size = ctx.measureText(label);
           // const textHeight = size.height || height*0.1; // Math.max(height*0.1, size.height);
@@ -2892,12 +2892,6 @@ var JSONResponse = {
     return { offsetX, offsetY };
   },
 
-  buildAssertPath: function(node) {
-    if (node.text) return "childList//text";
-    if (node.viewIdName) return "childList//viewIdName";
-    return "childList//type";
-  },
-
   convertViewTree: function(root, input) {
     input = input || {};
 
@@ -2905,7 +2899,7 @@ var JSONResponse = {
     let id = 1;
     const offset = JSONResponse.computeOffset(input);
 
-    function walk(node, parentX = 0, parentY = 0, path = "") {
+    function walk(node, parentX = 0, parentY = 0, path = "", assertPath = '') {
       if (! node) {
         return;
       }
@@ -2919,7 +2913,8 @@ var JSONResponse = {
         h = 0;
       }
 
-      var viewType = node.type
+      var viewType = node.type || ''
+      var viewIdName = node.viewIdName || ''
       if (StringUtil.isString(viewType)) {
         if (viewType.startsWith('android.widget.')) {
           viewType = viewType.substring('android.widget.'.length)
@@ -2941,9 +2936,9 @@ var JSONResponse = {
           label: viewType,
           text: node.text ?? null,
           viewId: node.viewId ?? null,
-          viewIdName: node.viewIdName ?? null,
-          path: path,
-          assertPath: JSONResponse.buildAssertPath(node),
+          viewIdName: viewIdName ?? null,
+          viewPath: (StringUtil.isEmpty(path) ? '' : path + "/") + (viewIdName || viewType),
+          assertPath: (StringUtil.isEmpty(assertPath) ? '' : assertPath + "/") + (viewType + (StringUtil.isEmpty(viewIdName) ? '' : ':' + viewIdName)),
           center: [screenX + w / 2, screenY + h / 2],
           area: w * h
         });
@@ -2956,8 +2951,9 @@ var JSONResponse = {
 
       for (let i = 0; i < arr.length; i++) {
           const child = arr[i];
-          const childPath = StringUtil.isEmpty(path) ? "childList/" + i : path + "/childList/" + i;
-          walk(child, x, y, childPath);
+          const childPath = (StringUtil.isEmpty(path) ? '' : path + "/") + (viewIdName || viewType) + "/" + i;
+          const childAssertPath = (StringUtil.isEmpty(assertPath) ? '' : assertPath + "/") + (viewType + (StringUtil.isEmpty(viewIdName) ? '' : ':' + viewIdName)) + "/" + i;
+          walk(child, x, y, childPath, childAssertPath);
       }
     }
 
