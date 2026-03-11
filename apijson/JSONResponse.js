@@ -1059,7 +1059,7 @@ var JSONResponse = {
         var format = target.format;
         if (typeof format == 'string' && FORMAT_PRIORITIES[format] != null) {
           var verifier = max.code < JSONResponse.COMPARE_FORMAT_CHANGE && StringUtil.isNotEmpty(format, true)
-              ? FORMAT_VERIFIERS[format] : null;
+          && StringUtil.isNotEmpty(real, true) ? FORMAT_VERIFIERS[format] : null;
           if (typeof verifier == 'function' && verifier(real) != true) {
               max.code = JSONResponse.COMPARE_FORMAT_CHANGE - (guess != true ? 0 : 1);
               max.msg = '不是 ' + format + " 格式！";
@@ -1664,7 +1664,7 @@ var JSONResponse = {
 
   /**根据 APIJSON 引用赋值路径精准地获取值
    */
-  getValByPath: function(target, pathKeys, isTry) {
+  getValByPath: function(target, pathKeys, isTry, isDesc) {
     if (target == null) {
       return null;
     }
@@ -1693,14 +1693,44 @@ var JSONResponse = {
       if (tgt instanceof Object) {
         if (k == '') {
           if (tgt instanceof Array) {
-              k = 0;
+              for (var j = 0; j < tgt.length; j ++) {
+                var ind = isDesc ? tgt.length - 1 - j : j;
+                var val = tgt[ind]
+                if (i >= depth - 1) {
+                  if (val == null) {
+                    continue
+                  }
+                  return val
+                }
+
+                var ks = pathKeys.slice(i + 1);
+                var child = JSONResponse.getValByPath(val, ks, isTry, isDesc);
+                if (child != null) {
+                  return child
+                }
+              }
           } else {
-              ks = Object.keys(tgt);
-              k = ks == null ? null : ks[0];
-              if (k == null) {
-                return null;
+              var tks = Object.keys(tgt);
+              for (var j = 0; j < tks.length; j ++) {
+                var ind = isDesc ? tks.length - 1 - j : j;
+                var k2 = tks[ind]
+                var val = tgt[k2]
+                if (i >= depth - 1) {
+                  if (val == null) {
+                    continue
+                  }
+                  return val
+                }
+
+                var ks = pathKeys.slice(i + 1);
+                var child = JSONResponse.getValByPath(val, ks, isTry, isDesc);
+                if (child != null) {
+                  return child
+                }
               }
           }
+
+          return null;
         }
         else {
           k = decodeURI(k)
@@ -2588,8 +2618,8 @@ var JSONResponse = {
   },
 
   drawDetections: function(canvas, detection, options, img, ctx, isClear) {
-    if (Object.keys(JSONResponse.isObject(detection) ? detection : {}) <= 0) {
-      console.error('drawDetections: invalid detection input');
+    if (StringUtil.isEmpty(JSONResponse.isObject(detection) ? detection : null)) {
+      console.log('drawDetections: invalid detection input: ' + StringUtil.trim(detection));
       return;
     }
 
@@ -2684,7 +2714,7 @@ var JSONResponse = {
           const id = item.viewIdName || item.id
           const viewPath = isHovered ? item.viewPath : null
           const gravity = item.gravity
-          const label = mark + (isDiff ? (isBefore ? '- ' : '+ ') : '') + (StringUtil.isEmpty(viewPath) ? `${id == null ? '' : id + '@'}${item.label || ''}` : StringUtil.limitLength(viewPath, 30, 'start'));
+          const label = mark + (isDiff ? (isBefore ? '- ' : '+ ') : '') + (StringUtil.isEmpty(viewPath) ? `${id == null ? '' : id}` : StringUtil.limitLength(viewPath, 30, 'start'));
           // ctx.font = 'bold 36px';
           // const size = ctx.measureText(label);
           // const textHeight = size.height || height*0.1; // Math.max(height*0.1, size.height);
