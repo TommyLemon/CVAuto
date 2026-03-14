@@ -8582,16 +8582,16 @@ https://github.com/Tencent/APIJSON/issues
           return
         }
 
-        if (StringUtil.isEmpty(this.host, true)) {
+        if (StringUtil.isEmpty(this.projectHost.host, true)) {
           var url = StringUtil.get(vUrl.value)
           if (url.startsWith('/') != true && url.startsWith('http://') != true && url.startsWith('https://') != true) {
             alert('URL 缺少 http:// 或 https:// 前缀，可能不完整或不合法，\n可能使用同域的 Host，很可能访问出错！')
           }
         }
         else {
-          if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
-            alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
-          }
+          // if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
+          //   alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
+          // }
         }
 
         this.onHandle(vInput.value)
@@ -10795,7 +10795,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             "class": cls, // 'UIAutoApp',
             "constructor": 'getInstance',
             "method": isRecord ? 'prepareRecord' : 'prepareReplay',
-            "methodArgs": isRecord ? ["boolean:true", "boolean:true", "boolean:true"] : [ inputList, "int:0", "boolean:true", "boolean:true"]
+            "methodArgs": isRecord ? ["boolean:true", "boolean:true", "boolean:true"] : [ inputList, "int:0", "boolean:true", "boolean:true", {type: "JSONObject", value: (this.currentRemoteItem || {}).Flow || {}}]
           }, header, function (url_, res_, err_) {
             try {
               App.onResponse(url_, res_, err_)
