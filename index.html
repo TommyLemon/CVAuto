@@ -500,7 +500,7 @@
                             <input id="vRandomCount" v-model="randomCount" style="width: 30px;text-align: center; margin-right: 4px"  type="number" @keyup="doOnKeyUp(event, 'random', true)" placeholder="条数" />
                         </div>
 
-                        <textarea v-show="false" id="vRandom" @copy="doOnCopy" @paste="doOnPaste" style="width: 100%;height: 100%; margin-top: 36px; background-color: rgba(255, 255, 255, 0.5)" wrap="off"
+                        <textarea id="vRandom" @copy="doOnCopy" @paste="doOnPaste" style="width: 100%;height: 100%; margin-top: 36px; background-color: rgba(255, 255, 255, 0.5)" wrap="off"
                                   placeholder="# 常用：
 RANDOM_IN(val0:Any, val1:Any ...) // 从选项内随机取值
 RANDOM_INT(min:Integer, max:Integer) // 从范围内随机取整数

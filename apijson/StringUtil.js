@@ -279,6 +279,21 @@ var StringUtil = {
     }
     return s.substring(0, maxLen) + '..';
   },
+  PATTERN_PHONE: /"^1(?:3\\d{3}|5[^4\\D]\\d{2}|8\\d{3}|7(?:[0-35-9]\\d{2}|4(?:0\\d|1[0-2]|9\\d))|9[0-35-9]\\d{2}|6[2567]\\d{2}|4(?:(?:10|4[01])\\d{3}|[68]\\d{4}|[579]\\d{2}))\\d{6}$"/g,
+  isPhone: function (s) {
+    if (Number.isSafeInteger(s)) {
+      s = StringUtil.get(s)
+    }
+    return StringUtil.isString(s) && StringUtil.PATTERN_PHONE.test(s)
+  },
+  PATTERN_EMAIL: /"^([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)$"/g,
+  isEmail: function (s) {
+    return StringUtil.isString(s) && StringUtil.PATTERN_EMAIL.test(s)
+  },
+  PATTERN_ID_CARD: /"(^[1-9]\\d{5}(18|19|([23]\\d))\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$)|(^[1-9]\\d{5}\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{2}$)"/g,
+  isIDCard: function (s) {
+    return StringUtil.isString(s) && StringUtil.PATTERN_EMAIL.test(s)
+  },
 
   isUri: function (s) {
     var ind = StringUtil.isNotString(s) ? -1 : s.indexOf('://');

@@ -5710,7 +5710,7 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         this.isHeaderShow = true
-        this.isRandomShow = false // true
+        this.isRandomShow = true
         this.isRandomListShow = false
 
         if (IS_BROWSER && ! isAdmin) {
@@ -5722,7 +5722,7 @@ https://github.com/Tencent/APIJSON/issues
           this.prevInput = vInput.value
           this.prevComment = vComment.value
           this.prevWarning = vWarning.value
-          this.prevRandom = '' // vRandom.value
+          this.prevRandom = vRandom.value
           this.prevHeader = vHeader.value
           this.prevScript = vScript.value
 
@@ -5732,7 +5732,8 @@ https://github.com/Tencent/APIJSON/issues
           vInput.value = JSON.stringify(req, null, '    ')
 
           this.testRandomCount = 1
-          // vRandom.value = `phone: App.account\npassword: App.password\nremember: vRemember.checked`
+          vRandom.value = `remember: vRemember.checked\naccount: App.account\npassword: App.password\nmethodArgs/1: App.account\nmethodArgs/2: App.password`
+           + (StringUtil.isPhone(this.account) ? '\nphone: App.account' : '') + (StringUtil.isEmail(this.account) ? '\nemail: App.account' : '')
         }
 
         this.scripts = newDefaultScript()
@@ -5836,7 +5837,9 @@ https://github.com/Tencent/APIJSON/issues
             var item
             for (var i in this.accounts) {
               item = this.accounts[i]
-              if (item != null && baseUrl == item.baseUrl && req.phone == item.phone) {
+              if (item != null && baseUrl == item.baseUrl && ((req.account == item.account && StringUtil.isNotEmpty(req.account))
+                  || (req.phone == item.phone && StringUtil.isNotEmpty(req.phone) || (req.email == item.email && StringUtil.isNotEmpty(req.email)))
+              )) {
                 recover()
                 alert(req.phone +  ' 已在测试账号中！')
                 // this.currentAccountIndex = i
@@ -5855,8 +5858,7 @@ https://github.com/Tencent/APIJSON/issues
           const loginType = (isLoginShow ? REQUEST_TYPE_JSON : curUser.loginType) || REQUEST_TYPE_JSON
           const loginUrl = (isLoginShow ? this.getBranchUrl() : curUser.loginUrl) || '/login'
           const loginReq = (isLoginShow ? this.getRequest(vInput.value) : curUser.loginReq) || req
-          // const loginRandom = (isLoginShow ? vRandom.value : curUser.loginRandom) || ''
-          const loginRandom = (isLoginShow ? '' : curUser.loginRandom) || ''
+          const loginRandom = (isLoginShow ? vRandom.value : curUser.loginRandom) || ''
           const loginHeader = (isLoginShow ? this.getHeader(vHeader.value) : curUser.loginHeader) || {}
 
           function loginCallback(url, res, err, random) {
@@ -5893,9 +5895,7 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           this.scripts = newDefaultScript()
-          const constJson = loginReq;
-
-          // this.parseRandom(loginReq, loginHeader, loginRandom, 0, true, false, false, function(randomName, constConfig, constJson) {
+          this.parseRandom(loginReq, loginHeader, loginRandom, 0, true, false, false, function(randomName, constConfig, constJson) {
               App.request(isAdminOperation, loginMethod, loginType, baseUrl + loginUrl, constJson, loginHeader, function (url, res, err) {
                 if (App.isEnvCompareEnabled != true) {
                   loginCallback(url, res, err, null, loginMethod, loginType, loginUrl, constJson, loginHeader)
@@ -5923,7 +5923,7 @@ https://github.com/Tencent/APIJSON/issues
                       App.onLoginResponse(isAdminOperation, req, url, res, err, loginMethod, loginType, loginUrl, constJson, loginRandom, loginHeader)
                     }, App.scripts)
               })
-          // })
+          })
         }
       },
 
