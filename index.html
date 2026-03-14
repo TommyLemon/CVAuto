@@ -160,8 +160,10 @@
     <!--<div :class="'side-left side-view-' + baseview">-->
     <div class="side-left" style="padding-bottom: -4px">
         <div v-show="! isTestCaseShow" class="left-bar" >
+            <button class="transfer" id="vOperate" :disabled="isEditResponse" @click="changeOperate()">{{ getOperateName(operate) }}</button>
+            <button v-show="operate != 'HTTP'" class="transfer" id="vTransfer" @click="transfer()">{{ isVideoFirst ? '视频' : '截屏' }}</button>
+            <button v-show="isShowMethod()" class="transfer" style="width: 60px" id="vMethod" :disabled="isEditResponse" @click="changeMethod()">{{ getMethodName(method, type) }}</button>
             <button v-show="isShowType()" class="transfer" id="vType" :disabled="isEditResponse" @click="changeType()">{{ getTypeName(type, method) }}</button>
-	        <button class="transfer" id="vTransfer" @click="transfer()">{{ isVideoFirst ? '视频' : '截屏' }}</button>
             <div style="height: 100%;display: flex;flex-grow: 1">
                 <input class="url" id="vUrlComment" :disabled="isEditResponse" type="text" style="width: 100%; position: absolute; z-index: -100; color: darkseagreen;background: #0000;"  ></input>
                 <textarea class="url" id="vUrl" :disabled="isEditResponse" type="text" @copy="doOnCopy" @paste="doOnPaste" @keyup="doOnKeyUp(event)"

@@ -754,6 +754,7 @@ https://github.com/Tencent/APIJSON/issues
   var OPERATE_TYPE_RECORD = 'RECORD'
   var OPERATE_TYPE_REVIEW = 'REVIEW'
   var OPERATE_TYPE_REPLAY = 'REPLAY'
+  var OPERATE_TYPE_HTTP = 'HTTP'
 
   var PLATFORM_POSTMAN = 'POSTMAN'
   var PLATFORM_SWAGGER = 'SWAGGER'
@@ -1496,10 +1497,12 @@ https://github.com/Tencent/APIJSON/issues
         balance: null //点击更新提示需要判空 0.00
       },
       isVideoFirst: false,
+      operate: OPERATE_TYPE_REVIEW,
+      operates: [ OPERATE_TYPE_RECORD, OPERATE_TYPE_REVIEW, OPERATE_TYPE_REPLAY, OPERATE_TYPE_HTTP ],
       method: HTTP_METHOD_POST,
       methods: null, // HTTP_METHODS,
-      type: OPERATE_TYPE_REVIEW,
-      types: [ OPERATE_TYPE_RECORD, OPERATE_TYPE_REVIEW, OPERATE_TYPE_REPLAY ],
+      type: REQUEST_TYPE_JSON,
+      types: [ REQUEST_TYPE_JSON, REQUEST_TYPE_PARAM, REQUEST_TYPE_FORM, REQUEST_TYPE_DATA ],
       host: 'uigo.x.UIAutoApp', // 'unitauto.test.TestUtil.',
       branch: 'countArray',
       database: 'MYSQL', // 查文档必须，除非后端提供默认配置接口  // 用后端默认的，避免用户总是没有配置就问为什么没有生成文档和注释  'MYSQL',// 'POSTGRESQL',
@@ -2621,12 +2624,23 @@ https://github.com/Tencent/APIJSON/issues
             this.view = 'code'
         }
 
+        var isHttp = random.type == InputUtil.EVENT_TYPE_HTTP
+        this.operate = isHttp ? OPERATE_TYPE_HTTP : this.operate
+
         var currentResponse = parseJSON(response, {}, true)
         var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? currentResponse.screenshot : null)
         vAfter.src = StringUtil.isEmpty(imgUrl) ? vAfter.src : (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
 
         var beforeUrl = StringUtil.trim(((item || {}).TestRecord || {}).screenshot)
         vBefore.src = StringUtil.isEmpty(beforeUrl) ? vBefore.src : (beforeUrl.indexOf('://') >= 0 ? '' : App.server) + '/download?filePath=' + encodeURI(beforeUrl)
+
+        this.method = random.method
+        var format = random.format
+        this.type = HTTP_CONTENT_TYPES.includes(format) ? format : REQUEST_TYPE_PARAM
+        vUrl.value = isHttp ? random.url || vUrl.value : vUrl.value
+        vInput.value = isHttp ? random.request || vInput.value : vInput.value
+
+        this.onChange(false)
       },
       // 根据测试用例/历史记录恢复数据
       restoreRemoteAndTest: function (index, item) {
@@ -2652,9 +2666,9 @@ https://github.com/Tencent/APIJSON/issues
         this.restore(item, ((item || {}).Flow || {}).log, true, test) // FIXME Output.log
       },
       // 根据历史恢复数据
-      restore: function (item, response, isRemote, test) {
+      restore: function (item, response, isRemote, test, isHttp) {
         this.isEditResponse = false
-        this.type = OPERATE_TYPE_REPLAY
+        this.operate = isHttp ? OPERATE_TYPE_HTTP : OPERATE_TYPE_REPLAY
 
         item = item || {}
         var doc = item.Flow || item
@@ -2665,7 +2679,7 @@ https://github.com/Tencent/APIJSON/issues
         var scripts = item.scripts
         if (isRemote) {
             this.randoms = []
-            if (this.type != OPERATE_TYPE_RECORD) {
+            if (this.operate != OPERATE_TYPE_RECORD) {
               this.showRandomList(true, doc)
             }
 
@@ -5654,6 +5668,7 @@ https://github.com/Tencent/APIJSON/issues
       showLogin: function (show, isAdmin) {
         this.isLoginShow = show
         this.isAdminOperation = isAdmin
+        this.operate = OPERATE_TYPE_HTTP
 
         if (show != true) {
           return
@@ -5727,7 +5742,7 @@ https://github.com/Tencent/APIJSON/issues
           this.prevScript = vScript.value
 
           this.method = HTTP_METHOD_POST
-          // this.type = REQUEST_TYPE_JSON
+          this.type = REQUEST_TYPE_JSON
           this.showUrl(isAdmin, '/login') // isAdmin ? '/login' : '/method/invoke')
           vInput.value = JSON.stringify(req, null, '    ')
 
@@ -5816,7 +5831,7 @@ https://github.com/Tencent/APIJSON/issues
 
             if (App.prevUrl != null) {
               App.method = App.prevMethod || HTTP_METHOD_POST
-              // App.type = App.prevType || REQUEST_TYPE_JSON
+              App.type = App.prevType || REQUEST_TYPE_JSON
 
               vUrl.value = App.prevUrl || (baseUrl + '/login') // '/method/invoke')
               vUrlComment.value = App.prevUrlComment || ''
@@ -6424,10 +6439,10 @@ https://github.com/Tencent/APIJSON/issues
       },
 
       isShowMethod: function() {
-        return this.methods == null || this.methods.length != 1
+        return this.operate == OPERATE_TYPE_HTTP && (this.methods == null || this.methods.length != 1)
       },
       isShowType: function() {
-        return this.types == null || this.types.length != 1
+        return this.operate == OPERATE_TYPE_HTTP && (this.types == null || this.types.length != 1)
       },
 
       /**请求类型切换
@@ -6459,25 +6474,101 @@ https://github.com/Tencent/APIJSON/issues
       },
       /**获取显示的请求类型名称
        */
-      getTypeName: function (type) {
-        type = type || OPERATE_TYPE_REPLAY
-        return type == OPERATE_TYPE_REVIEW ? '查看' : (type == OPERATE_TYPE_REPLAY ? '回放' : '录制')
+      getTypeName: function (type, method) {
+        var t = type
+        if (StringUtil.isEmpty(t, true)) {
+          if (StringUtil.isEmpty(method, true)) {
+            t = REQUEST_TYPE_JSON
+          }
+          else if (method == REQUEST_TYPE_GET) {
+            t = REQUEST_TYPE_PARAM
+          }
+          else if (method == REQUEST_TYPE_POST) {
+            t = REQUEST_TYPE_JSON
+          }
+          else {
+            t = REQUEST_TYPE_DATA
+          }
+        }
+
+//        var methods = this.methods
+//        if (this.isShowMethod()) {
+//          return t
+//        }
+//
+//        var ts = this.types
+//        if (ts == null || ts.length <= 1 || (ts.length <= 2 && ts.indexOf(REQUEST_TYPE_PARAM) >= 0 && ts.indexOf(REQUEST_TYPE_GRPC) < 0)) {
+//          return t == REQUEST_TYPE_PARAM ? 'GET' : 'POST'
+//        }
+        return t
       },
       /**请求类型切换
        */
       changeType: function () {
-        var types = this.types || [OPERATE_TYPE_RECORD, OPERATE_TYPE_REVIEW, OPERATE_TYPE_REPLAY]
-        var count = types.length
-        if (count > 1) {
-          var index = types.indexOf(this.type)
-          index++;
-          this.type = types[index % count]
+        var types = this.types
+        var count = types == null ? 0 : types.length
+        if (count <= 0) {
+          types = HTTP_CONTENT_TYPES
+          count = HTTP_CONTENT_TYPES.length
         }
 
-        CodeUtil.type = this.type;
+        if (count > 1) {
+          var index = types.indexOf(this.type) + 1
+          this.type = types[index % count]
+          CodeUtil.type = this.type;
+        }
+
+        var url = StringUtil.trim(vUrl.value).replaceAll('\n', '')
+        var index = url.indexOf('?')
+        if (index >= 0) {
+          var paramObj = getRequestFromURL(url.substring(index), true)
+          vUrl.value = url.substring(0, index)
+          if (paramObj != null && JSONObject.isEmpty(paramObj) == false) {
+            var originVal = this.getRequest(vInput.value, {});
+            var isConflict = false;
+
+            if (JSONObject.isEmpty(originVal) == false) {
+              for (var k in paramObj) {
+                if (originVal.hasOwnProperty(k)) {
+                  isConflict = true;
+                  break;
+                }
+              }
+            }
+
+            if (isConflict) {
+              vInput.value = JSON.stringify(paramObj, null, '    ') + '\n\n// FIXME 从 URL 上的参数转换过来，需要与下面原来的字段合并为一个 JSON：\n\n' + StringUtil.get(vInput.value)
+            }
+            else {
+              vInput.value = JSON.stringify(Object.assign(originVal, paramObj), null, '    ')
+            }
+          }
+          clearTimeout(handler)  //解决 vUrl.value 和 vInput.value 变化导致刷新，而且会把 vInput.value 重置，加上下面 onChange 再刷新就卡死了
+        }
+
+        this.onChange(false);
+      },
+
+      /**获取显示的操作类型名称
+       */
+      getOperateName: function (operate) {
+        operate = operate || OPERATE_TYPE_REPLAY
+        return operate == OPERATE_TYPE_HTTP ? 'HTTP' : (operate == OPERATE_TYPE_REVIEW ? '查看' : (operate == OPERATE_TYPE_REPLAY ? '回放' : '录制'))
+      },
+      /**操作类型切换
+       */
+      changeOperate: function () {
+        var operates = this.operates || [OPERATE_TYPE_RECORD, OPERATE_TYPE_REVIEW, OPERATE_TYPE_REPLAY]
+        var count = operates.length
+        if (count > 1) {
+          var index = operates.indexOf(this.operate)
+          index++;
+          this.operate = operates[index % count]
+        }
+
         this.onChange(false);
 
-        if (this.type == OPERATE_TYPE_RECORD) {
+        if (this.operate == OPERATE_TYPE_RECORD) {
           this.isRandomListShow = false
           this.randoms = []
           this.isRandomListShow = true
@@ -6486,7 +6577,6 @@ https://github.com/Tencent/APIJSON/issues
           this.showRandomList(true, (this.currentRemoteItem || {}).Flow)
         }
       },
-
 
       changeScriptType: function (type) {
         type = type || 'case'
@@ -8465,8 +8555,7 @@ https://github.com/Tencent/APIJSON/issues
       /**发送请求
        */
       send: function(isAdminOperation, callback, caseScript_, accountScript_, globalScript_, ignorePreScript) {
-        
-        if (this.type == null || this.type == OPERATE_TYPE_RECORD || this.type == OPERATE_TYPE_REPLAY) {
+        if (this.operate != OPERATE_TYPE_HTTP) {
           this.onClickTestRandom()
           return
         }
@@ -8476,102 +8565,102 @@ https://github.com/Tencent/APIJSON/issues
           return
         }
 
-        // if (StringUtil.isEmpty(this.host, true)) {
-        //   var url = StringUtil.get(vUrl.value)
-        //   if (url.startsWith('/') != true && url.startsWith('http://') != true && url.startsWith('https://') != true) {
-        //     alert('URL 缺少 http:// 或 https:// 前缀，可能不完整或不合法，\n可能使用同域的 Host，很可能访问出错！')
-        //   }
-        // }
-        // else {
-        //   if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
-        //     alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
-        //   }
-        // }
-        //
-        // this.onHandle(vInput.value)
-        //
-        // clearTimeout(handler)
-        //
-        // if (this.isEditResponse) {
-        //   this.onChange(false)
-        //   return
-        // }
-        //
-        // var header
-        // try {
-        //   header = this.getHeader(vHeader.value)
-        // } catch (e) {
-        //   // alert(e.message)
-        //   return
-        // }
-        //
-        // var req = this.getRequest(vInput.value, {})
-        //
-        // var url = this.getUrl()
-        //
-        // vOutput.value = "requesting... \nURL = " + url
-        //
-        // errHandler = function () {
-        //   vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
-        // }
-        // setTimeout(errHandler, 5000)
-        // this.view = 'output';
-        //
-        // var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
-        //
-        // var method = this.isShowMethod() ? this.method : null
-        //
-        // this.setBaseUrl()
-        // this.request(isAdminOperation, method, this.type, url, req, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
-        //
-        // var baseUrls = this.getCache('', 'baseUrls', [])
-        // var bu = this.getBaseUrl(url)
-        // if (StringUtil.isNotEmpty(bu, true) && baseUrls.indexOf(bu) < 0) {
-        //   baseUrls.push(bu)
-        //   this.saveCache('', 'baseUrls', baseUrls)
-        //   var projectHosts = this.projectHosts || []
-        //   var projectHost = this.projectHost || {}
-        //   var find = false
-        //   for (var j = 0; j < projectHosts.length; j ++) {
-        //       var pjt = projectHosts[j]
-        //       if (pjt == null || StringUtil.isEmpty(pjt.host, true)) {
-        //          continue
-        //       }
-        //
-        //       if (pjt.url == projectHost.host) {
-        //           find = true
-        //           break
-        //       }
-        //   }
-        //
-        //   if (find != true) {
-        //      projectHosts.push({host: bu, project: projectHost.project})
-        //      this.projectHosts = projectHosts
-        //      this.saveCache('', 'projectHosts', projectHosts)
-        //   }
-        //
-        // }
-        //
-        // this.locals = this.locals || []
-        // if (this.locals.length >= 1000) { //最多1000条，太多会很卡
-        //   this.locals.splice(900, this.locals.length - 900)
-        // }
-        // var path = this.getMethod()
-        // this.locals.unshift({
-        //   'Flow': {
-        //     'userId': this.User.id,
-        //     'project': (this.projectHost || {}).project,
-        //     'name': this.formatDateTime() + ' ' + (this.urlComment || StringUtil.trim(req.tag)),
-        //     'operation': CodeUtil.getOperation(path, req),
-        //     'method': method,
-        //     'type': this.type,
-        //     'url': '/' + path,
-        //     'request': JSON.stringify(req, null, '    '),
-        //     'header': vHeader.value,
-        //     'scripts': this.scripts
-        //   }
-        // })
-        // this.saveCache('', 'locals', this.locals)
+        if (StringUtil.isEmpty(this.host, true)) {
+          var url = StringUtil.get(vUrl.value)
+          if (url.startsWith('/') != true && url.startsWith('http://') != true && url.startsWith('https://') != true) {
+            alert('URL 缺少 http:// 或 https:// 前缀，可能不完整或不合法，\n可能使用同域的 Host，很可能访问出错！')
+          }
+        }
+        else {
+          if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
+            alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
+          }
+        }
+
+        this.onHandle(vInput.value)
+
+        clearTimeout(handler)
+
+        if (this.isEditResponse) {
+          this.onChange(false)
+          return
+        }
+
+        var header
+        try {
+          header = this.getHeader(vHeader.value)
+        } catch (e) {
+          // alert(e.message)
+          return
+        }
+
+        var req = this.getRequest(vInput.value, {})
+
+        var url = this.getUrl()
+
+        vOutput.value = "requesting... \nURL = " + url
+
+        errHandler = function () {
+          vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
+        }
+        setTimeout(errHandler, 5000)
+        this.view = 'output';
+
+        var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
+
+        var method = this.isShowMethod() ? this.method : null
+
+        this.setBaseUrl()
+        this.request(isAdminOperation, method, this.type, url, req, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
+
+        var baseUrls = this.getCache('', 'baseUrls', [])
+        var bu = this.getBaseUrl(url)
+        if (StringUtil.isNotEmpty(bu, true) && baseUrls.indexOf(bu) < 0) {
+          baseUrls.push(bu)
+          this.saveCache('', 'baseUrls', baseUrls)
+          var projectHosts = this.projectHosts || []
+          var projectHost = this.projectHost || {}
+          var find = false
+          for (var j = 0; j < projectHosts.length; j ++) {
+              var pjt = projectHosts[j]
+              if (pjt == null || StringUtil.isEmpty(pjt.host, true)) {
+                 continue
+              }
+
+              if (pjt.url == projectHost.host) {
+                  find = true
+                  break
+              }
+          }
+
+          if (find != true) {
+             projectHosts.push({host: bu, project: projectHost.project})
+             this.projectHosts = projectHosts
+             this.saveCache('', 'projectHosts', projectHosts)
+          }
+
+        }
+
+        this.locals = this.locals || []
+        if (this.locals.length >= 1000) { //最多1000条，太多会很卡
+          this.locals.splice(900, this.locals.length - 900)
+        }
+        var path = this.getMethod()
+        this.locals.unshift({
+          'Flow': {
+            'userId': this.User.id,
+            'project': (this.projectHost || {}).project,
+            'name': this.formatDateTime() + ' ' + (this.urlComment || StringUtil.trim(req.tag)),
+            'operation': CodeUtil.getOperation(path, req),
+            'method': method,
+            'type': this.type,
+            'url': '/' + path,
+            'request': JSON.stringify(req, null, '    '),
+            'header': vHeader.value,
+            'scripts': this.scripts
+          }
+        })
+        this.saveCache('', 'locals', this.locals)
       },
 
       adminRequest: function (url, req, header, callback) {
@@ -10601,7 +10690,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.sameIds = []
         this.missTruth = {}
         
-        const isRecord = this.type == OPERATE_TYPE_RECORD
+        const isRecord = this.operate == OPERATE_TYPE_RECORD
         if (testList != true && testSubList != true) {
           this.testRandomProcess = ''
           this.testRandomWithText(show, callback)
@@ -11839,7 +11928,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.isStatisticsEnabled = true
         this.reportId = new Date().getTime()
         this.caseShowType = 1
-        this.type = OPERATE_TYPE_REPLAY
+        this.operate = OPERATE_TYPE_REPLAY
 
         this.moveSplit(0.6)
 
@@ -12943,6 +13032,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var isBefore = item.showType == 'before'
         // FIXME 向前寻找最近的
         if (isRandom) {
+          var isHttp = random.type == InputUtil.EVENT_TYPE_HTTP
+          this.operate = isHttp ? OPERATE_TYPE_HTTP : this.operate
+
           var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? (currentResponse.TestRecord || {}).screenshot : null)
           vAfter.src = StringUtil.isEmpty(imgUrl) ? vAfter.src : (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
 
@@ -12950,6 +13042,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           vBefore.src = StringUtil.isEmpty(beforeUrl) ? vBefore.src : (beforeUrl.indexOf('://') >= 0 ? '' : this.server) + '/download?filePath=' + encodeURI(beforeUrl)
 
           item.img = isBefore ? vBefore.src : vAfter.src
+
+          this.method = random.method
+          var format = random.format
+          this.type = HTTP_CONTENT_TYPES.includes(format) ? format : REQUEST_TYPE_PARAM
+          vUrl.value = isHttp ? random.url || vUrl.value : vUrl.value
+          vInput.value = isHttp ? random.request || vInput.value : vInput.value
+
+          this.onChange(false)
         }
 
         if (pathKeys.length > 0) {
