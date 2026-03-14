@@ -3014,6 +3014,43 @@ var JSONResponse = {
     }
 
     return node;
+  },
+
+  getId: function(user) {
+    if (! JSONResponse.isObject(user)) {
+      return null;
+    }
+    return user.id || user.ID ||user.userId || user.userID || user.user_id || user.userid;
+  },
+  getName: function(user) {
+    if (! JSONResponse.isObject(user)) {
+      return null;
+    }
+    return user.name || user.nickname || user.nickName || user.user_name || user.username || user.userName;
+  },
+  getPhone: function(user) {
+    if (! JSONResponse.isObject(user)) {
+      return null;
+    }
+    return user.mobile || user.mobileNo || user.mobileNum || user.mobileNumber || user.phone || user.phoneNo || user.phoneNum || user.phoneNumber || user.mobile_no || user.mobile_num || user.mobile_number || user.phone_no || user.phone_num || user.phone_number;
+  },
+  getEmail: function(user) {
+    if (! JSONResponse.isObject(user)) {
+      return null;
+    }
+    return user.email || user.emailAddr || user.emailAddress || user.email_addr || user.email_address || user.mail || user.mailAddr || user.mailAddress || user.mail_addr || user.mail_address;
+  },
+  getAccount: function(user) {
+    if (! JSONResponse.isObject(user)) {
+      return null;
+    }
+    return user.account || JSONResponse.getPhone(user) || JSONResponse.getEmail(user);
+  },
+  getPassword: function(user) {
+    if (! JSONResponse.isObject(user)) {
+      return null;
+    }
+    return user.password || user.passcode || user.pwd || user.pass;
   }
 
 };

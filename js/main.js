@@ -1856,8 +1856,11 @@ https://github.com/Tencent/APIJSON/issues
         }
       },
       getUrl: function () {
-        var url = StringUtil.get(this.host) + vUrl.value
-        return url.replaceAll(' ', '')
+        var url = StringUtil.trim(vUrl.value)
+        if (! url.includes('://')) {
+          url = StringUtil.noBlank(this.host) + (url.startsWith('/') ? url : '/' + url)
+        }
+        return StringUtil.noBlank(url)
       },
       //获取基地址
       getBaseUrl: function (url_, fixed) {
@@ -4394,12 +4397,13 @@ https://github.com/Tencent/APIJSON/issues
           var accounts = this.accounts || []
           var accountMap = {}
           for (var i = 0; i < accounts.length; i ++) {
-              var account = accounts[i]
-              if (account == null || account.phone == null) {
+              var item = accounts[i]
+              var account = JSONResponse.getAccount(item);
+              if (item == null || StringUtil.isEmpty(account)) {
                 continue
               }
 
-              var bu = account.baseUrl || baseUrl
+              var bu = item.baseUrl || baseUrl
               var list = accountMap[bu] || []
 
               var find = false
@@ -4409,14 +4413,14 @@ https://github.com/Tencent/APIJSON/issues
                       continue
                   }
 
-                  if (act.baseUrl == bu && act.phone == account.phone) {
+                  if (act.baseUrl == bu && JSONResponse.getAccount(act) != account) {
                       find = true
                       break
                   }
               }
 
               if (find != true) {
-                   list.push(account)
+                   list.push(item)
                    accountMap[bu] = list
               }
           }
@@ -4492,7 +4496,7 @@ https://github.com/Tencent/APIJSON/issues
                 var resData = res.data || {}
                 var data = parseJSON(resData['return'] || JSONResponse.getValByPath(resData, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || resData
                 var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data || data
-                if (user == null) {
+                if (! JSONResponse.isObject(user)) {
                   if (callback != null) {
                     callback(false, index, err)
                   }
@@ -4502,9 +4506,9 @@ https://github.com/Tencent/APIJSON/issues
                   baseUrl = App.getBaseUrl(App.projectHost.host)
 
                   item.baseUrl = item.baseUrl || baseUrl
-                  item.id = user.id || user.userId || user.user_id || user.userid  // TODO 工具函数直接遍历 key 判断可能的名称
-                  item.name = user.name || user.nickname || user.nickName || user.user_name || user.username || user.userName
-//                  item.phone = user.phone = user.mobile || user.mobileNo || user.mobileNum || user.mobileNumber || user.phone || user.phoneNo || user.phoneNum || user.phoneNumber || user.mobile_no || user.mobile_num || user.mobile_number || user.phone_no || user.phone_num || user.phone_number
+                  item.id = JSONResponse.getId(user)  // TODO 工具函数直接遍历 key 判断可能的名称
+                  item.name = JSONResponse.getName(user)
+//                  item.phone = JSONResponse.getPhone(user)
                   item.remember = data.remember
                   item.isLoggedIn = true
                   item.token = headers.token || headers.Token || data.token || data.Token || user.token || user.Token || user.accessToken || user.access_token || data.accessToken || data.access_token
@@ -5362,6 +5366,8 @@ https://github.com/Tencent/APIJSON/issues
 
       //显示远程的随机配置文档
       showRandomList: function (show, item, isSub, callback) {
+        this.operate = show && this.operate == OPERATE_TYPE_HTTP ? OPERATE_TYPE_REPLAY : this.operate
+        this.isHeaderShow = show ? false : this.isHeaderShow
         this.isRandomEditable = false
         this.isRandomListShow = show && ! isSub
         this.isRandomSubListShow = show && isSub
@@ -5677,16 +5683,17 @@ https://github.com/Tencent/APIJSON/issues
         var user = isAdmin ? this.User : null  // add account   this.accounts[this.currentAccountIndex]
 
         // alert("showLogin  isAdmin = " + isAdmin + "; user = \n" + JSON.stringify(user, null, '    '))
-        if (user == null || StringUtil.isEmpty(user.phone, true)) {
+        if (user == null || StringUtil.isEmpty(user.account, true)) {
           user = {
+            account: '13000082001',
             phone: '13000082001',
             password: '123456'
           }
         }
 
         this.setRememberLogin(user.remember)
-        this.account = user.phone
-        this.password = user.password
+        var account = this.account = JSONResponse.getAccount(user)
+        var password = this.password = JSONResponse.getPassword(user)
 
         var schemas = StringUtil.isEmpty(this.schema, true) ? null : StringUtil.split(this.schema)
         var pkg = (this.getPackage(this.host) || 'uigo.x') + '.activity_fragment'
@@ -5695,8 +5702,8 @@ https://github.com/Tencent/APIJSON/issues
         const req = isAdmin ? {
           type: 0, // 登录方式，非必须 0-密码 1-验证码
           // asDBAccount: ! isAdminOperation,  // 直接 /execute 接口传 account, password
-          phone: this.account,
-          password: this.password,
+          phone: account,
+          password: password,
           version: 1, // 全局默认版本号，非必须
           remember: vRemember.checked,
           format: false,
@@ -5707,14 +5714,14 @@ https://github.com/Tencent/APIJSON/issues
             '@schema': schemas == null || schemas.length != 1 ? undefined : this.schema
           }
         } : {
-          account: this.account,
-          password: this.password,
+          account: account,
+          password: password,
           "package": pkg, // 'uiauto',
           "class": cls, // 'UIAutoApp',
           "classArgs": [],
           "reuse": true,
           "method": 'login',
-          "methodArgs": ["int:0", this.account, this.password, {
+          "methodArgs": ["int:0", account, password, {
             'type': 'uigo.x.HttpManager$OnHttpResponseListener',
             'value': {
               'onHttpResponse(int,String,Throwable)': {
@@ -5731,6 +5738,7 @@ https://github.com/Tencent/APIJSON/issues
         if (IS_BROWSER && ! isAdmin) {
           this.prevMethod = this.method
           this.prevType = this.type
+          this.prevOperate = this.operate
 
           this.prevUrl = vUrl.value
           this.prevUrlComment = vUrlComment.value
@@ -5747,7 +5755,7 @@ https://github.com/Tencent/APIJSON/issues
           vInput.value = JSON.stringify(req, null, '    ')
 
           this.testRandomCount = 1
-          vRandom.value = `remember: vRemember.checked\naccount: App.account\npassword: App.password\nmethodArgs/1: App.account\nmethodArgs/2: App.password`
+          vRandom.value = `remember: vRemember.checked\naccount: App.account || req.account\npassword: App.password || req.password\nmethodArgs/1: App.account || req.account\nmethodArgs/2: App.password || req.password`
            + (StringUtil.isPhone(this.account) ? '\nphone: App.account' : '') + (StringUtil.isEmail(this.account) ? '\nemail: App.account' : '')
         }
 
@@ -5778,9 +5786,12 @@ https://github.com/Tencent/APIJSON/issues
         this.isEditResponse = false
         var schemas = StringUtil.isEmpty(this.schema, true) ? null : StringUtil.split(this.schema)
 
+        const isLoginShow = this.isLoginShow
+        var curUser = this.getCurrentAccount() || {}
+
         var pkg = (this.getPackage(this.host) || 'uigo.x') + '.activity_fragment'
-        const account = this.account
-        const password = this.password
+        const account = isLoginShow ? this.account : JSONResponse.getAccount(curUser)
+        const password = isLoginShow ? this.password : JSONResponse.getPassword(curUser)
         var cls = 'LoginActivity'
         const req = isAdminOperation ? {
           type: 0, // 登录方式，非必须 0-密码 1-验证码
@@ -5832,6 +5843,7 @@ https://github.com/Tencent/APIJSON/issues
             if (App.prevUrl != null) {
               App.method = App.prevMethod || HTTP_METHOD_POST
               App.type = App.prevType || REQUEST_TYPE_JSON
+              App.operate = App.prevOperate || OPERATE_TYPE_REPLAY
 
               vUrl.value = App.prevUrl || (baseUrl + '/login') // '/method/invoke')
               vUrlComment.value = App.prevUrlComment || ''
@@ -5852,9 +5864,7 @@ https://github.com/Tencent/APIJSON/issues
             var item
             for (var i in this.accounts) {
               item = this.accounts[i]
-              if (item != null && baseUrl == item.baseUrl && ((req.account == item.account && StringUtil.isNotEmpty(req.account))
-                  || (req.phone == item.phone && StringUtil.isNotEmpty(req.phone) || (req.email == item.email && StringUtil.isNotEmpty(req.email)))
-              )) {
+              if (item != null && baseUrl == item.baseUrl && JSONResponse.getAccount(item) == account) {
                 recover()
                 alert(req.phone +  ' 已在测试账号中！')
                 // this.currentAccountIndex = i
@@ -5867,8 +5877,6 @@ https://github.com/Tencent/APIJSON/issues
 
           this.scripts = newDefaultScript()
 
-          const isLoginShow = this.isLoginShow
-          var curUser = this.getCurrentAccount() || {}
           const loginMethod = (isLoginShow ? this.method : curUser.loginMethod) || HTTP_METHOD_POST
           const loginType = (isLoginShow ? REQUEST_TYPE_JSON : curUser.loginType) || REQUEST_TYPE_JSON
           const loginUrl = (isLoginShow ? this.getBranchUrl() : curUser.loginUrl) || '/login'
@@ -5886,7 +5894,8 @@ https://github.com/Tencent/APIJSON/issues
 
             if (App.prevUrl != null) {
               App.method = App.prevMethod || HTTP_METHOD_POST
-              // App.type = App.prevType || REQUEST_TYPE_JSON
+              App.type = App.prevType || REQUEST_TYPE_JSON
+              App.operate = App.prevOperate || OPERATE_TYPE_REPLAY
 
               vUrl.value = App.prevUrl || (baseUrl + '/login') // '/method/invoke')
               vUrlComment.value = App.prevUrlComment || ''
@@ -5956,9 +5965,13 @@ https://github.com/Tencent/APIJSON/issues
           else {
             if (user != null) {
               var headers = res.headers || {}
+              var phone = JSONResponse.getPhone(req) || JSONResponse.getPhone(user)
+              var email = JSONResponse.getEmail(req) || JSONResponse.getEmail(user)
               user.remember = data.remember
-              user.phone = req.mobile || req.mobileNo || req.mobileNum || req.mobileNumber || req.phone || req.phoneNo || req.phoneNum || req.phoneNumber || req.mobile_no || req.mobile_num || req.mobile_number || req.phone_no || req.phone_num || req.phone_number
-              user.password = req.password || this.password
+              user.phone = phone || (StringUtil.isPhone(this.account) ? this.account : null)
+              user.email = email || (StringUtil.isEmail(this.account) ? this.account : null)
+              user.account = JSONResponse.getAccount(req) || user.phone || user.email || this.account
+              user.password = JSONResponse.getPassword(req) || this.password
               user.token = headers.token || headers.Token || data.token || data.Token || user.token || user.Token || user.accessToken || user.access_token || data.accessToken || data.access_token
               user.cookie = res.cookie || headers.cookie || headers.Cookie || headers['set-cookie'] || headers['Set-Cookie']
               this.User = user
@@ -5990,17 +6003,20 @@ https://github.com/Tencent/APIJSON/issues
           //由login按钮触发，不能通过callback回调来实现以下功能
           var resData = res.data || {}
           var data = parseJSON(resData['return'] || JSONResponse.getValByPath(resData, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || resData
-          if (JSONResponse.isSuccess(data) || typeof data[JSONResponse.KEY_CODE] == 'undefined') {
+          var user = JSONResponse.isObject(data) ? data.user || data.User || data.data || data.info || data.member || data : data
+          if (JSONResponse.isObject(user)) { //  || typeof data[JSONResponse.KEY_CODE] == 'undefined') {
             var headers = res.headers || {}
-            var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data || data || {}
+            var phone = JSONResponse.getPhone(req) || JSONResponse.getPhone(user) || (StringUtil.isPhone(this.account) ? this.account : null)
+            var email = JSONResponse.getEmail(req) || JSONResponse.getEmail(user) || (StringUtil.isEmail(this.account) ? this.account : null)
             this.accounts.push({
               isLoggedIn: true,
               baseUrl: this.getBaseUrl(),
-              id: user.id,
-              name: user.name || user.nickname || user.nickName || user.user_name || user.username || user.userName,
-              phone: req.mobile || req.mobileNo || req.mobileNum || req.mobileNumber || req.phone || req.phoneNo || req.phoneNum || req.phoneNumber || req.mobile_no || req.mobile_num || req.mobile_number || req.phone_no || req.phone_num || req.phone_number || user.phone,
-              email: req.email || req.emailAddr || req.emailAddress || req.email_addr || req.email_address || user.email || user.emailAddr || user.emailAddress || user.email_addr || user.email_address,
-              password: req.password || this.password,
+              id: JSONResponse.getId(user),
+              name: JSONResponse.getName(user),
+              phone: phone,
+              email: email,
+              account: JSONResponse.getAccount(req) || phone || email,
+              password: JSONResponse.getPassword(req) || this.password,
               remember: data.remember,
               loginMethod: loginMethod,
               loginType: loginType,
