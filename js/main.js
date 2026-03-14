@@ -2628,7 +2628,8 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         var isHttp = random.type == InputUtil.EVENT_TYPE_HTTP
-        this.operate = isHttp ? OPERATE_TYPE_HTTP : this.operate
+        this.prevOperate = this.prevOperate || (this.operate != OPERATE_TYPE_HTTP ? this.operate : (StringUtil.isEmpty(this.randoms) ? OPERATE_TYPE_RECORD : OPERATE_TYPE_REPLAY))
+        this.operate = isHttp ? OPERATE_TYPE_HTTP : this.prevOperate || this.operate
 
         var currentResponse = parseJSON(response, {}, true)
         var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? currentResponse.screenshot : null)
@@ -13049,7 +13050,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         // FIXME 向前寻找最近的
         if (isRandom) {
           var isHttp = random.type == InputUtil.EVENT_TYPE_HTTP
-          this.operate = isHttp ? OPERATE_TYPE_HTTP : this.operate
+          this.prevOperate = this.prevOperate || (this.operate != OPERATE_TYPE_HTTP ? this.operate : (StringUtil.isEmpty(this.randoms) ? OPERATE_TYPE_RECORD : OPERATE_TYPE_REPLAY))
+          this.operate = isHttp ? OPERATE_TYPE_HTTP : this.prevOperate || this.operate
 
           var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? (currentResponse.TestRecord || {}).screenshot : null)
           vAfter.src = StringUtil.isEmpty(imgUrl) ? vAfter.src : (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
