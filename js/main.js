@@ -4475,7 +4475,8 @@ https://github.com/Tencent/APIJSON/issues
               this.login(false, function (url, res, err) {
                 App.onResponse(url, res, err)
 
-                var data = parseJSON(JSONResponse.getValByPath(res.data, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || res.data || {}
+                var resData = res.data || {}
+                var data = parseJSON(resData['return'] || JSONResponse.getValByPath(resData, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || resData
                 var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data || data
                 if (user == null) {
                   if (callback != null) {
@@ -5691,12 +5692,14 @@ https://github.com/Tencent/APIJSON/issues
             '@schema': schemas == null || schemas.length != 1 ? undefined : this.schema
           }
         } : {
+          account: this.account,
+          password: this.password,
           "package": pkg, // 'uiauto',
           "class": cls, // 'UIAutoApp',
           "classArgs": [],
           "reuse": true,
           "method": 'login',
-          "methodArgs": ["int:0", "String:" + this.account, "String:" + this.password, {
+          "methodArgs": ["int:0", this.account, this.password, {
             'type': 'uigo.x.HttpManager$OnHttpResponseListener',
             'value': {
               'onHttpResponse(int,String,Throwable)': {
@@ -5725,7 +5728,7 @@ https://github.com/Tencent/APIJSON/issues
 
           this.method = HTTP_METHOD_POST
           // this.type = REQUEST_TYPE_JSON
-          this.showUrl(isAdmin, isAdmin ? '/login' : '/method/invoke')
+          this.showUrl(isAdmin, '/login') // isAdmin ? '/login' : '/method/invoke')
           vInput.value = JSON.stringify(req, null, '    ')
 
           this.testRandomCount = 1
@@ -5778,12 +5781,14 @@ https://github.com/Tencent/APIJSON/issues
             '@schema': schemas == null || schemas.length != 1 ? undefined : this.schema
           }
         } : {
+          account: account,
+          password: password,
           "package": pkg, // 'uiauto',
           "class": cls, // 'UIAutoApp',
           "classArgs": [], // "String:" + account],
           "reuse": true,
           "method": 'login',
-          "methodArgs": ["int:0", "String:" + account, "String:" + password, {
+          "methodArgs": ["int:0", account, password, {
             'type': 'uigo.x.HttpManager$OnHttpResponseListener',
             'value': {
               'onHttpResponse(int,String,Throwable)': {
@@ -5812,7 +5817,7 @@ https://github.com/Tencent/APIJSON/issues
               App.method = App.prevMethod || HTTP_METHOD_POST
               // App.type = App.prevType || REQUEST_TYPE_JSON
 
-              vUrl.value = App.prevUrl || (baseUrl + '/invoke/method')
+              vUrl.value = App.prevUrl || (baseUrl + '/login') // '/method/invoke')
               vUrlComment.value = App.prevUrlComment || ''
               vComment.value = App.prevComment || ''
               vWarning.value = App.prevWarning || ''
@@ -5866,7 +5871,7 @@ https://github.com/Tencent/APIJSON/issues
               App.method = App.prevMethod || HTTP_METHOD_POST
               // App.type = App.prevType || REQUEST_TYPE_JSON
 
-              vUrl.value = App.prevUrl || (baseUrl + '/method/invoke')
+              vUrl.value = App.prevUrl || (baseUrl + '/login') // '/method/invoke')
               vUrlComment.value = App.prevUrlComment || ''
               vComment.value = App.prevComment || ''
               vWarning.value = App.prevWarning || ''
@@ -5968,7 +5973,8 @@ https://github.com/Tencent/APIJSON/issues
           this.onResponse(url, res, err)
 
           //由login按钮触发，不能通过callback回调来实现以下功能
-          var data = parseJSON(JSONResponse.getValByPath(res.data, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || res.data
+          var resData = res.data || {}
+          var data = parseJSON(resData['return'] || JSONResponse.getValByPath(resData, StringUtil.split('methodArgs/3/value/call(){}/onHttpResponse(int,String,Throwable)/0/methodArgs/1/value', '/'))) || resData
           if (JSONResponse.isSuccess(data) || typeof data[JSONResponse.KEY_CODE] == 'undefined') {
             var headers = res.headers || {}
             var user = data.user || data.userObj || data.userObject || data.userRsp || data.userResp || data.userBean || data.userData || data.data || data.User || data.Data || data || {}
@@ -6101,13 +6107,15 @@ https://github.com/Tencent/APIJSON/issues
         }
         else {
           this.scripts = newDefaultScript()
-          this.showUrl(isAdminOperation, '/logout')
-          vInput.value = JSON.stringify(req, null, '    ')
-          this.method = HTTP_METHOD_POST
+          // this.showUrl(isAdminOperation, '/logout')
+          // vInput.value = JSON.stringify(req, null, '    ')
+          // this.method = HTTP_METHOD_POST
           // this.type = REQUEST_TYPE_JSON
           this.showTestCase(false, this.isLocalShow)
           this.onChange(false)
-          this.send(isAdminOperation, function (url, res, err) {
+          // this.send(isAdminOperation, function (url, res, err) {
+          this.request(isAdminOperation, HTTP_METHOD_POST, REQUEST_TYPE_JSON, '/logout'
+              , req, this.getHeader(vHeader.value), function (url_, res_, err_) {
             if (App.isEnvCompareEnabled != true) {
               if (callback) {
                 callback(url, res, err)
