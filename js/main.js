@@ -3140,7 +3140,7 @@ https://github.com/Tencent/APIJSON/issues
             if (isEditResponse) {
               inputObj.code = code_
             }
-          } else if (this.isRandomShow || this.isRandomSubListShow) {
+          } else if (this.isRandomShow && this.isRandomSubListShow) {
             this.exportChainApiCase(this.exTxt.name, this.isRandomSubListShow, this.isRandomSubListShow ? this.randomSubs : this.randoms)
             return
           }
@@ -3161,19 +3161,23 @@ https://github.com/Tencent/APIJSON/issues
           currentResponse.code = code;
           currentResponse.throw = thrw;
 
-          var config = '' // vRandom.value;
+          const config = vRandom.value;
 
           var callback = function (randomName, constConfig, constJson) {
             const userId = App.User.id;
+            const input = (App.currentRandomItem || {}).Input || {}
+            const randomId = input.id || 0;
             const methods = App.methods;
             const method = App.isShowMethod() ? App.method : null;
             const extName = App.exTxt.name;
             const baseUrl = App.getBaseUrl();
-            const url = App.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
+            var isPost = (randomId <= 0 || ! isExportRandom) && (isEditResponse || did == null)
+            const url = isPost ? '/post' : '/put';
             const req = isExportRandom && btnIndex <= 0 ? {
               format: false,
               'Input': {
                 // userId: userId,
+                id: randomId,
                 toId: 0,
                 chainGroupId: cgId,
                 chainId: cId,
@@ -3182,7 +3186,7 @@ https://github.com/Tencent/APIJSON/issues
                 name: extName,
                 config: config
               },
-              'TestRecord': {
+              'TestRecord': isPost ? {
                 // 'userId': userId,
                 'documentId': did,
                 'host': StringUtil.isEmpty(baseUrl, true) ? null : baseUrl,
@@ -3190,7 +3194,7 @@ https://github.com/Tencent/APIJSON/issues
                 'chainId': cId,
                 'response': rawRspStr,
                 'standard': isML ? JSON.stringify(stddObj) : null
-              },
+              } : null,
               'tag': 'Input'
             } : {
               format: false,
@@ -3208,8 +3212,8 @@ https://github.com/Tencent/APIJSON/issues
                 'imei': 1234,
                 'img': "http://test.url",
                 'log': (currentResponse.type || App.type) || null,
-                  // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
-                },
+                 // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
+              },
               'tag': 'Flow'
             }
 
@@ -3220,15 +3224,14 @@ https://github.com/Tencent/APIJSON/issues
 
               if (isExportRandom && btnIndex <= 0) {
                 if (JSONResponse.isSuccess(data)) {
-                  App.randoms = []
+                  input.config = config
+                  App.randoms = isPost ? [] : App.randoms
                   App.showRandomList(true, (App.currentRemoteItem || {}).Flow)
                 }
               }
               else {
-                var isPut = url.indexOf('/put') >= 0
-
                 if (JSONResponse.isSuccess(data) != true) {
-                  if (isPut) {  // 修改失败就转为新增
+                  if (! isPost) {  // 修改失败就转为新增
                     App.currentRemoteItem = null;
                     alert('修改失败，请重试(自动转为新增)！' + StringUtil.trim(data.msg))
                   }
@@ -3258,7 +3261,7 @@ https://github.com/Tencent/APIJSON/issues
                       if (StringUtil.isNotEmpty(config)) {
                         alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
                       }
-                      // vRandom.value = config
+                      vRandom.value = config
                     }
                     App.onResponse(url, res, err)
                   })
@@ -5851,7 +5854,7 @@ https://github.com/Tencent/APIJSON/issues
               vComment.value = App.prevComment || ''
               vWarning.value = App.prevWarning || ''
               vInput.value = App.prevInput || '{}'
-              // vRandom.value = App.prevRandom || ''
+              vRandom.value = App.prevRandom || ''
               vHeader.value = App.prevHeader || ''
               vScript.value = App.prevScript || ''
 
@@ -5903,7 +5906,7 @@ https://github.com/Tencent/APIJSON/issues
               vComment.value = App.prevComment || ''
               vWarning.value = App.prevWarning || ''
               vInput.value = App.prevInput || '{}'
-              // vRandom.value = App.prevRandom || ''
+              vRandom.value = App.prevRandom || ''
               vHeader.value = App.prevHeader || ''
               vScript.value = App.prevScript || ''
 
@@ -6782,7 +6785,7 @@ https://github.com/Tencent/APIJSON/issues
                       console.error(e)
                     }
 
-                    App.updateRandom(r)
+                    App.updateImage(r)
                   })
                   .catch(error => {
                     console.error('Upload failed:', error);
@@ -7117,8 +7120,8 @@ https://github.com/Tencent/APIJSON/issues
                 console.error(e)
               }
 
-              // App.updateRandom(random) // event 无效 App.doOnKeyUp(event, 'random', false, item)
-              App.updateRandom(random, {
+              // App.updateImage(random) // event 无效 App.doOnKeyUp(event, 'random', false, item)
+              App.updateImage(random, {
                 id: testRecord.id,
                 file: testRecord.file,
                 img: img,
@@ -7135,7 +7138,7 @@ https://github.com/Tencent/APIJSON/issues
             });
       },
 
-      updateRandom: function (random, testRecord) {
+      updateImage: function (random, testRecord) {
         if (random == null || testRecord == null) {
           alert('上传/修改图片失败, random == null || testRecord == null!');
           return
@@ -7170,6 +7173,44 @@ https://github.com/Tencent/APIJSON/issues
           App.isRandomEditable = ! isOk
         })
       },
+
+      // updateConfig: function (input) {
+      //   if (input == null) {
+      //     alert('上传/修改图片失败, random == null || testRecord == null!');
+      //     return
+      //   }
+      //
+      //   var id = input.id
+      //   var isPost = id == null || id <= 0
+      //   var inpt = isPost ? JSON.parse(JSON.stringify(input)) : input;
+      //   if (isPost) {
+      //     inpt.id = undefined
+      //   }
+      //   inpt.userId = undefined
+      //
+      //   this.adminRequest((isPost ? '/post' : '/put'), {
+      //     Input: inpt,
+      //     tag: 'Input'
+      //   }, {}, function (url, res, err) {
+      //     App.onResponse(url, res, err)
+      //     var data = res.data
+      //     var isOk = JSONResponse.isSuccess(data)
+      //
+      //     var msg = isOk ? '' : ('\nmsg: ' + StringUtil.get((data || {}).msg))
+      //     if (err != null) {
+      //       msg += '\nerr: ' + err.msg
+      //       alert((isPost ? '新增参数配置' : '修改参数配置') + (isOk ? '成功' : '失败') + '\nname: ' + input.name + msg)
+      //     }
+      //     if (isPost) {
+      //       input.id = (data.Input || {}).id
+      //     }
+      //     App.isRandomShow = true
+      //     App.isRandomListShow = true
+      //     App.isRandomEditable = ! isOk
+      //     // App.randoms = []
+      //     App.showRandomList(true, input, (input.toId || 0) > 0, null, true)
+      //   })
+      // },
 
       imgRatio: 1920/1080,
       syncCanvasSize: function(stage) {
@@ -10734,18 +10775,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const fullList = (testSubList ? App.randomSubs : App.randoms) || []
           var allCount = 0  // list.length
-          // const list = fullList // []
-          const list = isRecord ? fullList : []
+          const list = fullList // []
+          // const list = isRecord ? fullList : []
           const stepIndexMap = this.stepIndexMap = this.stepIndexMap || []
-          for (let i = 0; i < fullList.length; i++) {
-            const item = fullList[i]
-            const random = item == null ? null : item.Input
-            // allCount += random.disable || random.type != InputUtil.EVENT_TYPE_TOUCH || random.action != MotionEvent.ACTION_DOWN ? 0 : 1 // (random == null || random.count == null ? 0 : random.count)
-            if (random != null) { // && ! random.disable) {
-              stepIndexMap[random.step || -1] = i
-              list.push(item)
-            }
-          }
 
           allCount = list.length;
 
@@ -10774,117 +10806,137 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
           summaryItem.totalCount = allCount
 
+          const pkg = this.getPackage(this.host) || 'uiauto'
+          const cls = this.getClass(this.host) || 'UIAutoApp'
           var methods = this.methods
-          var method = this.isShowMethod() ? this.method : null
-          var type = this.type
-          var json = this.getRequest(vInput.value, {})
-          var url = this.getUrl()
-          var header = this.getHeader(vHeader.value)
 
+          const inputList = []
+          function parseCallback(inputList) {
+            App.requestPost(false, baseUrl + '/method/invoke', {
+              "package": pkg, // 'uiauto',
+              "class": cls, // 'UIAutoApp',
+              "constructor": 'getInstance',
+              "method": isRecord ? 'prepareRecord' : 'prepareReplay',
+              "methodArgs": isRecord ? ["boolean:true", "boolean:true", "boolean:true"] : [inputList, "int:0", "boolean:true", "boolean:true", {
+                type: "JSONObject",
+                value: (App.currentRemoteItem || {}).Flow || {}
+              }]
+            }, header, function (url_, res_, err_) {
+              try {
+                App.onResponse(url_, res_, err_)
+                App.log('test  App.request >> res.data = ' + JSON.stringify(res_.data, null, '  '))
+              } catch (e) {
+                App.log('test  App.request >> } catch (e) {\n' + e.message)
+              }
 
-          var inputList = []
-          for (var i = 0; i < list.length; i ++) {
-            inputList[i] = (list[i] || {}).Input
-          }
+              if (res_.data == null || res_.data.code != 200) {
+                alert('准备失败！' + (res_.data || {}).msg + '\n具体原因见右侧 JSON 结果及客户端日志')
+                App.testRandomProcess = ''
+                return
+              }
 
-          var pkg = this.getPackage(this.host) || 'uiauto'
-          var cls = this.getClass(this.host) || 'UIAutoApp'
-
-          this.requestPost(false, baseUrl + '/method/invoke', {
-            "package": pkg, // 'uiauto',
-            "class": cls, // 'UIAutoApp',
-            "constructor": 'getInstance',
-            "method": isRecord ? 'prepareRecord' : 'prepareReplay',
-            "methodArgs": isRecord ? ["boolean:true", "boolean:true", "boolean:true"] : [ inputList, "int:0", "boolean:true", "boolean:true", {type: "JSONObject", value: (this.currentRemoteItem || {}).Flow || {}}]
-          }, header, function (url_, res_, err_) {
-            try {
-              App.onResponse(url_, res_, err_)
-              App.log('test  App.request >> res.data = ' + JSON.stringify(res_.data, null, '  '))
-            } catch (e) {
-              App.log('test  App.request >> } catch (e) {\n' + e.message)
-            }
-
-            if (res_.data == null || res_.data.code != 200) {
-              alert('准备失败！' + (res_.data || {}).msg + '\n具体原因见右侧 JSON 结果及客户端日志')
-              App.testRandomProcess = ''
-              return
-            }
-
-            App.testRandomProcess = '正在' + (isRecord ? '录制' : '回放') + '...'
-            // App.requestPost(false, '/method/invoke', {
-            //   "package": pkg, // 'uiauto',
-            //   "class": cls, // 'UIAutoApp',
-            //   "constructor": 'getInstance',
-            //   "method": 'onClickPlay',
-            //   "static": false
-            // }, header, function (url, res, err) {
-            //   try {
-            //     App.onResponse(url, res, err)
-            //     App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
-            //   } catch (e) {
-            //     App.log('test  App.request >> } catch (e) {\n' + e.message)
-            //   }
+              App.testRandomProcess = '正在' + (isRecord ? '录制' : '回放') + '...'
+              // App.requestPost(false, '/method/invoke', {
+              //   "package": pkg, // 'uiauto',
+              //   "class": cls, // 'UIAutoApp',
+              //   "constructor": 'getInstance',
+              //   "method": 'onClickPlay',
+              //   "static": false
+              // }, header, function (url, res, err) {
+              //   try {
+              //     App.onResponse(url, res, err)
+              //     App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+              //   } catch (e) {
+              //     App.log('test  App.request >> } catch (e) {\n' + e.message)
+              //   }
 
               if (isRecord) {
                 App.loopEventList(list, inputList, allCount, 0, header, callback)
               } else {
                 // setTimeout(function () {
-                  App.loopRandomTestResult(list, inputList, allCount, 0, header, null, isRecord ? function () {} : callback)
+                App.loopRandomTestResult(list, inputList, allCount, 0, header, null, isRecord ? function () {
+                } : callback)
                 // }, isRecord ? 1000 : 0)
               }
-            // });
+              // });
 
-          });
+            });
 
-          // ORDER_MAP = {}  //重置
-          //
-          // for (var i = 0; i < (limit != null ? limit : list.length); i ++) {  //limit限制子项测试个数
-          //   const item = list[i]
-          //   const random = item == null ? null : item.Input
-          //   if (random == null || random.name == null) {
-          //     App.randomDoneCount ++
-          //     continue
-          //   }
-          //   if (DEBUG) {
-          //     this.log('test  random = ' + JSON.stringify(random, null, '  '))
-          //   }
-          //
-          //   const index = i
-          //
-          //   const itemAllCount = random.count || 0
-          //   // allCount += (itemAllCount - 1)  // 为什么减 1？因为初始化时 var allCount = list.length
-          //
-          //   // UI 往上顶出屏幕
-          //   // try {
-          //   //   document.getElementById((testSubList ?  'randomSubItem' : 'randomItem') + index).scrollIntoView()
-          //   // } catch (e) {
-          //   //   console.log(e)
-          //   // }
-          //
-          //   App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
-          //   try {
-          //     this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, method, type, url, json, header, isCross, isManual, function (url, res, err) {
-          //       var data = null
-          //       if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
-          //         data = res.data
-          //         try {
-          //           App.onResponse(url, res, err)
-          //           if (DEBUG) {
-          //             App.log('test  App.request >> res.data = ' + (data == null ? 'null' : JSON.stringify(data, null, '  ')))
-          //           }
-          //         } catch (e) {
-          //           App.log('test  App.request >> } catch (e) {\n' + e.message)
-          //         }
-          //       }
-          //
-          //       App.compareResponse(res, allCount, list, index, item, data, true, App.currentAccountIndex, false, err, null, isCross, callback)
-          //       return true
-          //     })
-          //   }
-          //   catch (e) {
-          //     this.compareResponse(null, allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
-          //   }
-          // }
+            return true
+          }
+
+          var rspCount = 0;
+          for (var i = 0; i < list.length; i++) {
+
+            // for (var i = 0; i < (limit != null ? limit : list.length); i++) {  //limit限制子项测试个数
+              const item = list[i]
+              const input = item == null ? null : item.Input
+              inputList[i] = input
+              stepIndexMap[(input || {}).step || 0] = i
+              if (input == null || StringUtil.isEmpty(input.config)) {
+                rspCount ++
+                if (rspCount == allCount) {
+                  parseCallback(inputList)
+                }
+                continue
+              }
+              if (DEBUG) {
+                this.log('test  input = ' + JSON.stringify(input, null, '  '))
+              }
+
+              const index = i
+
+              const itemAllCount = input.count || 0
+              // allCount += (itemAllCount - 1)  // 为什么减 1？因为初始化时 var allCount = list.length
+
+              // UI 往上顶出屏幕
+              // try {
+              //   document.getElementById((testSubList ?  'randomSubItem' : 'randomItem') + index).scrollIntoView()
+              // } catch (e) {
+              //   console.log(e)
+              // }
+
+            ORDER_MAP = {}  //重置
+
+            var method = input.method
+            var type = input.type
+            var json = input // this.getRequest(input.request, {})
+            var url = input.url
+            var header = this.getHeader(input.reqHeader || input.header)
+
+            App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
+              try {
+                this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, method, type, url, json, header, isCross, isManual, function (url, res, err) {
+                  var data = null
+                  if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
+                    data = res.data
+                    try {
+                      App.onResponse(url, res, err)
+                      if (DEBUG) {
+                        App.log('test  App.request >> res.data = ' + (data == null ? 'null' : JSON.stringify(data, null, '  ')))
+                      }
+                    } catch (e) {
+                      App.log('test  App.request >> } catch (e) {\n' + e.message)
+                    }
+                  }
+
+                  // App.compareResponse(res, allCount, list, index, item, data, true, App.currentAccountIndex, false, err, null, isCross, callback)
+                  return true
+                }, function (which, randomName, constConfig, constJson) {
+                  inputList[index] = constJson
+                  rspCount ++
+                  if (rspCount == allCount) {
+                    parseCallback(inputList)
+                  }
+                  return true
+                }, function(count, isCross, isManual) {
+                  return true
+                })
+              } catch (e) {
+                this.compareResponse(null, allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
+              }
+            // }
+          }
         }
       },
 
@@ -11083,7 +11135,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        * @param show
        * @param callback
        */
-      testRandomSingle: function (show, testList, testSubList, item, method, type, url, json, header, isCross, isManual, callback) {
+      testRandomSingle: function (show, testList, testSubList, item, method, type, url, json, header, isCross, isManual, callback, singleCallback, allCallback) {
         item = item || {}
 
         // 保证能调用自定义函数等 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -11125,9 +11177,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const which = i;
           var rawConfig = testSubList && i < existCount ? ((subs[i] || {}).Input || {}).config : random.config
-          var keyPath = (StringUtil.isEmpty(vRandomKeyPath.value, true) ? 'image' : vRandomKeyPath.value)
-          rawConfig = (StringUtil.isEmpty(rawConfig, true) ? '' : rawConfig + '\n') + keyPath + ': '
-              + JSON.stringify(this.host.indexOf('localhost') >= 0 || this.host.indexOf('127.0.0.1') >= 0 ? (item.img || this.img) : random.img)
+          // var keyPath = (StringUtil.isEmpty(vRandomKeyPath.value, true) ? 'image' : vRandomKeyPath.value)
+          // rawConfig = (StringUtil.isEmpty(rawConfig, true) ? '' : rawConfig + '\n') + keyPath + ': '
+          //     + JSON.stringify(this.host.indexOf('localhost') >= 0 || this.host.indexOf('127.0.0.1') >= 0 ? (item.img || this.img) : random.img)
 
           var cb = function (url, res, err) {
             if (callback != null) {
@@ -11176,6 +11228,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   }
                 }
                 else {
+                  if (singleCallback != null && singleCallback(which, randomName, constConfig, constJson)) {
+                    return
+                  }
+
                   if (show == true) {
                     vInput.value = JSON.stringify(constJson, null, '    ');
                     App.send(false, cb, caseScript);
@@ -11206,6 +11262,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     item.subs = subs
                   }
                   if (respCount == count) {
+                    if (allCallback != null && allCallback(count, isCross, isManual)) {
+                      return
+                    }
+
                     App.testRandom(false, false, true, count, isCross, isManual, callback)
                   }
                 }
@@ -11396,7 +11456,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               userId: (this.User || {}).id,
               count: count,
               name: this.randomTestTitle,
-              config: '', // vRandom.value
+              config: vRandom.value
             },
             totalCount: count
           }
@@ -11416,7 +11476,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
 
           this.isRandomShow = true
-          // vRandom.select()
+          vRandom.select()
         }
       },
 
@@ -14373,7 +14433,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           if (StringUtil.isNotEmpty(rawReq.random, true)) {
             hasTestArg = true
-            // vRandom.value = StringUtil.trim(rawReq.random, true)
+            vRandom.value = StringUtil.trim(rawReq.random, true)
             App.isRandomShow = true
             App.isRandomListShow = false
           }

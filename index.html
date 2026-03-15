@@ -796,7 +796,7 @@ fun(true, 1, 'a'..);
         </svg>
 
         <input type="text" placeholder="请输入名称" v-model="exTxt.name" />
-        <div style="display: inline-block; margin-top: 6px; padding-bottom: 0px"><button v-show="! isExportRandom" @click="exportTxt(0)">{{isExportRemote ? '上传' : '下载'}}</button><button v-show="isExportRemote && isExportScript != true && (isExportRandom != true || isEditResponse != true)" style="margin-left: 6px" @click="exportTxt(1)">{{isExportRandom ? '导出场景接口用例' : '分享'}}</button></div>
+        <div style="display: inline-block; margin-top: 6px; padding-bottom: 0px"><button v-show="! (isExportRandom && isRandomListShow)" @click="exportTxt(0)">{{isExportRemote ? '上传' : '下载'}}</button><button v-show="isExportRemote && isExportScript != true && (isExportRandom != true || isEditResponse != true)" style="margin-left: 6px" @click="exportTxt(1)">{{isExportRandom && isRandomListShow ? '导出场景接口用例' : '分享'}}</button></div>
     </div>
 
     <!--弹出设置文本框-->
