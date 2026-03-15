@@ -87,7 +87,7 @@ var StringUtil = {
    * @param s
    * @return
    */
-  isName(s) {
+  isName: function(s) {
     return s != null && s.length > 0 && /[a-zA-Z_]/.test(s.substring(0, 1)) && /^[0-9a-zA-Z_]+$/.test(s);
   },
 
@@ -95,7 +95,7 @@ var StringUtil = {
    * @param s
    * @return
    */
-  isBigName(s) {
+  isBigName: function(s) {
     return s != null && s.length > 0 && /[A-Z]/.test(s.substring(0, 1)) && /^[0-9a-zA-Z_]+$/.test(s);
   },
 
@@ -103,11 +103,11 @@ var StringUtil = {
    * @param s
    * @return
    */
-  isSmallName(s) {
+  isSmallName: function(s) {
     return s != null && s.length > 0 && /[a-z]/.test(s.substring(0, 1)) && /^[0-9a-zA-Z_]+$/.test(s);
   },
 
-  isConstName(s) {
+  isConstName: function(s) {
     return s != null && s.length > 0 && /[A-Z_]/.test(s.substring(0, 1)) && /^[0-9A-Z_]+$/.test(s);
   },
 
@@ -491,7 +491,7 @@ var StringUtil = {
     var prefix = s.substring(0, ind);
     var suffix = StringUtil.toLowerCase(s.substring(ind + 1));
 
-    return ['jpg', 'jpeg', 'png', 'bmp', 'gif'].indexOf(suffix) >= 0 && StringUtil.isNotEmpty(prefix, true);
+    return ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'].indexOf(suffix) >= 0 && StringUtil.isNotEmpty(prefix, true);
   },
   isAudio: function (s) {
     var ind = StringUtil.isNotString(s) ? -1 : s.lastIndexOf('.');

@@ -3693,9 +3693,7 @@ https://github.com/Tencent/APIJSON/issues
           return ''
         }
         var isAPIJSON = JSONObject.isAPIJSONPath(url)
-        const IGNORE_KEYS = ['page', 'count', 'query', 'pagesize', 'pagenum', 'pageno', 'page_size', 'page_num', 'page_no'
-            , 'order', 'orderby', 'order_by', 'groupby', 'group_by'
-        ]
+        const IGNORE_KEYS = JSONResponse.IGNORE_LINK_KEYS || [];
         var lowerKey = key.toLowerCase()
         if (IGNORE_KEYS.indexOf(lowerKey) >= 0 || (isAPIJSON && path == '' && ['tag', 'version', 'format'].indexOf(key) >= 0)) {
           return ''
@@ -7181,44 +7179,6 @@ https://github.com/Tencent/APIJSON/issues
         })
       },
 
-      // updateConfig: function (input) {
-      //   if (input == null) {
-      //     alert('上传/修改图片失败, random == null || testRecord == null!');
-      //     return
-      //   }
-      //
-      //   var id = input.id
-      //   var isPost = id == null || id <= 0
-      //   var inpt = isPost ? JSON.parse(JSON.stringify(input)) : input;
-      //   if (isPost) {
-      //     inpt.id = undefined
-      //   }
-      //   inpt.userId = undefined
-      //
-      //   this.adminRequest((isPost ? '/post' : '/put'), {
-      //     Input: inpt,
-      //     tag: 'Input'
-      //   }, {}, function (url, res, err) {
-      //     App.onResponse(url, res, err)
-      //     var data = res.data
-      //     var isOk = JSONResponse.isSuccess(data)
-      //
-      //     var msg = isOk ? '' : ('\nmsg: ' + StringUtil.get((data || {}).msg))
-      //     if (err != null) {
-      //       msg += '\nerr: ' + err.msg
-      //       alert((isPost ? '新增参数配置' : '修改参数配置') + (isOk ? '成功' : '失败') + '\nname: ' + input.name + msg)
-      //     }
-      //     if (isPost) {
-      //       input.id = (data.Input || {}).id
-      //     }
-      //     App.isRandomShow = true
-      //     App.isRandomListShow = true
-      //     App.isRandomEditable = ! isOk
-      //     // App.randoms = []
-      //     App.showRandomList(true, input, (input.toId || 0) > 0, null, true)
-      //   })
-      // },
-
       imgRatio: 1920/1080,
       syncCanvasSize: function(stage) {
         const img = this.imgMap[stage];
@@ -7863,6 +7823,10 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
+          this.isRandomShow = true
+          this.isRandomListShow = this.isRandomSubListShow = false
+          this.randomTestTitle = StringUtil.trim(item.reqLinkExp) + " / " + StringUtil.trim(item.seqLinkExp)
+          vRandom.value = StringUtil.trim(item.reqLinkConfig) + "\n\n// / \n\n" + StringUtil.trim(item.seqLinkConfig)
 
           // 无效
           // const labelX = bx + bw + 4; // 和 drawDetections 中计算按钮位置保持一致
@@ -13410,8 +13374,49 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const chain = cri.Chain || {}
             const cgId = chain.groupId || 0
             const cId = chain.id || 0
-            const detection = this.detection || {};
+            const detection = this.detection || {}
             const missTruth = this.missTruth || {}
+
+            const bboxes = (detection.after || {}).bboxes || []
+            const randoms = (this.isRandomSubListShow ? this.randomSubs : this.randoms) || []
+            var count = index >= 0 ? StringUtil.length(randoms) : 0
+            if (count > index && count >= 2) {
+              function callback(exp, isReq) {
+                var v = null; // FIXME 还不如继续从 inputList 中找
+                App.parseRandom({}, {}, 'ret: ' + exp, 0, true, false, false, function (randomName, constConfig, constJson) {
+                  v = constJson.ret
+                })
+                return v
+              }
+
+              for (let i = 0; i < bboxes.length; i++) {
+                const bbox = bboxes[i]
+                if (StringUtil.isEmpty(bbox)) {
+                  continue
+                }
+
+                const inReqLinkExp = bbox.reqLinkExp // a + b, a || b + c
+                const inResLinkExp = bbox.resLinkExp // a + b, a || b + c
+                const inReqLinkPaths = bbox.reqLinkPaths // = bbox.reqLinkPaths || []
+                const inResLinkPaths = bbox.resLinkPaths // = bbox.resLinkPaths || []
+                const reqLinkPaths = []
+                const resLinkPaths = []
+                const value = bbox.text || bbox.image || bbox.src || bbox.background
+                JSONResponse.findLinkPaths('', bbox.viewIdName, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths, inResLinkPaths)
+
+                bbox.reqLinkExp = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExp, true, callback)
+                bbox.resLinkExp = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExp, false, callback)
+                bbox.reqLinkConfig = JSONResponse.linkPaths2Config(reqLinkPaths, true)
+                bbox.resLinkConfig = JSONResponse.linkPaths2Config(resLinkPaths, false)
+
+                // if (reqLinkPaths.length >= 1) {
+                delete bbox.reqLinkPaths
+                // }
+                // if (resLinkPaths.length >= 1) {
+                delete bbox.resLinkPaths
+                // }
+              }
+            }
 
             //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
@@ -13438,7 +13443,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 duration: item.duration,
                 minDuration: minDuration,
                 maxDuration: maxDuration,
-                compare: JSON.stringify(testRecord.compare || {})
+                compare: JSON.stringify(testRecord.compare || {}),
+                bboxes: bboxes
               }) : {
                 // userId: userId,
                 chainGroupId: cgId,
