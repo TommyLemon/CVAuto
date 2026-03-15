@@ -3140,7 +3140,7 @@ https://github.com/Tencent/APIJSON/issues
             if (isEditResponse) {
               inputObj.code = code_
             }
-          } else if (this.isRandomShow && this.isRandomSubListShow) {
+          } else if (this.isRandomShow && this.isRandomListShow) {
             this.exportChainApiCase(this.exTxt.name, this.isRandomSubListShow, this.isRandomSubListShow ? this.randomSubs : this.randoms)
             return
           }
@@ -3374,7 +3374,7 @@ https://github.com/Tencent/APIJSON/issues
         const projectHost = this.projectHost || {}
         const project = StringUtil.isEmpty(projectHost.project) ? null : projectHost.project
 
-        var accountInfo = this.getCurrentAccount()
+        var accountInfo = this.getCurrentAccount() || {}
         var currentAccountId = accountInfo.id
         var account = accountInfo.account || accountInfo.phone || accountInfo.email
 
@@ -3465,7 +3465,14 @@ https://github.com/Tencent/APIJSON/issues
           response: currentResponse
         }
 
-        var callback = function (randomName, constConfig, constJson, doc) {
+        var callback = function (randomName, constConfig, constJson, doc, req_, url, res, err) {
+          var did = doc == null ? null : doc.id
+          if (did == null || did <= 0) {
+            App.addApiCase2Chain(group, list, index + 1, chains, preIndex, preChain)
+            alert('新增 Document 单接口用例失败！' + data.msg + '; ' + (err || {}).message + '; req = \n' + JSON.stringify(req))
+            return
+          }
+
           const isAdd = true
 
           const chainReq = {
@@ -3473,7 +3480,7 @@ https://github.com/Tencent/APIJSON/issues
             'groupName': groupName,
             // 'userId': userId,
             'groupId': groupId,
-            'documentId': doc.id,
+            'documentId': did,
             'documentName': doc.name
           }
           const randomReq = {
@@ -3481,7 +3488,7 @@ https://github.com/Tencent/APIJSON/issues
             toId: 0,
             chainGroupId: cgId,
             chainId: cId,
-            documentId: doc.id,
+            documentId: did,
             count: 1,
             name: '[Record] 参数传递 ' + nowStr,
             config: constConfig
@@ -3547,10 +3554,10 @@ https://github.com/Tencent/APIJSON/issues
           var data = res.data
           var doc = data == null ? null : data.Document
           var did = doc == null ? null : doc.id
-          var isAdd = did == null || did < 0
+          var isAdd = did == null || did <= 0
           if (! isAdd) {
             // curChain.Document = doc
-            callback(null, config, inputObj, doc)
+            callback(null, config, inputObj, doc, {}, url, res, err)
             return
           }
 
@@ -3608,7 +3615,7 @@ https://github.com/Tencent/APIJSON/issues
               return
             }
 
-            callback(null, config, inputObj, doc)
+            callback(null, config, inputObj, doc, req, url, res, err)
           })
 
         })

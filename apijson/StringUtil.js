@@ -32,7 +32,7 @@ var StringUtil = {
    */
   get: function(s) {
 //    return s == null ? '' : (JSONResponse.isString(s) ? s : JSON.stringify(s));
-    return s == null ? '' : (typeof StringUtil.isString(s) ? s : JSON.stringify(s));
+    return s == null ? '' : (StringUtil.isString(s) ? s : JSON.stringify(s));
   },
 
   /**获取去掉前后空格后的string,为null则返回''
@@ -244,7 +244,7 @@ var StringUtil = {
   },
 
   isNumber: function (s) {
-    return typeof StringUtil.isString(s) && /^[0-9]+$/.test(s);
+    return StringUtil.isString(s) && /^[0-9]+$/.test(s);
   },
 
   join: function (arr, separator) {
