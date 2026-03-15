@@ -13443,8 +13443,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 duration: item.duration,
                 minDuration: minDuration,
                 maxDuration: maxDuration,
-                compare: JSON.stringify(testRecord.compare || {}),
-                bboxes: bboxes
+                compare: JSON.stringify(testRecord.compare || {})
               }) : {
                 // userId: userId,
                 chainGroupId: cgId,
@@ -13469,7 +13468,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 missTruth: Object.keys(missTruth).length <= 0 ? null : JSON.stringify(missTruth),
                 compare: JSON.stringify(testRecord.compare || {}),
                 response: rawRspStr || (rawRspStr == null ? '' : (StringUtil.isString(random.response) ? random.response : JSON.stringify(random.response))),
-                standard: isML ? JSON.stringify(stddObj) : null
+                standard: isML ? JSON.stringify(stddObj) : null,
+                bboxes: bboxes
               },
               tag: isNewRandom ? 'Input' : 'TestRecord'
             }
