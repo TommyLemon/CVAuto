@@ -94,6 +94,11 @@
     }
   }
 
+  function len(s) {
+    return StringUtil.length(s)
+  }
+
+
   Vue.component('vue-item', {
     props: ['jsondata', 'theme', 'thiz'],
     template: '#item-template'
@@ -679,48 +684,9 @@ https://github.com/TommyLemon/APIAuto/issues
 
 If you are requesting an APIJSON backend service, use the following link:
 https://github.com/Tencent/APIJSON/issues
+
+
 `;
-
-
-  function getRequestFromURL(url_, tryParse) {
-    var url = url_ || window.location.search;
-
-    var index = url == null ? -1 : url.indexOf("?")
-    if(index < 0) { //判断是否有参数
-      return null;
-    }
-
-    var theRequest = null;
-    var str = url.substring(index + 1);  //从第一个字符开始 因为第0个是?号 获取所有除问号的所有符串
-    var arr = str.split("&");  //截除“&”生成一个数组
-
-    var len = arr == null ? 0 : arr.length;
-    for(var i = 0; i < len; i++) {
-      var part = arr[i];
-      var ind = part == null ? -1 : part.indexOf("=");
-      if (ind <= 0) {
-        continue
-      }
-
-      if (theRequest == null) {
-        theRequest = {};
-      }
-
-      var v = decodeURIComponent(part.substring(ind+1));
-      if (tryParse == true) {
-        try {
-          v = parseJSON(v)
-        }
-        catch (e) {
-          console.log(e)
-        }
-      }
-
-      theRequest[part.substring(0, ind)] = v;
-    }
-
-    return theRequest;
-  }
 
 
   function markdownToHTML(md, isRequest) {
@@ -11804,7 +11770,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 as3 = parseJSON(as3, as3, true)
                 as.splice(2, 2)
               }
-              var accountHostIndexPath = isChain ? (StringUtil.isNumber(as[3]) ? '/' + as3 : (StringUtil.isEmpty(as3) ? '/' : as3 + (as3.indexOf('/') < 0 ? '/' : ''))) : ''
+              var as3s = isChain ? StringUtil.trim(as3) : ''
+              var accountHostIndexPath = isChain ? (StringUtil.isNumber(as3) ? '/' + as3 : (StringUtil.isEmpty(as3) ? '/' : as3s + (as3s.indexOf('/') < 0 ? '/' : ''))) : ''
 
               if (fun == PRE_REQ) {
                 var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/req")' : 'get4Path(((ctx || {}).pre || {}).req'
@@ -13395,19 +13362,30 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   continue
                 }
 
-                const inReqLinkExp = bbox.reqLinkExp // a + b, a || b + c
-                const inResLinkExp = bbox.resLinkExp // a + b, a || b + c
-                const inReqLinkPaths = bbox.reqLinkPaths // = bbox.reqLinkPaths || []
-                const inResLinkPaths = bbox.resLinkPaths // = bbox.resLinkPaths || []
-                const reqLinkPaths = []
-                const resLinkPaths = []
-                const value = bbox.text || bbox.image || bbox.src || bbox.background
-                JSONResponse.findLinkPaths('', bbox.viewIdName, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths, inResLinkPaths)
+                const inReqLinkExps = bbox.reqLinkExps = bbox.reqLinkExps || {} // a + b, a || b + c
+                const inResLinkExps = bbox.resLinkExps = bbox.resLinkExps || {} // a + b, a || b + c
+                const inReqLinkPaths = bbox.reqLinkPaths = bbox.reqLinkPaths || {}
+                const inResLinkPaths = bbox.resLinkPaths = bbox.resLinkPaths || {}
+                const inReqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {}
+                const inResLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {}
 
-                bbox.reqLinkExp = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExp, true, callback)
-                bbox.resLinkExp = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExp, false, callback)
-                bbox.reqLinkConfig = JSONResponse.linkPaths2Config(reqLinkPaths, true)
-                bbox.resLinkConfig = JSONResponse.linkPaths2Config(resLinkPaths, false)
+                const props = ['text'] // , 'image', 'background']
+                for (let j = 0; j < props.length; j ++) {
+                  const prop = props[j]
+                  const value = bbox[prop]
+                  if (StringUtil.isEmpty(value)) {
+                    continue
+                  }
+
+                  const reqLinkPaths = {}
+                  const resLinkPaths = {}
+                  JSONResponse.findLinkPaths(bbox.viewIdName, prop, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths[prop], inResLinkPaths[prop])
+
+                  const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true, callback)
+                  const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false, callback)
+                  const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
+                  const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
+                }
 
                 // if (reqLinkPaths.length >= 1) {
                 delete bbox.reqLinkPaths

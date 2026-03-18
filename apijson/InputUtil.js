@@ -381,7 +381,7 @@ const InputUtil = {
             return timeStr + ' ' + InputUtil.getHTTPActionName(action)
                 + "\nURL: " + StringUtil.trim(obj.url)
                 + "\n\nREQUEST: " + StringUtil.trim(format) + '\n' + StringUtil.trim(obj.request)
-                + (isReq ? "" : "\n\n\nRESPONSE: " + StringUtil.trim(obj.status) + '\n' + + StringUtil.trim(obj.response))
+                + (isReq ? "" : "\n\n\nRESPONSE: " + StringUtil.trim(obj.status) + '\n' + StringUtil.trim(obj.response))
                 + "\n\n"
         }
 

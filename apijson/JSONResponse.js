@@ -2971,8 +2971,8 @@ var JSONResponse = {
           text: node.text,
           image: node.image || node.src,
           background: node.background,
-          viewId: node.viewId ?? null,
-          viewIdName: viewIdName ?? null,
+          viewId: node.viewId,
+          viewIdName: viewIdName,
           viewPath: (StringUtil.isEmpty(path) ? '' : path + "/") + (viewIdName || viewType),
           assertPath: (StringUtil.isEmpty(assertPath) ? '' : assertPath + "/") + (viewType + (StringUtil.isEmpty(viewIdName) ? '' : ':' + viewIdName)),
           center: [screenX + w / 2, screenY + h / 2],
@@ -3058,7 +3058,7 @@ var JSONResponse = {
   IGNORE_LINK_KEYS: ['page', 'count', 'query', 'pagesize', 'pagenum', 'pageno', 'page_size', 'page_num', 'page_no'
     , 'order', 'orderby', 'order_by', 'groupby', 'group_by'
   ],
-  findLinkPaths: function (path, idName, value, randoms, index, maxLen, reqLinkPaths, resLinkPaths, inReqLinkPaths, inResLinkPaths) {
+  findLinkPaths: function (idName, prop, value, randoms, index, maxLen, reqLinkPaths, resLinkPaths, inReqLinkPaths, inResLinkPaths) {
     var count = StringUtil.length(randoms) // 让它报错发现问题 JSONResponse.isNumber(index) && index >= 0 ? StringUtil.length(randoms) : 0
     if (count < 2 || count <= index) { // StringUtil.isEmpty(randoms)) {
       return
@@ -3074,6 +3074,7 @@ var JSONResponse = {
     const idNamePrefixes = ['tv', 'et', 'btn', 'iv', 'ib', 'ibtn', 'txt', 'text', 'textView', 'button', 'edit', 'editText', 'img', 'image', 'imageView']; // TODO visibility
     // const idNameSuffixes = ['Tv', 'Et', 'Btn', 'Iv', 'Ib', 'Ibtn', 'Txt', 'text', 'textView', 'button', 'edit', 'editText', 'img', 'image', 'imageView'];
     var key = StringUtil.length(idName) < 2 ? '' : idName
+    var vLen = StringUtil.length(value)
     var len = StringUtil.length(key) < 2 ? 0 : idNamePrefixes.length
     for (let i = 0; i < len; i++) {
       var k = idNamePrefixes[i]
@@ -3146,7 +3147,7 @@ var JSONResponse = {
         // var cfg2 = ''
         var paths2 = {}
         var v2 = key.length >= 3 ? v[key] : undefined
-        if (typeof v2 != 'undefined') {
+        if (typeof v2 != 'undefined' && ! v2 instanceof Object) {
           var ccp = isFolderEmpty ? key : cp + '/' + key
           var uri = '"' + ccp + '", null' + sfx
           if (inLinkPaths == null || inLinkPaths[uri] == null) {
@@ -3154,15 +3155,14 @@ var JSONResponse = {
             // if (StringUtil.isNotEmpty(linkPaths[ccp])) {
             // cfg2 = (StringUtil.isEmpty(linkPaths) ? '' : '\n') + pfx + ccp + '", null' + sfx + ') // key 同名';
             // cfg2 += '\n' + pfx + ccp + '", undefined' + sfx + route + ') // key 同名';
-            var isValMatch = v2 === value && (isStr || isNum) && (!isValueEmpty) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v2) < 0
-
+            var isValMatch = v2 === value && (isStr || isNum) && (! isValueEmpty) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v2) < 0
 
             if (isValMatch) {
               // cfg2 += ' + value 相等：' + StringUtil.limitLength(v, 20);
-              linkPaths[uri] = 'key 同名 + value 相等：' + StringUtil.limitLength(v, 20);
+              linkPaths[uri] = 'key 同名 + value 相等: '; // + StringUtil.limitLength(v, 20);
               return paths2;
             }
-            linkPaths[uri] = 'key 同名'
+            linkPaths[uri] = 'key 同名: ' + StringUtil.trim(v2)
             // }
           }
         }
@@ -3186,7 +3186,7 @@ var JSONResponse = {
         return paths2
       } else if (! isCpEmpty) {
         var isKeyMatch = StringUtil.isNotEmpty(k) && k.toLowerCase().endsWith(lowerKey) || lowerKey.endsWith(k)
-        var isValMatch = (! isValueEmpty) && (isStr || isNum) && (v === value || (isStr && value.includes(v))) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v) < 0
+        var isValMatch = (! isValueEmpty) && (isStr || isNum) && (v === value || (isStr && prop == 'text' && vLen >= 2 && value.includes(v))) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v) < 0
         if (isKeyMatch || isValMatch) { // FIXME StringUtil.endsWith(a, b, ignoreCase)
           // var sfx2 = ') // ' + (isKeyMatch ? 'key 相似' : '') + (isValMatch ? (isKeyMatch ? ' + ' : '') + 'value 相等：' + StringUtil.limitLength(v, 20) : '');
           var ccp = cp // isFolderEmpty ? StringUtil.get(k) : folder + '/' + StringUtil.get(k) // '' 代表数组 i = cp
@@ -3195,7 +3195,7 @@ var JSONResponse = {
           // paths += '\n// 可替代上面的 ' + pfx + ccp + '", undefined' + sfx + route + sfx2;
 
           if (inLinkPaths == null || inLinkPaths[uri] == null) {
-            linkPaths[uri] = (isKeyMatch ? 'key 相似' : '') + (isValMatch ? (isKeyMatch ? ' + ' : '') + 'value ' + (v === value ? '相等：' : '包含：') + StringUtil.limitLength(v, 20) : '');
+            linkPaths[uri] = (isKeyMatch ? 'key 相似' : '') + (isValMatch ? (isKeyMatch ? ' + ' : '') + 'value ' + (v === value ? '相等' : '包含') : '') + ': ' + StringUtil.trim(v) // StringUtil.limitLength(v, 20) : '');
             if (isValMatch && (isKeyMatch || isUnique)) {
               return paths
             }
@@ -3206,10 +3206,18 @@ var JSONResponse = {
       return linkPaths
     }
 
-    if (inReqLinkPaths == null || inReqLinkPaths.length > 1) {
+    if (inReqLinkPaths == null || StringUtil.length(inReqLinkPaths) > 1) {
       for (var i = index + 1; i < randoms.length; i++) { // 前端输入 -> 发请求参数
         var input = (randoms[i] || {}).Input
         var req = input == null || input.type != InputUtil.EVENT_TYPE_HTTP ? null : input.request
+        try {
+          req = parseJSON(req)
+        } catch (e) {
+          if (JSONResponse.isString(req)) {
+            req = getRequestFromURL('?' + req, true)
+          }
+        }
+
         if (StringUtil.isEmpty(req)) {
           continue
         }
@@ -3221,23 +3229,47 @@ var JSONResponse = {
       }
     }
 
-    if (inResLinkPaths == null || inResLinkPaths.length > 1) {
+    if (inResLinkPaths == null || StringUtil.length(inResLinkPaths) > 1) {
       for (var i = index - 1; i >= 0; i--) { // 后端返回 JSON -> 渲染 UI
-        var input = (randoms[i] || {}).Input
-        var res = input == null || input.type != InputUtil.EVENT_TYPE_HTTP ? null : input.response
-        if (StringUtil.isEmpty(res)) {
+        var item = randoms[i] || {}
+        var input = item.Input
+        if (input == null || input.type != InputUtil.EVENT_TYPE_HTTP) {
           continue
         }
 
-        var data = res
-        if (JSONResponse.isObject(res) && StringUtil.isEmpty(chainPath) && res[JSONResponse.KEY_DATA] != null) {
-          data = res[JSONResponse.KEY_DATA];
-          chainPath = JSONResponse.KEY_DATA;
+        var reses = []
+        var testRecord = item.TestRecord || {}
+        var ares = parseJSON(testRecord.response, null, true)
+        var bres = parseJSON(input.response, null, true)
+        if (StringUtil.isNotEmpty(ares)) {
+          reses.push(ares)
+        }
+        if (StringUtil.isNotEmpty(bres)) {
+          reses.push(bres)
+        }
+        if (StringUtil.isEmpty(reses)) {
+          continue
         }
 
-        var paths = findLinkPaths(chainPath, input, '', data, 'data', maxLen, resLinkPaths, inResLinkPaths)
-        if (StringUtil.length(resLinkPaths) > maxLen) {
-          break
+        for (var k2 = 0; k2 < reses.length; k2 ++) {
+          var res = reses[k2];
+          var data = res
+          if (JSONResponse.isObject(res) && StringUtil.isEmpty(chainPath) && res[JSONResponse.KEY_DATA] != null) {
+            data = res[JSONResponse.KEY_DATA];
+            chainPath = JSONResponse.KEY_DATA;
+          }
+
+          var code = data[JSONResponse.KEY_CODE]
+          var msg = data[JSONResponse.KEY_MSG]
+          data[JSONResponse.KEY_CODE] = undefined
+          data[JSONResponse.KEY_MSG] = undefined
+          var paths = findLinkPaths(chainPath, input, '', data, 'data', maxLen, resLinkPaths, inResLinkPaths)
+          data[JSONResponse.KEY_CODE] = code
+          data[JSONResponse.KEY_MSG] = msg
+
+          if (StringUtil.length(resLinkPaths) > maxLen) {
+            continue
+          }
         }
       }
     }
@@ -3249,7 +3281,7 @@ var JSONResponse = {
     if (StringUtil.isEmpty(linkPaths)) {
       return null;
     }
-    if (! StringUtil.isObject(linkPaths)) {
+    if (! JSONResponse.isObject(linkPaths)) {
       throw new Error('linkPaths must be Object!');
     }
 
@@ -3272,14 +3304,17 @@ var JSONResponse = {
         continue
       }
 
-      // var v = linkPaths[k]
-      var rv = callback(isReq, isReq ? 'CUR_ARG(' : 'CUR_DATA(') + k + ')'
-      if (rv != null && rv != value) { //  StringUtil.isEmpty(rv)) {
+      var v = StringUtil.trim(linkPaths[k])
+      var ind2 = v.indexOf(': ')
+      var cvs = ind2 < 0 ? v : v.substring(ind2 + 2)
+
+      var rv = StringUtil.isEmpty(cvs) ? value : parseJSON(cvs, cvs, true) // callback(isReq, isReq ? 'CUR_ARG(' : 'CUR_DATA(') + k + ')'
+      if (rv != null && rv !== value) { //  StringUtil.isEmpty(rv)) {
         // var ind2 = isStr ? value.split(rv) : -1
         if (isNum && rv != 0) {
           if (rv instanceof Array) {
             if (value != 0 && value == rv.length) {
-              s += (ind <= 0 ? '' : ' || ') + name + '.length'
+              s += (ind <= 0 ? '' : ' || len(') + name + ')' // '.length'
             }
             continue
           }
@@ -3295,7 +3330,8 @@ var JSONResponse = {
           }
         }
         else if (isStr && StringUtil.isNotEmpty(rv)) { // 没替换换掉的固定字符串要包裹起来
-          vs = vs.replaceAll('`' + rv + '`', '` + ' + name + ' + `').replaceAll(rv, '` + ' + name + ' + `')
+          // vs = vs.replaceAll('`' + rv + '`', '` + ' + name + ' + `').replaceAll(rv, '` + ' + name + ' + `')
+          vs = vs.replaceAll(rv, '${' + name + '}')
 
           // var arr = value.split(rv)
           // if (arr.length > 1) {
@@ -3319,7 +3355,7 @@ var JSONResponse = {
       ind ++
     }
 
-    vs = isNum ? (rest == 0 ? vs : '') : StringUtil.trim(vs.replaceAll('``', ''))
+    vs = isNum ? (rest === 0 ? vs : '') : StringUtil.trim(vs.replaceAll('``', ''))
     while (vs.startsWith('+')) {
       vs = StringUtil.trim(vs.substring(1))
     }
@@ -3336,7 +3372,7 @@ var JSONResponse = {
     if (StringUtil.isEmpty(linkPaths)) {
       return null;
     }
-    if (! StringUtil.isObject(linkPaths)) {
+    if (! JSONResponse.isObject(linkPaths)) {
       throw new Error('linkPaths must be Object!');
     }
 
