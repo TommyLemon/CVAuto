@@ -2,7 +2,7 @@
   CVAuto
 </h1>
  
-<p align="center">👁 <b>零代码零标注 CV AI 自动化测试工具</b> 🚀 <br><b>零代码快速自动化测试 CV 计算机视觉 AI 人工智能图像识别算法的功能、效果、性能</b><br>适合 算法 应用/开发 工程师/专家、算法测试 工程师/专家、AI/机器学习/算法 工程师/专家/研究员/科学家 等</p>
+<p align="center">👁 <b>零代码零标注 CV AI 自动化测试工具</b> 🚀 <br><b>零代码快速自动化测试 CV 计算机视觉 AI 人工智能图像识别算法的效果、功能、性能</b><br>适合 AI/算法/模型 应用/开发/测试/交付/验收 工程师/专家、AI/机器学习/算法/模型 工程师/专家/研究员/科学家 等</p>
 
 <p align="center" >
   <a href="https://deepwiki.com/TommyLemon/CVAuto">English</a>
