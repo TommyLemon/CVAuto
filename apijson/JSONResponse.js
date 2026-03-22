@@ -2971,6 +2971,7 @@ var JSONResponse = {
           text: node.text,
           image: node.image || node.src,
           background: node.background,
+          viewType: viewType,
           viewId: node.viewId,
           viewIdName: viewIdName,
           viewPath: (StringUtil.isEmpty(path) ? '' : path + "/") + (viewIdName || viewType),
@@ -3376,6 +3377,7 @@ var JSONResponse = {
       throw new Error('linkPaths must be Object!');
     }
 
+    var index = 0;
     var s = '';
     if (JSONResponse.isArray(linkPaths)) {
       for (let i = 0; i < linkPaths.length; i++) {
@@ -3383,7 +3385,8 @@ var JSONResponse = {
         if (StringUtil.isEmpty(line) || s.includes(line)) {
           continue
         }
-        s += '\n' + line
+        s += '\n_' + index + ': ' + line
+        index ++
       }
     } else if (JSONResponse.isObject(linkPaths)) {
       for (let k in linkPaths) {
@@ -3395,7 +3398,8 @@ var JSONResponse = {
         var v = linkPaths[k]
         var line = (isReq ? 'CUR_ARG(' : 'CUR_DATA(') + k + ')' + (StringUtil.isEmpty(v) ? '' : ' // ' + StringUtil.trim(v))
 
-        s += '\n' + line
+        s += '\n_' + index + ': ' + line
+        index ++
       }
     }
 

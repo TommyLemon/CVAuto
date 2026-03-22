@@ -2166,6 +2166,7 @@ https://github.com/Tencent/APIJSON/issues
               return
             }
             if (isRandom) {
+              // this.exTxt.isSub = this.isRandomSubListShow
               this.exTxt.name = this.isRandomListShow || this.isRandomSubListShow ? vUrl.value : '随机配置 ' + this.formatDateTime()
             }
             else if (isScript) { // 避免 APIJSON 启动报错  '执行脚本 ' + this.formatDateTime()
@@ -2578,10 +2579,16 @@ https://github.com/Tencent/APIJSON/issues
 
       // 根据事件配置用例恢复数据
       restoreRandom: function (index, item) {
-        this.currentRandomIndex = index
-        this.currentRandomItem = item
+        if (this.isRandomSubListShow) {
+          this.currentRandomSubIndex = index
+        } else if (this.isRandomListShow) {
+          this.currentRandomIndex = index
+          this.currentRandomItem = item
+          this.currentRandomSubIndex = -1
+        }
         this.isRandomListShow = false
         this.isRandomSubListShow = false
+
         var random = (item || {}).Input || {}
         this.randomTestTitle = random.name
         this.testRandomCount = random.count
@@ -2594,7 +2601,9 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         var isHttp = random.type == InputUtil.EVENT_TYPE_HTTP
-        this.prevOperate = this.prevOperate || (this.operate != OPERATE_TYPE_HTTP ? this.operate : (StringUtil.isEmpty(this.randoms) ? OPERATE_TYPE_RECORD : OPERATE_TYPE_REPLAY))
+        if (isHttp && StringUtil.isEmpty(this.prevOperate)) {
+          this.prevOperate = (this.operate != OPERATE_TYPE_HTTP ? this.operate : (StringUtil.isEmpty(this.randoms) ? OPERATE_TYPE_RECORD : OPERATE_TYPE_REPLAY))
+        }
         this.operate = isHttp ? OPERATE_TYPE_HTTP : this.prevOperate || this.operate
 
         var currentResponse = parseJSON(response, {}, true)
@@ -3079,6 +3088,7 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           this.isTestCaseShow = false
+          const isRandomSubListShow = this.isRandomSubListShow
           
           const currentResponse = this.view != 'code' || StringUtil.isEmpty(this.jsoncon, true) ? {} : this.removeDebugInfo(parseJSON(this.jsoncon));
 
@@ -3107,7 +3117,7 @@ https://github.com/Tencent/APIJSON/issues
               inputObj.code = code_
             }
           } else if (this.isRandomShow && this.isRandomListShow) {
-            this.exportChainApiCase(this.exTxt.name, this.isRandomSubListShow, this.isRandomSubListShow ? this.randomSubs : this.randoms)
+            this.exportChainApiCase(this.exTxt.name, isRandomSubListShow, isRandomSubListShow ? this.randomSubs : this.randoms)
             return
           }
 
@@ -3127,28 +3137,30 @@ https://github.com/Tencent/APIJSON/issues
           currentResponse.code = code;
           currentResponse.throw = thrw;
 
+          const subIndex = this.currentRandomSubIndex
+          const userId = this.User.id;
+          const extName = this.exTxt.name;
+          const isSub = subIndex != null && subIndex >= 0
+          const input = ((isSub ? this.randomSubs[this.currentRandomSubIndex] : this.currentRandomItem) || {}).Input || {}
           const config = vRandom.value;
+          const methods = this.methods;
+          const method = this.isShowMethod() ? this.method : null;
+          const baseUrl = this.getBaseUrl();
 
           var callback = function (randomName, constConfig, constJson) {
-            const userId = App.User.id;
-            const input = (App.currentRandomItem || {}).Input || {}
             const randomId = input.id || 0;
-            const methods = App.methods;
-            const method = App.isShowMethod() ? App.method : null;
-            const extName = App.exTxt.name;
-            const baseUrl = App.getBaseUrl();
-            var isPost = (randomId <= 0 || ! isExportRandom) && (isEditResponse || did == null)
+            var isPost = isExportRandom && isSub ? randomId <= 0 : (randomId <= 0 || ! isExportRandom) && (isEditResponse || did == null)
             const url = isPost ? '/post' : '/put';
             const req = isExportRandom && btnIndex <= 0 ? {
               format: false,
               'Input': {
                 // userId: userId,
-                id: randomId,
-                toId: 0,
+                id: randomId <= 0 ? null : randomId,
+                toId: isSub ? ((App.currentRandomItem || {}).Input || {}).id : 0,
                 chainGroupId: cgId,
                 chainId: cId,
                 flowId: did,
-                count: App.requestCount,
+                count: isSub ? 1 : App.requestCount,
                 name: extName,
                 config: config
               },
@@ -3170,7 +3182,7 @@ https://github.com/Tencent/APIJSON/issues
                   // 'userId': userId,
   //                'testAccountId': currentAccountId,
   //                'chainGroupId': cgId,
-                'detail': App.exTxt.name,
+                'detail': extName,
                 'systemId': 1,
                   // 'userId': userId,
   //                'chainGroupId': cgId,
@@ -4215,7 +4227,7 @@ https://github.com/Tencent/APIJSON/issues
             this.saveCache('', 'database', this.database)
 
             doc = null
-            var item = this.accounts[this.currentAccountIndex]
+            var item = this.accounts[this.currentAccountIndex] || {}
             item.isLoggedIn = false
             this.onClickAccount(this.currentAccountIndex, item)
             break
@@ -4224,7 +4236,7 @@ https://github.com/Tencent/APIJSON/issues
             this.saveCache('', 'schema', this.schema)
 
             doc = null
-            var item = this.accounts[this.currentAccountIndex]
+            var item = this.accounts[this.currentAccountIndex] || {}
             item.isLoggedIn = false
             this.onClickAccount(this.currentAccountIndex, item)
             break
@@ -5958,7 +5970,7 @@ https://github.com/Tencent/APIJSON/issues
             if (this.currentAccountIndex == null || this.currentAccountIndex < 0) {
               this.currentAccountIndex = 0
             }
-            var item = this.accounts[this.currentAccountIndex]
+            var item = this.accounts[this.currentAccountIndex] || {}
             item.isLoggedIn = false
             this.onClickAccount(this.currentAccountIndex, item) //自动登录测试账号
 
@@ -7790,9 +7802,22 @@ https://github.com/Tencent/APIJSON/issues
 
           var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
           this.isRandomShow = true
-          this.isRandomListShow = this.isRandomSubListShow = false
-          this.randomTestTitle = StringUtil.trim(item.reqLinkExp) + " / " + StringUtil.trim(item.seqLinkExp)
-          vRandom.value = StringUtil.trim(item.reqLinkConfig) + "\n\n// / \n\n" + StringUtil.trim(item.seqLinkConfig)
+          this.isRandomListShow = false
+          this.isRandomSubListShow = true
+
+          var reqLinkConfigs = item.reqLinkConfigs || {};
+          var resLinkConfigs = item.resLinkConfigs || {};
+          this.randomTestTitle = 'UI/Data 关联配置：' + (item.viewIdName || item.viewType || item.viewPath)
+          // vRandom.value = StringUtil.trim(item.reqLinkConfigs) + "\n\n// / \n\n" + StringUtil.trim(item.resLinkConfigs)
+
+          var randomSubs = []
+          for (let k in reqLinkConfigs) {
+            randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
+          }
+          for (let k in resLinkConfigs) {
+            randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
+          }
+          this.randomSubs = (this.currentRandomItem || {}).subs = randomSubs
 
           // 无效
           // const labelX = bx + bw + 4; // 和 drawDetections 中计算按钮位置保持一致
@@ -11030,6 +11055,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 App.currentRandomIndex = k
                 const resultIndex = k
                 const response = oj // {TestRecord: oj, code: 200, msg: 'success'}
+                response.code = response.code || 200
+                // response.msg = response.msg || 'success'
                 setTimeout(function () {  // 让图片切换更平滑，且保持和选项断言结果同时出现
                   App.compareResponse({data: {TestRecord: oj, code: 200, msg: 'success'}}, allCount, list, resultIndex, ik, response, true, App.currentAccountIndex, false, err)
                   // App.compareResponse(allCount, list, k, inputList[k], App.currentOutputList[k], true, App.currentAccountIndex, false, err)
@@ -12096,8 +12123,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         if (isCross) {
-          if (accountIndex < 0 && accounts[this.currentAccountIndex] != null) {  //退出登录已登录的账号
-            accounts[this.currentAccountIndex].isLoggedIn = true
+          var account = accounts[this.currentAccountIndex]
+          if (accountIndex < 0 && account != null) {  //退出登录已登录的账号
+            account.isLoggedIn = true
           }
           var index = accountIndex < 0 ? this.currentAccountIndex : accountIndex
           this.onClickAccount(index, accounts[index], function (isLoggedIn, index, err) {
@@ -13001,9 +13029,16 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var isChanged = false;
         if (isRandom) {
           this.currentRandomItem = item;
-          isChanged = this.currentRandomIndex != index;
+          var curIndex = this.isRandomSubListShow ? this.currentRandomSubIndex : this.currentRandomIndex;
+          isChanged = curIndex != index;
           if (isChanged) {
-            this.currentRandomIndex = index;
+            if (this.isRandomSubListShow) {
+              this.currentRandomSubIndex = index
+            } else {
+              this.currentRandomIndex = index
+              this.currentRandomSubIndex = -1
+            }
+
             this.hoverIds = {};
             this.visiblePaths = [];
             this.missTruth = {};
@@ -13019,7 +13054,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             return
           }
 
-          this.currentRandomSubIndex = index
           document = this.currentRemoteItem || {}
 
           // vBefore.src = vDiff.src = vAfter.src = this.img = random.img;
@@ -13048,10 +13082,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         // FIXME 向前寻找最近的
         if (isRandom) {
           var isHttp = random.type == InputUtil.EVENT_TYPE_HTTP
-          this.prevOperate = this.prevOperate || (this.operate != OPERATE_TYPE_HTTP ? this.operate : (StringUtil.isEmpty(this.randoms) ? OPERATE_TYPE_RECORD : OPERATE_TYPE_REPLAY))
+          if (isHttp && StringUtil.isEmpty(this.prevOperate)) {
+            this.prevOperate = (this.operate != OPERATE_TYPE_HTTP ? this.operate : (StringUtil.isEmpty(this.randoms) ? OPERATE_TYPE_RECORD : OPERATE_TYPE_REPLAY))
+          }
           this.operate = isHttp ? OPERATE_TYPE_HTTP : this.prevOperate || this.operate
 
-          var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? (currentResponse.TestRecord || {}).screenshot : null)
+          var imgUrl = StringUtil.trim(JSONResponse.isObject(currentResponse) ? (currentResponse.TestRecord || currentResponse || {}).screenshot : null)
           vAfter.src = StringUtil.isEmpty(imgUrl) ? vAfter.src : (imgUrl.indexOf('://') >= 0 ? '' : baseUrl) + '/download?filePath=' + encodeURI(imgUrl)
 
           var beforeUrl = StringUtil.trim(testRecord.screenshot)
@@ -13199,7 +13235,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             
             var beforeRsp = before; // (StringUtil.isEmpty(testRecord.response, true) ? null : parseJSON(testRecord.response)) || {}
             var beforeImgUrl = (beforeRsp.TestRecord || {}).screenshot
-            var afterImgUrl = (currentResponse.TestRecord || {}).screenshot
+            var afterImgUrl = ((currentResponse || {}).TestRecord || currentResponse || {}).screenshot
 
             var pic = isBefore ? afterImgUrl : beforeImgUrl
             if (StringUtil.isEmpty(pic)) {  // 往前寻找最近的截屏
@@ -13227,6 +13263,48 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             if (StringUtil.isEmpty(pic) != true) {
               this.showImgDiff(beforeImgUrl, afterImgUrl)
             }
+
+            const bboxes = (detection.after || {}).bboxes || []
+            const randoms = (this.isRandomSubListShow ? this.randomSubs : this.randoms) || []
+            var count = index >= 0 ? StringUtil.length(randoms) : 0
+            if (count > index && count >= 2) {
+              for (let i = 0; i < bboxes.length; i++) {
+                const bbox = bboxes[i]
+                if (StringUtil.isEmpty(bbox)) {
+                  continue
+                }
+
+                const inReqLinkExps = bbox.reqLinkExps = bbox.reqLinkExps || {} // a + b, a || b + c
+                const inResLinkExps = bbox.resLinkExps = bbox.resLinkExps || {} // a + b, a || b + c
+                const inReqLinkPaths = bbox.reqLinkPaths = bbox.reqLinkPaths || {}
+                const inResLinkPaths = bbox.resLinkPaths = bbox.resLinkPaths || {}
+                const inReqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {}
+                const inResLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {}
+
+                const props = ['text', 'image', 'background']
+                for (let j = 0; j < props.length; j ++) {
+                  const prop = props[j]
+                  const value = bbox[prop]
+                  if (StringUtil.isEmpty(value)) {
+                    continue
+                  }
+
+                  const reqLinkPaths = {}
+                  const resLinkPaths = {}
+                  JSONResponse.findLinkPaths(bbox.viewIdName, prop, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths[prop], inResLinkPaths[prop])
+
+                  const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true)
+                  const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false)
+                  if (StringUtil.isNotEmpty(reqLinkExp)) {
+                    const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
+                  }
+                  if (StringUtil.isNotEmpty(resLinkExp)) {
+                    const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
+                  }
+                }
+              }
+            }
+
           }
         }
         else {
@@ -13345,56 +13423,56 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const missTruth = this.missTruth || {}
 
             const bboxes = (detection.after || {}).bboxes || []
-            const randoms = (this.isRandomSubListShow ? this.randomSubs : this.randoms) || []
-            var count = index >= 0 ? StringUtil.length(randoms) : 0
-            if (count > index && count >= 2) {
-              function callback(exp, isReq) {
-                var v = null; // FIXME 还不如继续从 inputList 中找
-                App.parseRandom({}, {}, 'ret: ' + exp, 0, true, false, false, function (randomName, constConfig, constJson) {
-                  v = constJson.ret
-                })
-                return v
-              }
-
-              for (let i = 0; i < bboxes.length; i++) {
-                const bbox = bboxes[i]
-                if (StringUtil.isEmpty(bbox)) {
-                  continue
-                }
-
-                const inReqLinkExps = bbox.reqLinkExps = bbox.reqLinkExps || {} // a + b, a || b + c
-                const inResLinkExps = bbox.resLinkExps = bbox.resLinkExps || {} // a + b, a || b + c
-                const inReqLinkPaths = bbox.reqLinkPaths = bbox.reqLinkPaths || {}
-                const inResLinkPaths = bbox.resLinkPaths = bbox.resLinkPaths || {}
-                const inReqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {}
-                const inResLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {}
-
-                const props = ['text'] // , 'image', 'background']
-                for (let j = 0; j < props.length; j ++) {
-                  const prop = props[j]
-                  const value = bbox[prop]
-                  if (StringUtil.isEmpty(value)) {
-                    continue
-                  }
-
-                  const reqLinkPaths = {}
-                  const resLinkPaths = {}
-                  JSONResponse.findLinkPaths(bbox.viewIdName, prop, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths[prop], inResLinkPaths[prop])
-
-                  const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true, callback)
-                  const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false, callback)
-                  const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
-                  const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
-                }
-
-                // if (reqLinkPaths.length >= 1) {
-                delete bbox.reqLinkPaths
-                // }
-                // if (resLinkPaths.length >= 1) {
-                delete bbox.resLinkPaths
-                // }
-              }
-            }
+            // const randoms = (this.isRandomSubListShow ? this.randomSubs : this.randoms) || []
+            // var count = index >= 0 ? StringUtil.length(randoms) : 0
+            // if (count > index && count >= 2) {
+            //   function callback(exp, isReq) {
+            //     var v = null; // FIXME 还不如继续从 inputList 中找
+            //     App.parseRandom({}, {}, 'ret: ' + exp, 0, true, false, false, function (randomName, constConfig, constJson) {
+            //       v = constJson.ret
+            //     })
+            //     return v
+            //   }
+            //
+            //   for (let i = 0; i < bboxes.length; i++) {
+            //     const bbox = bboxes[i]
+            //     if (StringUtil.isEmpty(bbox)) {
+            //       continue
+            //     }
+            //
+            //     const inReqLinkExps = bbox.reqLinkExps = bbox.reqLinkExps || {} // a + b, a || b + c
+            //     const inResLinkExps = bbox.resLinkExps = bbox.resLinkExps || {} // a + b, a || b + c
+            //     const inReqLinkPaths = bbox.reqLinkPaths = bbox.reqLinkPaths || {}
+            //     const inResLinkPaths = bbox.resLinkPaths = bbox.resLinkPaths || {}
+            //     const inReqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {}
+            //     const inResLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {}
+            //
+            //     const props = ['text', 'image', 'background']
+            //     for (let j = 0; j < props.length; j ++) {
+            //       const prop = props[j]
+            //       const value = bbox[prop]
+            //       if (StringUtil.isEmpty(value)) {
+            //         continue
+            //       }
+            //
+            //       const reqLinkPaths = {}
+            //       const resLinkPaths = {}
+            //       JSONResponse.findLinkPaths(bbox.viewIdName, prop, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths[prop], inResLinkPaths[prop])
+            //
+            //       const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true, callback)
+            //       const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false, callback)
+            //       const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
+            //       const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
+            //     }
+            //
+            //     // if (reqLinkPaths.length >= 1) {
+            //     delete bbox.reqLinkPaths
+            //     // }
+            //     // if (resLinkPaths.length >= 1) {
+            //     delete bbox.resLinkPaths
+            //     // }
+            //   }
+            // }
 
             //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
