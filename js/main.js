@@ -3155,7 +3155,7 @@ https://github.com/Tencent/APIJSON/issues
               format: false,
               'Input': {
                 // userId: userId,
-                id: randomId <= 0 ? null : randomId,
+                id: randomId <= 0 ? undefined : randomId,
                 toId: isSub ? ((App.currentRandomItem || {}).Input || {}).id : 0,
                 chainGroupId: cgId,
                 chainId: cId,
