@@ -3105,16 +3105,16 @@ https://github.com/Tencent/APIJSON/issues
               log(e)
             }
 
-            var code_ = inputObj.code
+            var code_ = inputObj[JSONResponse.KEY_CODE]
             if (isEditResponse) {
-              inputObj.code = null  // delete inputObj.code
+              inputObj[JSONResponse.KEY_CODE] = typeof code_ == 'undefined' ? code_ : null  // delete inputObj.code
             }
 
             commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
             CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], path, this.database, this.language, isEditResponse != true, commentObj, true);
 
             if (isEditResponse) {
-              inputObj.code = code_
+              inputObj[JSONResponse.KEY_CODE] = code_
             }
           } else if (this.isRandomShow && this.isRandomListShow) {
             this.exportChainApiCase(this.exTxt.name, isRandomSubListShow, isRandomSubListShow ? this.randomSubs : this.randoms)
@@ -3122,20 +3122,8 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           var rawRspStr = JSON.stringify(currentResponse || {})
-          const code = currentResponse.code;
-          const thrw = currentResponse.throw;
-          delete currentResponse.code; // currentResponse.code = null; //code必须一致
-          delete currentResponse.throw; // currentResponse.throw = null; // throw必须一致
-
-          var rsp = parseJSON(JSON.stringify(currentResponse || {}))
-          rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
-          const isML = this.isMLEnabled;
-          const stddObj = isML ? JSONResponse.updateStandard({}, currentResponse) : {};
-          stddObj.status = (this.currentHttpResponse || {}).status || 200;
-          stddObj.code = code || 0;
-          stddObj.throw = thrw;
-          currentResponse.code = code;
-          currentResponse.throw = thrw;
+          var rsp = currentResponse // parseJSON(rawRspStr)
+          var stddObj = isML ? JSONResponse.updateFullStandard({}, rsp, isML) : {};
 
           const subIndex = this.currentRandomSubIndex
           const userId = this.User.id;

@@ -909,6 +909,9 @@ var JSONResponse = {
 
     var type = target.type;
     log('compareWithStandard  type = target.type = ' + type + ' >>');
+    if (StringUtil.isEmpty(type) || ['null', 'undefined'].indexOf(type) >= 0) {
+      type = null;
+    }
 
     var valueLevel = target.valueLevel;
     log('compareWithStandard  valueLevel = target.valueLevel = ' + valueLevel + ' >>');
@@ -959,8 +962,12 @@ var JSONResponse = {
     };
 
     var realType = JSONResponse.getType(real);
-    if (type != null && type != 'undefined' && type != realType && (type != 'number' || realType != 'integer')) { //类型改变
-      log('compareWithStandard  type != undefined && type != realType && (type != number || realType != integer) >> return COMPARE_TYPE_CHANGE');
+    if (StringUtil.isEmpty(realType) || ['null', 'undefined'].indexOf(realType) >= 0) {
+      realType = null;
+    }
+
+    if (type != realType && type != null && (type != 'number' || realType != 'integer')) { //类型改变
+      log('compareWithStandard  type != realType && type != null  && (type != number || realType != integer) >> return COMPARE_TYPE_CHANGE');
 
       max = {
         code: JSONResponse.COMPARE_TYPE_CHANGE,
@@ -1304,16 +1311,18 @@ var JSONResponse = {
       standard = {};
     }
 
-    var code = currentResponse.code;
+    var code = currentResponse[JSONResponse.KEY_CODE];
     var thrw = currentResponse.throw;
-    var msg = currentResponse.msg;
+    var msg = currentResponse[JSONResponse.KEY_MSG];
 
     var hasCode = standard.code != null;
     var isCodeChange = noBizCode != true && standard.code != code;
     var exceptions = standard.exceptions || [];
 
-    delete currentResponse.code; //code必须一致
-    delete currentResponse.throw; //throw必须一致
+    // delete currentResponse[JSONResponse.KEY_CODE]; //code必须一致
+    // delete currentResponse.throw; //throw必须一致
+    currentResponse[JSONResponse.KEY_CODE] = typeof code == 'undefined' ? code : null; //code必须一致
+    currentResponse.throw = typeof thrw == 'undefined' ? thrw : null; //throw必须一致
 
     var find = false;
     if (isCodeChange && hasCode) {  // 走异常分支
@@ -1327,27 +1336,28 @@ var JSONResponse = {
       }
 
       if (find) {
-        delete currentResponse.msg;
+        currentResponse[JSONResponse.KEY_MSG] = typeof msg == 'undefined' ? msg : null; // delete currentResponse.msg;
       }
     }
 
     var stddObj = isML ? (isCodeChange && hasCode ? standard : JSONResponse.updateStandard(standard, currentResponse)) : {};
 
 //    if (noBizCode != true) {
-        currentResponse.code = code;
+        currentResponse[JSONResponse.KEY_CODE] = code;
         currentResponse.throw = thrw;
 //    }
 
     if (hasCode || isML) {
-      stddObj.code = code || 0;
+      stddObj.code = code // || 0;
     }
 
     if (isCodeChange) {
       if (hasCode != true) {  // 走正常分支
+        stddObj.code = code // || 0;
         stddObj.throw = thrw;
       }
       else {  // 走异常分支
-        currentResponse.msg = msg;
+        currentResponse[JSONResponse.KEY_MSG] = msg; // currentResponse.msg = msg;
 
         if (find != true) {
           exceptions.push({
@@ -1393,7 +1403,7 @@ var JSONResponse = {
 
     var notEmpty = target.notEmpty;
     log('updateStandard  notEmpty = target.notEmpty = ' + notEmpty + ' >>');
-    if (real != null && typeof real != 'boolean' && typeof real != 'number') {
+    if (notEmpty !== false && real != null && typeof real != 'boolean' && typeof real != 'number') {
       notEmpty = target.notEmpty = StringUtil.isNotEmpty(real, true);
     }
 
@@ -1952,6 +1962,11 @@ var JSONResponse = {
           tgt.values[0] = child;
         }
 
+        if (k == 0) {
+          tgt = child;
+          continue;
+        }
+
         if (child[k] == null) {
           child[k] = {};
         }
@@ -2234,8 +2249,10 @@ var JSONResponse = {
     switch (type) {
       case 'boolean':
         return 2;
-      case 'number':
+      case 'integer':
         return 10;
+      case 'number':
+        return 5;
       case 'string':
         return 10;
     }
