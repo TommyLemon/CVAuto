@@ -686,6 +686,7 @@ If you are requesting an APIJSON backend service, use the following link:
 https://github.com/Tencent/APIJSON/issues
 
 
+
 `;
 
 
@@ -1189,6 +1190,8 @@ https://github.com/Tencent/APIJSON/issues
       sameIds: [],
       missTruth: {},
       compareRandomIds: null, // [],
+      isEditReqLink: false,
+      currentBbox: null,
       isDrawingBox: false,
       drawingBox: { startX: 0, startY: 0, endX: 0, endY: 0 },
       isLabelModalShow: false,
@@ -2167,7 +2170,7 @@ https://github.com/Tencent/APIJSON/issues
             }
             if (isRandom) {
               // this.exTxt.isSub = this.isRandomSubListShow
-              this.exTxt.name = this.isRandomListShow || this.isRandomSubListShow ? vUrl.value : '随机配置 ' + this.formatDateTime()
+              this.exTxt.name = this.isRandomListShow || this.isRandomSubListShow ? vUrl.value : (this.randomTestTitle || '随机配置 ' + this.formatDateTime())
             }
             else if (isScript) { // 避免 APIJSON 启动报错  '执行脚本 ' + this.formatDateTime()
               this.exTxt.name = this.scriptType + (this.isPreScript ? 'Pre' : 'Post') + this.getCurrentScriptBelongId()
@@ -3134,20 +3137,29 @@ https://github.com/Tencent/APIJSON/issues
           const methods = this.methods;
           const method = this.isShowMethod() ? this.method : null;
           const baseUrl = this.getBaseUrl();
+          const bbox = this.currentBbox || {}
+          if (isSub) {
+            var isReq = this.isEditReqLink
+            var key = isReq ? 'reqLinkConfigs' : 'resLinkConfigs'
+            var links = bbox[key] || {}
+            links[extName] = config
+          }
 
           var callback = function (randomName, constConfig, constJson) {
             const randomId = input.id || 0;
             var isPost = isExportRandom && isSub ? randomId <= 0 : (randomId <= 0 || ! isExportRandom) && (isEditResponse || did == null)
             const url = isPost ? '/post' : '/put';
+            const table = isSub ? 'Random' : 'Input'
             const req = isExportRandom && btnIndex <= 0 ? {
               format: false,
-              'Input': {
+              [table]: {
                 // userId: userId,
                 id: randomId <= 0 ? undefined : randomId,
                 toId: isSub ? ((App.currentRandomItem || {}).Input || {}).id : 0,
                 chainGroupId: cgId,
                 chainId: cId,
-                flowId: did,
+                flowId: isSub ? undefined : did,
+                documentId: isSub ? did : undefined,
                 count: isSub ? 1 : App.requestCount,
                 name: extName,
                 config: config
@@ -3161,7 +3173,7 @@ https://github.com/Tencent/APIJSON/issues
                 'response': rawRspStr,
                 'standard': isML ? JSON.stringify(stddObj) : null
               } : null,
-              'tag': 'Input'
+              'tag': table
             } : {
               format: false,
               'Flow': {
@@ -4498,7 +4510,7 @@ https://github.com/Tencent/APIJSON/issues
                       callback(true, index, err)
                   }
                 }
-              });
+              }, true);
             }
 
           }
@@ -5757,7 +5769,7 @@ https://github.com/Tencent/APIJSON/issues
 
       /**登录
        */
-      login: function (isAdminOperation, callback) {
+      login: function (isAdminOperation, callback, isTab) {
         this.isEditResponse = false
         var schemas = StringUtil.isEmpty(this.schema, true) ? null : StringUtil.split(this.schema)
 
@@ -7789,23 +7801,6 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           var [bx, by, bw, bh, bd] = JSONResponse.getXYWHD(JSONResponse.getBbox(item), width, height, xRate, yRate);
-          this.isRandomShow = true
-          this.isRandomListShow = false
-          this.isRandomSubListShow = true
-
-          var reqLinkConfigs = item.reqLinkConfigs || {};
-          var resLinkConfigs = item.resLinkConfigs || {};
-          this.randomTestTitle = 'UI/Data 关联配置：' + (item.viewIdName || item.viewType || item.viewPath)
-          // vRandom.value = StringUtil.trim(item.reqLinkConfigs) + "\n\n// / \n\n" + StringUtil.trim(item.resLinkConfigs)
-
-          var randomSubs = []
-          for (let k in reqLinkConfigs) {
-            randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
-          }
-          for (let k in resLinkConfigs) {
-            randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
-          }
-          this.randomSubs = (this.currentRandomItem || {}).subs = randomSubs
 
           // 无效
           // const labelX = bx + bw + 4; // 和 drawDetections 中计算按钮位置保持一致
@@ -7849,6 +7844,27 @@ https://github.com/Tencent/APIJSON/issues
                 wrongs.push(ind);
               }
             }
+
+            this.isRandomShow = true
+            this.isRandomListShow = false
+            this.isRandomSubListShow = true
+            this.currentBbox = item
+
+            var reqLinkConfigs = item.reqLinkConfigs || {};
+            var resLinkConfigs = item.resLinkConfigs || {};
+            this.randomTestTitle = 'UI/Data 关联配置：' + (item.viewIdName || item.viewType || item.viewPath)
+            // vRandom.value = StringUtil.trim(item.reqLinkConfigs) + "\n\n// / \n\n" + StringUtil.trim(item.resLinkConfigs)
+
+            var randomSubs = []
+            for (let k in reqLinkConfigs) {
+              randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
+            }
+            for (let k in resLinkConfigs) {
+              randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
+            }
+            this.randomSubs = (this.currentRandomItem || {}).subs = randomSubs
+
+
             break;
           }
         }
@@ -8635,7 +8651,7 @@ https://github.com/Tencent/APIJSON/issues
                  continue
               }
 
-              if (pjt.url == projectHost.host) {
+              if (pjt.host == projectHost.host) {
                   find = true
                   break
               }
@@ -13031,6 +13047,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             this.visiblePaths = [];
             this.missTruth = {};
             // this.sameIds = [];
+            this.currentBbox = null;
           }
 
           if ((random.count || 0) > 1) {
@@ -13277,17 +13294,42 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     continue
                   }
 
+                  var isFindReq = true
+                  for (let k in inReqLinkConfigs) {
+                    if (k != null && k.startsWith(prop + ': ')) {
+                      isFindReq = false
+                      break
+                    }
+                  }
+
+                  var isFindRes = true
+                  for (let k in inResLinkConfigs) {
+                    if (k != null && k.startsWith(prop + ': ')) {
+                      isFindRes = false
+                      break
+                    }
+                  }
+
                   const reqLinkPaths = {}
                   const resLinkPaths = {}
                   JSONResponse.findLinkPaths(bbox.viewIdName, prop, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths[prop], inResLinkPaths[prop])
 
-                  const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true)
-                  const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false)
-                  if (StringUtil.isNotEmpty(reqLinkExp)) {
-                    const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
+                  if (isFindReq) {
+                    const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true)
+                    const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp]
+
+                    if (StringUtil.isNotString(reqLinkConfig)) {
+                      inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
+                    }
                   }
-                  if (StringUtil.isNotEmpty(resLinkExp)) {
-                    const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
+
+                  if (isFindRes) {
+                    const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false)
+                    const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp]
+
+                    if (StringUtil.isNotString(resLinkConfig)) {
+                      inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
+                    }
                   }
                 }
               }
@@ -13618,7 +13660,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.adminRequest('/get', {
           TestRecord: {
             documentId: isRandom ? doc.flowId : doc.id,
-            randomId: isRandom ? doc.id : null,
+            randomId: isRandom ? doc.id : 0,
             testAccountId: this.getCurrentAccountId(),
             'invalid': 0,
             'host': this.getBaseUrl(),
