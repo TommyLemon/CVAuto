@@ -3317,6 +3317,7 @@ https://github.com/Tencent/APIJSON/issues
         const inputUrl = input == null ? null : input.url
         var bizUrl_ = this.getBranchUrl(inputUrl || '');
         var locate_ = ''
+        var qry_ = input == null ? null : StringUtil.trim(input.query)
         var query_ = ''
         if (JSONResponse.isString(bizUrl_)) {
           var ind = bizUrl_.indexOf('?')
@@ -3357,7 +3358,7 @@ https://github.com/Tencent/APIJSON/issues
         var account = accountInfo.account || accountInfo.phone || accountInfo.email
 
         const baseUrl = this.getBaseUrl(inputUrl || '', true) || input.host;
-        const query = query_;
+        const query = StringUtil.isEmpty(query_) ? qry_ : (StringUtil.isEmpty(qry_) ? query_ : query_ + '&' + qry_);
         const request_ = input.request
         var inputObj_;
         try {
@@ -3812,7 +3813,7 @@ https://github.com/Tencent/APIJSON/issues
                 var isCpEmpty = StringUtil.isEmpty(cp)
                 ctxVar = ctxVar || 'data'
                 var pfx = prefix + 'PRE_' + ctxVar.toUpperCase() + '("'
-                var sfx = '", "' + StringUtil.trim(chain.method) + ' ' + StringUtil.trim(chain.url) + '"'
+                var sfx = ', "' + StringUtil.trim(chain.method) + ' ' + StringUtil.trim(chain.url) + '"'
 
                 if (v instanceof Array) {
                   for (var i = 0; i < v.length; i ++) {
@@ -3828,13 +3829,13 @@ https://github.com/Tencent/APIJSON/issues
                 else if (v instanceof Object) {
                   var cfg2 = ''
                   var v2 = v[key]
-                  if (key.length >= 3 && typeof v2 != 'undefined') {
+                  if (key.length >= 3 && typeof v2 != 'undefined' && ! JSONResponse.isObject(v2)) {
                     var ccp = isFolderEmpty ? key : cp + '/' + key
                     cfg2 = (StringUtil.isEmpty(config) ? '' : '\n// 可替代上面的 ') + pfx + ccp + '", null' + sfx + ') // key 同名';
                     cfg2 += '\n// 可替代上面的 ' + pfx + ccp + '", undefined' + sfx + route + ') // key 同名';
                     var isValMatch = v2 === value && (isStr || isNum) && (! isValueEmpty) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v2) < 0
                     if (isValMatch) {
-                      cfg2 += ' + value 相等：' + StringUtil.limitLength(v, 20);
+                      cfg2 += ' + value 相等：' + StringUtil.limitLength(v2, 50);
                       return cfg2;
                     }
                   }
@@ -3863,7 +3864,7 @@ https://github.com/Tencent/APIJSON/issues
                   var isKeyMatch = StringUtil.isNotEmpty(k) && k.toLowerCase().endsWith(lowerKey) || lowerKey.endsWith(k)
                   var isValMatch = v === value && (isStr || isNum) && (! isValueEmpty) && [0, 1, -1, 'true', 'false', 'null', 'undefined', '0', '1', '-1'].indexOf(v) < 0
                   if (isKeyMatch || isValMatch) { // FIXME StringUtil.endsWith(a, b, ignoreCase)
-                    var sfx2 = ') // ' + (isKeyMatch ? 'key 相似' : '') + (isValMatch ? (isKeyMatch ? ' + ' : '') + 'value 相等：' + StringUtil.limitLength(v, 20) : '');
+                    var sfx2 = ') // ' + (isKeyMatch ? 'key 相似' : '') + (isValMatch ? (isKeyMatch ? ' + ' : '') + 'value 相等：' + StringUtil.limitLength(v, 50) : '');
                     var ccp = cp // isFolderEmpty ? StringUtil.get(k) : folder + '/' + StringUtil.get(k) // '' 代表数组 i = cp
                     var cfg = (StringUtil.isEmpty(config) ? '' : '\n// 可替代上面的 ') + pfx + ccp + '", null' + sfx + sfx2;
                     cfg += '\n// 可替代上面的 ' + pfx + ccp + '", undefined' + sfx + route + sfx2;
