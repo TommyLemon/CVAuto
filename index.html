@@ -342,7 +342,7 @@
 
                     <div class="vRow"  :style="{ height: isFullScreen ? '80%' : '50%' }" >
                         <div class="vCell">
-                            <div id="vAfterTitle" class="vTitle" > <a >本次: {{ detection.isShowNum ? '正确数 ' + detection.afterCorrect + ' 误报数 ' + detection.afterWrong + ' 漏检数 ' + detection.afterMiss : '召回率 ' + detection.afterRecallStr + ' 精确率 ' + detection.afterPrecisionStr + ' F1 ' + detection.afterF1Str }} </a> <a style="height: 25px; color: black; font-weight: bold; padding: 0" href="javascript:void(0)" @click="onClickFullScreen($event)" > 全屏 </a> </div>
+                            <div id="vAfterTitle" class="vTitle" > <a >后:{{ detection.isShowNum ? '正确 ' + detection.afterCorrect + ' 误报 ' + detection.afterWrong + ' 漏检 ' + detection.afterMiss : ' ' + detection.afterRecallStr + ' 精确 ' + detection.afterPrecisionStr + ' F1 ' + detection.afterF1Str }} </a> <a style="height: 25px; color: black; font-weight: bold; padding: 0" href="javascript:void(0)" @click="onClickFullScreen($event)" > 全屏 </a> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vAfter" :src="img" ref="vAfterImg" @load="syncCanvasSize('after')">
                                 <canvas id="vAfterCanvas" ref="vAfterCanvas" @click="onClick('after', $event)" @mousemove="onMousemove('after', $event)" @mousedown="onMousedown('after', $event)" @mouseup="onMouseup('after', $event)" />
@@ -350,7 +350,7 @@
                         </div>
 
                         <div class="vCell">
-                            <div id="vBeforeTitle" class="vTitle" > <a >之前: {{ detection.isShowNum ? '正确数 ' + detection.beforeCorrect + ' 误报数 ' + detection.beforeWrong + ' 漏检数 ' + detection.beforeMiss : '召回率 ' + detection.beforeRecallStr + ' 精确率 ' + detection.beforePrecisionStr + ' F1 ' + detection.beforeF1Str }} </a> <a > 实际 </a><input id="vAfterTotal" v-model="detection.total" style="width: 36px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'afterTotal', true)" placeholder="总数" /> </div>
+                            <div id="vBeforeTitle" class="vTitle" > <a >前:{{ detection.isShowNum ? '正确 ' + detection.beforeCorrect + ' 误报 ' + detection.beforeWrong + ' 漏检 ' + detection.beforeMiss : '召回 ' + detection.beforeRecallStr + ' 精确 ' + detection.beforePrecisionStr + ' F1 ' + detection.beforeF1Str }} </a> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vBefore" :src="img" ref="vBeforeImg" @load="syncCanvasSize('before')">
                                 <canvas id="vBeforeCanvas" ref="vBeforeCanvas" @mousemove="onMousemove('before', $event)" />
@@ -360,7 +360,7 @@
 
                     <div class="vRow" :style="{ height: isFullScreen ? '80%' : '50%' }" >
                         <div class="vCell">
-                            <div id="vDiffBeforeTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异(之前): </a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" /> </div>
+                            <div id="vDiffBeforeTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异(前):</a><a>重合度 </a><input id="vDiffThreshold" v-model="detection.diffThreshold" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'diffThreshold', true)" placeholder="阈值" /> <a > 实际 </a><input id="vAfterTotal" v-model="detection.total" style="width: 36px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'afterTotal', true)" placeholder="总数" /> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vDiffBefore"  :src="img" ref="vDiffImg" @load="syncCanvasSize('diffBefore')">
                                 <canvas id="vDiffBeforeCanvas" ref="vDiffBeforeCanvas" @click="onClick('diffBefore', $event)" @mousemove="onMousemove('diffBefore', $event)" />
@@ -368,7 +368,7 @@
                         </div>
 
                         <div class="vCell">
-                            <div id="vDiffAfterTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异(本次): </a><a>总数 </a><input id="vDiffTotal" v-model="detection.total" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'total', true)" placeholder="总数" /> </div>
+                            <div id="vDiffAfterTitle" class="vTitle" > <a style="font-weight: bold; color: black">差异(后):</a><a>总数 </a><input id="vDiffTotal" v-model="detection.total" style="width: 24px;text-align: center" type="number" @keyup="doOnKeyUp(event, 'total', true)" placeholder="总数" /> </div>
                             <div class="vBox" :style="{'aspect-ratio': imgRatio || 16/9}">
                                 <img id="vDiffAfter" :src="img" ref="vDiffAfterImg" @load="syncCanvasSize('diffAfter')">
                                 <canvas id="vDiffAfterCanvas" ref="vDiffAfterCanvas" @click="onClick('diffAfter', $event)" @mousemove="onMousemove('diffAfter', $event)" />
@@ -434,12 +434,10 @@
 <!--                        <input id="vRandomKeyPath" v-show="isRandomListShow || isRandomSubListShow" v-model="((currentRemoteItem || {}).Flow || {}).path" style="width: 100%; text-align: center; margin-top: 115px; background-color: rgba(255, 255, 255, 0.5); border: #DDD 1px solid; border-radius: 2px"  @keyup="doOnKeyUp(event, 'randomKeyPath', false, {'path': vRandomKeyPath.value})" placeholder="image: 图片的 JSON key 路径，以 / 分隔，转义特殊字符 / 等" />-->
 
                         <!-- 临时生成的配置子项 -->
-                        <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%; background-color: transparent; overflow: hidden;overflow-y: scroll; padding-bottom: 215px">
-                            <li style="width: 100%; background-color: white; " v-for="(item, index) in randomSubs" :id="'randomSubItem' + index" >
-                                <img id="vRandomSubImg" :src="item.img" style="height: 90px; min-width: 90px" @click="restoreRandom(index, item)">
-
-                                <a class="hint--rounded hint--no-animate" ref="randomSubTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(index, item)" :style="{ color: index == currentRandomSubIndex ? 'black' : 'gray' }">{{ Math.round(100*((item.Input || {}).size || 0)/1024/1024)/100 + 'M ' + ((item.Input || {}).width || '') + "x" + ((item.Input || {}).height || '') }}</a>
-                                <input style="width: 96%" v-model="(item.Input || {}).name" @keyup="doOnKeyUp(event, 'randomSub', false, item)" />
+                        <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll; padding-bottom: 100px">
+                            <li style="width: 100%" v-for="(item, index) in randomSubs" :id="'randomSubItem' + index" >
+                                <a v-show="! isRandomEditable" class="hint--rounded hint--no-animate" ref="randomSubTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(index, item)" :style="{ color: index == currentRandomSubIndex ? 'black' : 'gray' }">{{ (item.Random || {}).name }}</a>
+                                <input v-show="isRandomEditable" style="width: 96%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, 'randomSub', false, item)" />
 
                                 <div :style="{ background: item.compareColor }" v-show="! isRandomEditable && item.compareType != null" style="position: absolute;top: 8px;right: 36px;display: inline-block;">
                                     <button class="hint--left" ref="testRandomSubResultButtons" @mouseover="setTestHint(index, item, true)" v-show="item.compareType != null" @click="handleTest(false, index, item, null, true)" style="position: relative;">{{ StringUtil.limitLength(item.compareMessage, 30, 'middle') + (item.showType == 'before' ? '-前' : '-后') }}</button>
@@ -448,13 +446,11 @@
                                     </svg>   <!-- 中间 button 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
                                     <button class="hint--left" ref="testRandomSubHandleButtons" @mouseover="setTestHint(index, item, true, null, true)" v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item, null, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button><button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button><button style="padding-left: 1px; padding-right: 1px; width: 50px" :style="{ color: item.durationColor }" class="hint--left" ref="testRandomSubResultDurationButtons" @mouseover="setTestHint(index, item, true, true)" @click="handleTest(true, index, item, null, true, true)">{{ (item.showType == 'before' ? item.durationBeforeShowStr : item.durationShowStr) || '?' }}</button>
                                 </div>
-
-<!--                                <img id="vRandomSubUpload" :src="item.status == 'uploading' ? 'img/loading.gif' : 'img/add_light.png'" class="icon" style="margin-right: 27px; top: 13px" @click="uploadImage(currentRandomIndex, index)">-->
-                                <svg v-show="item.Input != null && item.Input.userId == User.id" class="icon" style="margin-right: 5px; top: 13px" @click="remove(item, index, true, true)">
+                                <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 5px; top: 13px" @click="remove(item, index, true, true)">
                                     <use xlink:href="svg/icon.svg#trash"></use>
                                 </svg>
                             </li>
-                        </ul>
+                        </ul> c
 
                         <div v-show="isRandomSubListShow" style="bottom: 0px; padding: 4px 13px 4px 6px; position: absolute; width: 100%; text-align: right; z-index: 100">
                             <input id="vRandomSubSearch" v-model="randomSubSearch" style="min-width: 60px; display: inline-flex; text-align: center" @keyup="doOnKeyUp(event, 'randomSub', true)" placeholder="搜索" />

@@ -7764,7 +7764,7 @@ https://github.com/Tencent/APIJSON/issues
         const realWidth = isFullScreen ? 0 : (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 1920);
         const maxTextWidth = realWidth <= 0 ? 0 : Math.max(vAfterTitle.clientWidth || 0, vDiffTitle.clientWidth || 0, vBeforeTitle.clientWidth || 0);
         const imgWidth = maxTextWidth <= 0 ? 0 : Math.max(maxTextWidth, Math.min(700, vAfter.width || vDiffAfter.width || vDiffBefore.width || vBefore.width || realWidth/(window.devicePixelRatio*3)));
-        this.moveSplit(isFullScreen ? 0.73 : Math.min(0.6, Math.max(0.3, (2*imgWidth + 450 + 20)/realWidth)));
+        this.moveSplit(isFullScreen ? 0.4 : Math.max(0.6,  (2*imgWidth + 450 + 20)/realWidth));
         event?.preventDefault();
       },
       /**
@@ -7858,13 +7858,12 @@ https://github.com/Tencent/APIJSON/issues
 
             var randomSubs = []
             for (let k in reqLinkConfigs) {
-              randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
+              randomSubs.push({Random: {name: k, config: reqLinkConfigs[k]}})
             }
             for (let k in resLinkConfigs) {
-              randomSubs.push({Input: {name: k, config: reqLinkConfigs[k]}})
+              randomSubs.push({Random: {name: k, config: reqLinkConfigs[k]}})
             }
             this.randomSubs = (this.currentRandomItem || {}).subs = randomSubs
-
 
             break;
           }
