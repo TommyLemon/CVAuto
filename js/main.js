@@ -2582,7 +2582,7 @@ https://github.com/Tencent/APIJSON/issues
       },
 
       // 根据事件配置用例恢复数据
-      restoreRandom: function (index, item) {
+      restoreRandom: function (index, item, isSub) {
         if (this.isRandomSubListShow) {
           this.currentRandomSubIndex = index
         } else if (this.isRandomListShow) {
@@ -2593,10 +2593,14 @@ https://github.com/Tencent/APIJSON/issues
         this.isRandomListShow = false
         this.isRandomSubListShow = false
 
-        var random = (item || {}).Input || {}
+        var random = (isSub ? (item || {}).Random : (item || {}).Input) || {}
         this.randomTestTitle = random.name
         this.testRandomCount = random.count
         vRandom.value = StringUtil.get(random.config)
+
+        if (isSub) {
+          return
+        }
 
         var response = ((item || {}).TestRecord || {}).response
         if (StringUtil.isNotEmpty(response)) {
@@ -2693,7 +2697,7 @@ https://github.com/Tencent/APIJSON/issues
 
         
           var originItem = item
-          item.random = (originItem.Input || {}).config
+          item.random = (originItem.Input || originItem.Random || {}).config
 
           doc = item.Flow || {}
           docId = doc.id || 0
@@ -7856,7 +7860,7 @@ https://github.com/Tencent/APIJSON/issues
 
             var reqLinkConfigs = item.reqLinkConfigs || {};
             var resLinkConfigs = item.resLinkConfigs || {};
-            this.randomTestTitle = 'UI/Data 关联配置：' + (item.viewIdName || item.viewType || item.viewPath)
+            this.randomTestTitle = 'UI/Data 关联: ' + (item.viewIdName || item.viewType || item.viewPath)
             // vRandom.value = StringUtil.trim(item.reqLinkConfigs) + "\n\n// / \n\n" + StringUtil.trim(item.resLinkConfigs)
 
             var randomSubs = (this.currentRandomItem || {}).subs || this.randomSubs || []
@@ -13680,6 +13684,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           const head = ''
           const inputs = App.randoms || []
           const len = StringUtil.length(inputs)
+          var redCount = 0
+          var total = 0
+          App.resetCount(item, true, true, App.currentAccountIndex)
+
           var pre = null // {}
           for (let i = 0; i < index; i++) {
             const inputItem = inputs[i]
@@ -13788,10 +13796,16 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                             msg: 'UI 没按数据渲染 ' + StringUtil.limitLength(transVal, 20) + (transVal === val ? '' : ' = transform(' + StringUtil.limitLength(val, 20) + ')')
                         }
                         var compareShowObj = JSONResponse.getCompareShowObj(tr.compare)
-                        randomItem.compareColor = compareShowObj.compareColor
+                        var color = randomItem.compareColor = compareShowObj.compareColor || ''
                         randomItem.compareType = compareShowObj.compareType
                         randomItem.compareMessage = compareShowObj.compareMessage
-                        randomItem.compareHint = compareShowObj.compareHint
+                        randomItem.hintMessage = compareShowObj.hintMessage
+
+                        total += 1
+                        item.totalCount = total
+
+                        var count = item[color + 'Count'] || 0
+                        item[color + 'Count'] = count + 1
 
                         if (compare.code > JSONResponse.COMPARE_EQUAL) { // FIXME 生成 transform 函数内部代码，用这个函数处理后再对比；image/background 需要图像对比
                           if (corrects.includes(id)) {
@@ -13815,7 +13829,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 randomItem.compareColor = compareShowObj.compareColor
                 randomItem.compareType = compareShowObj.compareType
                 randomItem.compareMessage = compareShowObj.compareMessage
-                randomItem.compareHint = compareShowObj.compareHint
+                randomItem.hintMessage = compareShowObj.hintMessage
+                total += 1
+                redCount += 1
+                item.totalCount = total
+                item.redCount = redCount
 
                 // if (corrects.includes(id)) {
                 //   corrects.splice(id, 1)
@@ -13900,7 +13918,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         item = item || {};
         var toId = isRandom ? ((item.Input || {}).toId || 0) : 0;
         var h = isDuration ? item.durationHint : (isHandle ? item.compareMessage : item.hintMessage);
-        var eles = this.$refs['test' + (isRandom ? (toId <= 0 ? 'Input' : 'RandomSub') : '') + (isHandle ? 'Handle' : 'Result') + (isDuration ? 'Duration' : '') + 'Buttons'];
+        var eles = this.$refs['test' + (isRandom ? (toId <= 0 ? 'Random' : 'RandomSub') : '') + (isHandle ? 'Handle' : 'Result') + (isDuration ? 'Duration' : '') + 'Buttons'];
         var ele = eles == null ? null : eles[index];
         if (ele == null) {
           return;
