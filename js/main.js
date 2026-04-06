@@ -7185,7 +7185,7 @@ https://github.com/Tencent/APIJSON/issues
 
         this.imgRatio = imgWidth/imgHeight;
 
-        this.moveSplit(Math.min(0.7, Math.max(0.3, (2*imgWidth + 450 + 20)/realWidth)));
+        // this.moveSplit(Math.min(0.7, Math.max(0.3, (2*imgWidth + 450 + 20)/realWidth)));
       },
       getCanvasXY: function(stage, event) {
         const el = this.canvasMap[stage];
@@ -7764,7 +7764,7 @@ https://github.com/Tencent/APIJSON/issues
         const realWidth = isFullScreen ? 0 : (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 1920);
         const maxTextWidth = realWidth <= 0 ? 0 : Math.max(vAfterTitle.clientWidth || 0, vDiffTitle.clientWidth || 0, vBeforeTitle.clientWidth || 0);
         const imgWidth = maxTextWidth <= 0 ? 0 : Math.max(maxTextWidth, Math.min(700, vAfter.width || vDiffAfter.width || vDiffBefore.width || vBefore.width || realWidth/(window.devicePixelRatio*3)));
-        this.moveSplit(isFullScreen ? 0.4 : Math.max(0.6,  (2*imgWidth + 450 + 20)/realWidth));
+        this.moveSplit(isFullScreen ? 0.4 : Math.max(0.6, (2*imgWidth + 450 + 20)/realWidth));
         event?.preventDefault();
       },
       /**
@@ -11976,6 +11976,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.caseShowType = 1
         this.operate = OPERATE_TYPE_REPLAY
 
+        this.isFullScreen = false
         this.moveSplit(0.6)
 
         var isCross = this.isCrossEnabled
