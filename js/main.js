@@ -3162,6 +3162,7 @@ https://github.com/Tencent/APIJSON/issues
                 documentId: isSub ? did : undefined,
                 count: isSub ? 1 : App.requestCount,
                 name: extName,
+                path: bbox.assertPath || bbox.viewPath,
                 config: config
               },
               'TestRecord': isPost ? {
@@ -13223,7 +13224,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             detection.beforePrecision = testRecord.precision;
             detection.beforeF1 = testRecord.f1;
 
-            detection.before = {bboxes: JSONResponse.convertViewTree(before.viewTree, random) || {}};
+            detection.before = {bboxes: testRecord.bboxes || JSONResponse.convertViewTree(before.viewTree, random) || {}};
             detection.after = {bboxes: JSONResponse.convertViewTree(after.viewTree, random) || {}};
 
             this.detection = detection;
@@ -13232,13 +13233,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             // this.processAutoMark();
             // this.drawAll();
             var diff = this.processDiffAndAutoMark();
+            // var jsonDiff = JSONResponse.deepMerge(JSON.parse(JSON.stringify(before)), JSON.parse(JSON.stringify(after)));
+            // this.draw('diffBefore'); // this.drawDetections(vDiffAfterCanvas, diff);
+            // this.draw('diffAfter'); //
 
-            // var diff = JSONResponse.deepMerge(JSON.parse(JSON.stringify(before)), JSON.parse(JSON.stringify(after)));
-
-            // this.drawDetections(vBefore, vBeforeCanvas, before); // FIXME
-            // this.drawDetections(vDiff, vDiffCanvas, diff);
-            // this.drawDetections(vAfter, vAfterCanvas, after);
-            
             var beforeRsp = before; // (StringUtil.isEmpty(testRecord.response, true) ? null : parseJSON(testRecord.response)) || {}
             var beforeImgUrl = (beforeRsp.TestRecord || {}).screenshot
             var afterImgUrl = ((currentResponse || {}).TestRecord || currentResponse || {}).screenshot
@@ -13334,8 +13332,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   }
                 }
               }
+
             }
 
+            this.loadPropsAndCompare(item, random, detection, false)
           }
         }
         else {
@@ -13454,56 +13454,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const missTruth = this.missTruth || {}
 
             const bboxes = (detection.after || {}).bboxes || []
-            // const randoms = (this.isRandomSubListShow ? this.randomSubs : this.randoms) || []
-            // var count = index >= 0 ? StringUtil.length(randoms) : 0
-            // if (count > index && count >= 2) {
-            //   function callback(exp, isReq) {
-            //     var v = null; // FIXME 还不如继续从 inputList 中找
-            //     App.parseRandom({}, {}, 'ret: ' + exp, 0, true, false, false, function (randomName, constConfig, constJson) {
-            //       v = constJson.ret
-            //     })
-            //     return v
-            //   }
-            //
-            //   for (let i = 0; i < bboxes.length; i++) {
-            //     const bbox = bboxes[i]
-            //     if (StringUtil.isEmpty(bbox)) {
-            //       continue
-            //     }
-            //
-            //     const inReqLinkExps = bbox.reqLinkExps = bbox.reqLinkExps || {} // a + b, a || b + c
-            //     const inResLinkExps = bbox.resLinkExps = bbox.resLinkExps || {} // a + b, a || b + c
-            //     const inReqLinkPaths = bbox.reqLinkPaths = bbox.reqLinkPaths || {}
-            //     const inResLinkPaths = bbox.resLinkPaths = bbox.resLinkPaths || {}
-            //     const inReqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {}
-            //     const inResLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {}
-            //
-            //     const props = ['text', 'image', 'background']
-            //     for (let j = 0; j < props.length; j ++) {
-            //       const prop = props[j]
-            //       const value = bbox[prop]
-            //       if (StringUtil.isEmpty(value)) {
-            //         continue
-            //       }
-            //
-            //       const reqLinkPaths = {}
-            //       const resLinkPaths = {}
-            //       JSONResponse.findLinkPaths(bbox.viewIdName, prop, value, randoms, index, 20, reqLinkPaths, resLinkPaths, inReqLinkPaths[prop], inResLinkPaths[prop])
-            //
-            //       const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true, callback)
-            //       const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false, callback)
-            //       const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
-            //       const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
-            //     }
-            //
-            //     // if (reqLinkPaths.length >= 1) {
-            //     delete bbox.reqLinkPaths
-            //     // }
-            //     // if (resLinkPaths.length >= 1) {
-            //     delete bbox.resLinkPaths
-            //     // }
-            //   }
-            // }
 
             //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
@@ -13652,6 +13602,87 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           }
         }
+      },
+
+      loadPropsAndCompare: function (item, input, detection, isSummary) {
+        var subSearch = StringUtil.isEmpty(this.randomSubSearch, true)
+            ? null : '%' + StringUtil.trim(this.randomSubSearch) + '%'
+        this.adminRequest('/get', {
+          '[]': {
+            count: 0,
+            Random: { // 人工核对上传后的 UI/Data 关联配置及表达式
+              toId: input.id,
+              '@order': 'date-',
+              '@column': 'id,toId,userId,documentId,isRes,name,path,config',
+              // 'name$': subSearch
+            },
+//             '[]': {
+//               'count': 10,
+//               'page': 0,
+//               'Random': {
+//                 'toId@': '[]/Random/id',
+//                 // 'chainId': cId,
+//                 documentId: input.id,
+//                 '@order': "time-",
+//                 // 'name$': subSearch
+//               },
+//               'TestRecord': {
+//                 'randomId@': '/Input/id',
+// //                  'testAccountId': this.getCurrentAccountId(),
+//                 'host': StringUtil.isEmpty(baseUrl, true) ? null : baseUrl,
+//                 '@order': 'date-'
+//               }
+//             }
+          }
+        }, {}, function (url, res, err) {
+          App.onResponse(url, res, err)
+
+          var data = (res || {}).data || {}
+          if (JSONResponse.isSuccess(data) != true) {
+            alert('获取最新的校验标准 异常：\n' + (data.msg || (err || {}).message || (err || {}).reason))
+            return
+          }
+
+          var configs = App.randomSubs = item['[]'] = data['[]'] || []
+          // var configMap = {}
+          const bboxes = (detection.after || {}).bboxes || []
+          for (let i = 0; i < configs.length; i++) {
+            var configItem = configs[i]
+            var config = configItem == null ? null : configItem.Random
+            var path = config == null ? null : config.path
+            var name = StringUtil.isEmpty(path) ? null : config.name
+            if (StringUtil.isEmpty(name)) {
+              continue
+            }
+
+            var cfg = config.config
+
+            // configMap[cfg.name] = cfg.config
+
+            for (let j = 0; j < bboxes.length; j++) {
+              var bbox = bboxes[j]
+              var assertPath = bbox == null ? null : bbox.assertPath
+              if (! JSONResponse.isViewPathMatch(assertPath, path)) {
+                continue
+              }
+
+              var reqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {};
+              var resLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {};
+              if (config.isRes) {
+                resLinkConfigs[name] = cfg
+              } else {
+                reqLinkConfigs[name] = cfg
+              }
+            }
+          }
+
+          // App.compareResponse(res, allCount, list, index, item, response, isRandom, accountIndex, true, err, ignoreTrend, isCross);
+          App.drawAll()
+
+          if (isSummary) {
+            App.summary();
+          }
+        })
       },
 
       updateTestRecord: function (allCount, list, index, item, response, isRandom, ignoreTrend, accountIndex, isCross, isSummary) {

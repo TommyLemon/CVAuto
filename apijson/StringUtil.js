@@ -733,8 +733,16 @@ var StringUtil = {
   },
   CATEGORY_MAP: { // from TYPE_CATEGORY_KEYS
 //    'count': 'integer'
-  }
+  },
 
+  parsePair: function(s, trim) {
+    if (StringUtil.isNotString(s) || StringUtil.isEmpty(s, trim)) {
+      return []
+    }
+
+    var ind = s.indexOf(':')
+    return ind < 0 ? [s] : [s.substring(0, ind), s.substring(ind + 1)]
+  }
 };
 
 if (typeof module == 'object') {
