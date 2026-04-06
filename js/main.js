@@ -774,6 +774,7 @@ https://github.com/Tencent/APIJSON/issues
 
   var PRE_REQ = 'PRE_REQ' // PRE_REQ('[]/page')
   var PRE_ARG = 'PRE_ARG' // PRE_ARG('[]/page')
+  var NEXT_ARG = 'NEXT_ARG' // NEXT_ARG('[]/page')
   var PRE_RES = 'PRE_RES' // PRE_RES('[]/0/User/id')
   var PRE_DATA = 'PRE_DATA' // PRE_DATA('[]/0/User/id')
   var CTX_GET = 'CTX_GET' // CTX_GET('key')
@@ -783,8 +784,8 @@ https://github.com/Tencent/APIJSON/issues
   var CUR_DATA = 'CUR_DATA' // CUR_DATA('[]/0/User/id')
   var CTX_PUT = 'CTX_PUT' // CTX_PUT('key', val)
 
-  function get4Path(obj, path, defaultVal, msg) {
-    var val = path == null || path == '' ? obj : JSONResponse.getValByPath(obj, StringUtil.splitPath(path, false))
+  function get4Path(obj, path, defaultVal, msg, isDesc) {
+    var val = path == null || path == '' ? obj : JSONResponse.getValByPath(obj, StringUtil.splitPath(path, false), true, isDesc)
     if (val == null && defaultVal === undefined) {
       throw new Error('找不到 ' + path + ' 对应在 obj 中的非 null 值！' + StringUtil.get(msg))
     }
@@ -3155,6 +3156,7 @@ https://github.com/Tencent/APIJSON/issues
               [table]: {
                 // userId: userId,
                 id: randomId <= 0 ? undefined : randomId,
+                isRes: isSub ? (App.isEditReqLink ? 0 : 1) : null,
                 toId: isSub ? ((App.currentRandomItem || {}).Input || {}).id : 0,
                 chainGroupId: cgId,
                 chainId: cId,
@@ -7857,14 +7859,26 @@ https://github.com/Tencent/APIJSON/issues
             this.randomTestTitle = 'UI/Data 关联配置：' + (item.viewIdName || item.viewType || item.viewPath)
             // vRandom.value = StringUtil.trim(item.reqLinkConfigs) + "\n\n// / \n\n" + StringUtil.trim(item.resLinkConfigs)
 
-            var randomSubs = []
-            for (let k in reqLinkConfigs) {
-              randomSubs.push({Random: {name: k, config: reqLinkConfigs[k]}})
+            var randomSubs = (this.currentRandomItem || {}).subs || this.randomSubs || []
+            var subs = []
+            for (let j = 0; j < randomSubs.length; j++) {
+              const rs = randomSubs[j]
+              const r = rs == null ? null : rs.Random
+              if (r != null && JSONResponse.isViewPathMatch(r.path, item.assertPath || item.viewPath)) {
+                subs.push(rs)
+              }
             }
-            for (let k in resLinkConfigs) {
-              randomSubs.push({Random: {name: k, config: reqLinkConfigs[k]}})
+
+            if (StringUtil.isEmpty(subs)) {
+              for (let k in reqLinkConfigs) {
+                subs.push({Random: {isRes: 0, name: k, path: item.assertPath || item.viewPath, config: reqLinkConfigs[k]}})
+              }
+              for (let k in resLinkConfigs) {
+                subs.push({Random: {isRes: 1, name: k, path: item.assertPath || item.viewPath, config: reqLinkConfigs[k]}})
+              }
             }
-            this.randomSubs = (this.currentRandomItem || {}).subs = randomSubs
+
+            this.randomSubs = (this.currentRandomItem || {}).subs = subs
 
             break;
           }
@@ -11468,6 +11482,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           callback('', '', json, head);
           return
         }
+        const isUI = this.isRandomSubListShow
+
         json = json || {};
         head = head || {};
 
@@ -11805,21 +11821,37 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               var as3s = isChain ? StringUtil.trim(as3) : ''
               var accountHostIndexPath = isChain ? (StringUtil.isNumber(as3) ? '/' + as3 : (StringUtil.isEmpty(as3) ? '/' : as3s + (as3s.indexOf('/') < 0 ? '/' : ''))) : ''
 
-              if (fun == PRE_REQ) {
-                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/req")' : 'get4Path(((ctx || {}).pre || {}).req'
+              if (fun == NEXT_ARG || (isUI && fun == CUR_ARG)) {
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/arg")' : '((ctx || {}).next || {}).arg'
+                toEval = 'get4Path(' + source + ', ' + (value == 'NEXT_ARG()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
+              }
+              else if (fun == PRE_DATA || (isUI && fun == CUR_DATA)) {
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/data", undefined, null, true)' : '((ctx || {}).pre || {}).data'
+                toEval = 'get4Path(' + source + ', ' + (value == 'PRE_DATA()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
+              }
+              else if (fun == PRE_REQ) {
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/req", undefined, null, true)' : '((ctx || {}).pre || {}).req'
                 toEval = 'get4Path(' + source + ', ' + (value == 'PRE_REQ()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
               else if (fun == PRE_ARG) {
-                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/arg")' : 'get4Path(((ctx || {}).pre || {}).arg'
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/arg", undefined, null, true)' : '((ctx || {}).pre || {}).arg'
                 toEval = 'get4Path(' + source + ', ' + (value == 'PRE_ARG()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
               else if (fun == PRE_RES) {
-                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/res")' : 'get4Path(((ctx || {}).pre || {}).res'
+                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/res", undefined, null, true)' : '((ctx || {}).pre || {}).res'
                 toEval = 'get4Path(' + source + ', ' + (value == 'PRE_RES()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
               }
-              else if (fun == PRE_DATA) {
-                var source = isChain ? 'get4Path(' + chainArr + ', "' + accountHostIndexPath + '/data")' : 'get4Path(((ctx || {}).pre || {}).data'
-                toEval = 'get4Path(' + source + ', ' + (value == 'PRE_DATA()' ? JSON.stringify(path) : '') + (isChain ? as.join(', ') + value.substring(end) : value.substring(start + 1));
+              else if (fun == CUR_REQ) {
+                toEval = 'get4Path(((ctx || {}).cur || {}).req, ' + (value == 'CUR_REQ()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+              }
+              else if (fun == CUR_ARG) {
+                toEval = 'get4Path(((ctx || {}).cur || {}).arg, ' + (value == 'CUR_ARG()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+              }
+              else if (fun == CUR_RES) {
+                toEval = 'get4Path(((ctx || {}).cur || {}).res, ' + (value == 'CUR_RES()' ? JSON.stringify(path) : '') + value.substring(start + 1);
+              }
+              else if (fun == CUR_DATA) {
+                toEval = 'get4Path(((ctx || {}).cur || {}).data, ' + (value == 'CUR_DATA()' ? JSON.stringify(path) : '') + value.substring(start + 1);
               }
               else if (fun == CTX_GET) {
                 toEval = 'get4Path((ctx || {}).ctx, ' + (value == 'CTX_GET()' ? JSON.stringify(path) : '') + value.substring(start + 1);
@@ -11835,6 +11867,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 }
                 else if (as1 == 'PRE_ARG') {
                   as[1] = '((ctx || {}).pre || {}).arg'
+                }
+                else if (as1 == 'NEXT_ARG') {
+                  as[1] = '((ctx || {}).next || {}).arg'
                 }
                 else if (as1 == 'PRE_RES') {
                   as[1] = '((ctx || {}).pre || {}).res'
@@ -11857,18 +11892,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   as.splice(1, 1)
                 }
                 toEval = 'put4Path((ctx || {}).ctx, ' + JSON.stringify(path) + ', ' + as.join(', ') + value.substring(end);
-              }
-              else if (fun == CUR_REQ) {
-                toEval = 'get4Path(((ctx || {}).cur || {}).req, ' + (value == 'CUR_REQ()' ? JSON.stringify(path) : '') + value.substring(start + 1);
-              }
-              else if (fun == CUR_ARG) {
-                toEval = 'get4Path(((ctx || {}).cur || {}).arg, ' + (value == 'CUR_ARG()' ? JSON.stringify(path) : '') + value.substring(start + 1);
-              }
-              else if (fun == CUR_RES) {
-                toEval = 'get4Path(((ctx || {}).cur || {}).res, ' + (value == 'CUR_RES()' ? JSON.stringify(path) : '') + value.substring(start + 1);
-              }
-              else if (fun == CUR_DATA) {
-                toEval = 'get4Path(((ctx || {}).cur || {}).data, ' + (value == 'CUR_DATA()' ? JSON.stringify(path) : '') + value.substring(start + 1);
               }
               else {
                 fun = funWithOrder;  //还原，其它函数不支持 升降序和跨步！
@@ -13243,10 +13266,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             var pic = isBefore ? afterImgUrl : beforeImgUrl
             if (StringUtil.isEmpty(pic)) {  // 往前寻找最近的截屏
-              if (list != null && list.length > index) {
-                while (index > 0) {
-                  index --
-                  var prevItem = list[index] || {}
+              var ind = index
+              if (list != null && list.length > ind) {
+                while (ind > 0) {
+                  ind --
+                  var prevItem = list[ind] || {}
                   var prevInput = prevItem.Input
                   var prevInputId = prevInput == null ? null : prevInput.id
                   if (prevInputId != null) {
@@ -13315,18 +13339,18 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
                   if (isFindReq) {
                     const reqLinkExp = inReqLinkPaths[prop] = JSONResponse.linkPaths2Exp(reqLinkPaths, value, inReqLinkExps[prop], true)
-                    const reqLinkConfig = inReqLinkConfigs[prop + ': ' + reqLinkExp]
+                    const reqLinkConfig = StringUtil.isEmpty(reqLinkExp) ? null : inReqLinkConfigs[prop + ': ' + reqLinkExp]
 
-                    if (StringUtil.isNotString(reqLinkConfig)) {
+                    if (reqLinkConfig != null && StringUtil.isNotString(reqLinkConfig)) {
                       inReqLinkConfigs[prop + ': ' + reqLinkExp] = JSONResponse.linkPaths2Config(reqLinkPaths, true)
                     }
                   }
 
                   if (isFindRes) {
                     const resLinkExp = inResLinkPaths[prop] = JSONResponse.linkPaths2Exp(resLinkPaths, value, inResLinkExps[prop], false)
-                    const resLinkConfig = inResLinkConfigs[prop + ': ' + resLinkExp]
+                    const resLinkConfig = StringUtil.isEmpty(resLinkExp) ? null : inResLinkConfigs[prop + ': ' + resLinkExp]
 
-                    if (StringUtil.isNotString(resLinkConfig)) {
+                    if (resLinkConfig != null && StringUtil.isNotString(resLinkConfig)) {
                       inResLinkConfigs[prop + ': ' + resLinkExp] = JSONResponse.linkPaths2Config(resLinkPaths, false)
                     }
                   }
@@ -13335,7 +13359,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             }
 
-            this.loadPropsAndCompare(item, random, detection, false)
+            if (random.type === InputUtil.EVENT_TYPE_TOUCH) {
+              this.loadPropsAndCompare(index, document, item, random, detection, false)
+            }
           }
         }
         else {
@@ -13604,7 +13630,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
       },
 
-      loadPropsAndCompare: function (item, input, detection, isSummary) {
+      loadPropsAndCompare: function (index, document, item, input, detection, isSummary) {
+        index = index || this.currentRandomIndex
         var subSearch = StringUtil.isEmpty(this.randomSubSearch, true)
             ? null : '%' + StringUtil.trim(this.randomSubSearch) + '%'
         this.adminRequest('/get', {
@@ -13643,35 +13670,159 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             return
           }
 
-          var configs = App.randomSubs = item['[]'] = data['[]'] || []
+          var randoms = App.randomSubs = item.subs = item['[]'] = data['[]'] || []
           // var configMap = {}
+
+          const corrects = detection.corrects = detection.corrects || []
+          const wrongs = detection.wrongs = detection.wrongs || []
           const bboxes = (detection.after || {}).bboxes || []
-          for (let i = 0; i < configs.length; i++) {
-            var configItem = configs[i]
-            var config = configItem == null ? null : configItem.Random
-            var path = config == null ? null : config.path
-            var name = StringUtil.isEmpty(path) ? null : config.name
-            if (StringUtil.isEmpty(name)) {
+
+          const head = ''
+          const inputs = App.randoms || []
+          const len = StringUtil.length(inputs)
+          var pre = null // {}
+          for (let i = 0; i < index; i++) {
+            const inputItem = inputs[i]
+            const input_ = inputItem == null ? null : inputItem.Input
+            const type = input_ == null ? null : input_.type
+            if (type !== InputUtil.EVENT_TYPE_HTTP) {
               continue
             }
 
-            var cfg = config.config
+            const data = parseJSON(input_.response, input_.response, true)
+            pre = {
+              // arg: ,
+              data: data,
+              pre: pre
+            }
+          }
 
-            // configMap[cfg.name] = cfg.config
+          var next = null // {}
+          for (let i = len - 1; i > index; i--) {
+            const inputItem = inputs[i]
+            const input_ = inputItem == null ? null : inputItem.Input
+            const type = input_ == null ? null : input_.type
+            if (type !== InputUtil.EVENT_TYPE_HTTP) {
+              continue
+            }
+
+            const arg = parseJSON(input_.request, input_.request, true)
+            next = {
+              arg: arg,
+              next: next
+            }
+          }
+
+          const ctx = {
+            pre: pre,
+            next: next
+            // req: ,
+            // arg: ,
+            // res: ,
+            // data: ,
+          }
+
+          const preScript = StringUtil.trim(((App.scripts.global['0'] || {}).pre || {}).script)
+              + '\n' + StringUtil.trim(((App.scripts.case[(document || {}).id] || {}).pre || {}).script)
+
+          for (let i = 0; i < randoms.length; i++) {
+            let randomItem = randoms[i]
+            const random = randomItem == null ? null : randomItem.Random
+            const path = random == null ? null : random.path
+            const name = StringUtil.isEmpty(path) ? null : random.name
+            if (StringUtil.isEmpty(name)) {
+              continue
+            }
+            const ind = name.indexOf(': ')
+            const key = name.substring(0, ind)
+            if (StringUtil.isEmpty(key)) {
+              random.name += ' // 无效配置 ！必须是 key: value 这种格式！key 只能是 text, image, background 等 View 属性名称！'
+              continue
+            }
+
+            const config = random.config
+            const tr = randomItem.TestRecord = {
+              id: -i - 1,
+              documentId: random.documentId,
+              randomId: random.id
+            }
 
             for (let j = 0; j < bboxes.length; j++) {
-              var bbox = bboxes[j]
-              var assertPath = bbox == null ? null : bbox.assertPath
+              const bbox = bboxes[j]
+              const assertPath = bbox == null ? null : bbox.assertPath || bbox.viewPath
               if (! JSONResponse.isViewPathMatch(assertPath, path)) {
                 continue
               }
 
-              var reqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {};
-              var resLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {};
-              if (config.isRes) {
-                resLinkConfigs[name] = cfg
+              const reqLinkConfigs = bbox.reqLinkConfigs = bbox.reqLinkConfigs || {};
+              const resLinkConfigs = bbox.resLinkConfigs = bbox.resLinkConfigs || {};
+              if (random.isRes) {
+                resLinkConfigs[name] = config
               } else {
-                reqLinkConfigs[name] = cfg
+                reqLinkConfigs[name] = config
+              }
+
+              const id = j // bbox.id || bbox.index || j
+              try {
+                App.parseRandom({}, head, config, random.id, true, false, false
+                  , function (randomName, constConfig, constJson) {
+                  // var first = true
+                  // var script = '\nvar ['
+                  var script = '\n'
+                  for (var k in constJson) {
+                    var v = constJson[k]
+                    script += '\nvar ' + k + ' = ' + (typeof v == 'undefined' ? 'undefined' : JSON.stringify(v)) + ';'
+                    // script += (first ? '' : ', ') + k
+                    // first = false
+                  }
+                  // script += '] = ' + JSON.stringify(constJson)
+
+                  App.parseRandom(constJson, head, name, random.id, true, false, false
+                    , function (randomName2, constConfig2, constJson2) {
+                        const val = constJson2 == null ? null : constJson2[key]
+                        const transVal = JSONResponse.transform(key, val, bbox)
+                        const compare = JSONResponse.compareWithBefore(transVal, bbox[key])
+                        tr.compare = {
+                            code: JSONResponse.COMPARE_VALUE_CHANGE,
+                            path: assertPath,
+                            msg: 'UI 没按数据渲染 ' + StringUtil.limitLength(transVal, 20) + (transVal === val ? '' : ' = transform(' + StringUtil.limitLength(val, 20) + ')')
+                        }
+                        var compareShowObj = JSONResponse.getCompareShowObj(tr.compare)
+                        randomItem.compareColor = compareShowObj.compareColor
+                        randomItem.compareType = compareShowObj.compareType
+                        randomItem.compareMessage = compareShowObj.compareMessage
+                        randomItem.compareHint = compareShowObj.compareHint
+
+                        if (compare.code > JSONResponse.COMPARE_EQUAL) { // FIXME 生成 transform 函数内部代码，用这个函数处理后再对比；image/background 需要图像对比
+                          if (corrects.includes(id)) {
+                            corrects.splice(id, 1)
+                          }
+                          if (! wrongs.includes(id)) {
+                            wrongs.push(id)
+                          }
+                        }
+                    }, preScript + script, ctx)
+                  }, preScript, ctx)
+              } catch (e) {
+                console.log(e)
+                // random.name += ' // 断言报错！' + e.message
+                tr.compare = {
+                  code: JSONResponse.COMPARE_ERROR,
+                  path: assertPath,
+                  msg: '断言报错！' + e.message
+                }
+                var compareShowObj = JSONResponse.getCompareShowObj(tr.compare)
+                randomItem.compareColor = compareShowObj.compareColor
+                randomItem.compareType = compareShowObj.compareType
+                randomItem.compareMessage = compareShowObj.compareMessage
+                randomItem.compareHint = compareShowObj.compareHint
+
+                // if (corrects.includes(id)) {
+                //   corrects.splice(id, 1)
+                // }
+                // if (! wrongs.includes(id)) {
+                //   wrongs.push(id)
+                // }
               }
             }
           }
@@ -14218,10 +14369,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                       name: "CUR_REQ('config/data/[]/count')",
                       type: stringType,
                       comment: "从当前请求的 Request 对象中取值 function(path:String, defaultVal:Any?, msg:String?)"
-                    // }, {
-                    //   name: "CUR_DATA('[]/count')",
-                    //   type: stringType,
-                    //   comment: "从当前请求的返回结果中取值 function(path:String?, defaultVal:Any?, msg:String?)"
+                    }, {
+                      name: "CUR_DATA('[]/count')",
+                      type: stringType,
+                      comment: "从当前请求的返回结果中取值 function(path:String?, defaultVal:Any?, msg:String?)"
                     // }, {
                     //   name: "CUR_RES('[]/count')",
                     //   type: stringType,

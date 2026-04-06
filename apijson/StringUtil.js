@@ -18,6 +18,9 @@
  */
 var StringUtil = {
   TAG: 'StringUtil',
+  MAX_NAME_LENGTH: 30,
+  MAX_NICK_NAME_LENGTH: 20,
+  MAX_CONST_NAME_LENGTH: 30,
 
   isString: function(s) {
     return typeof s == 'string';

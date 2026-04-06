@@ -3413,7 +3413,7 @@ var JSONResponse = {
         }
 
         var v = linkPaths[k]
-        var line = (isReq ? 'CUR_ARG(' : 'CUR_DATA(') + k + ')' + (StringUtil.isEmpty(v) ? '' : ' // ' + StringUtil.trim(v))
+        var line = (isReq ? 'NEXT_ARG(' : 'PRE_DATA(') + k + ')' + (StringUtil.isEmpty(v) ? '' : ' // ' + StringUtil.trim(v))
 
         s += '\n_' + index + ': ' + line
         index ++
@@ -3427,6 +3427,10 @@ var JSONResponse = {
     if (realPath == targetPath || StringUtil.isEmpty(targetPath)) {
       return true;
     }
+    if (StringUtil.isEmpty(realPath)) {
+      return false;
+    }
+
     var realKeys = StringUtil.splitPath(realPath, false)
     var targetKeys = StringUtil.splitPath(targetPath, false)
     var rl = StringUtil.length(realKeys)
@@ -3457,6 +3461,11 @@ var JSONResponse = {
     }
 
     return true
+  },
+
+  // FIXME 生成 transform 函数内部代码，用这个函数处理后再对比；image/background 需要图像对比
+  transform: function (key, val, bbox) {
+    return val
   }
 };
 
