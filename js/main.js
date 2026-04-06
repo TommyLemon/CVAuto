@@ -7875,10 +7875,10 @@ https://github.com/Tencent/APIJSON/issues
 
             if (StringUtil.isEmpty(subs)) {
               for (let k in reqLinkConfigs) {
-                subs.push({Random: {isRes: 0, name: k, path: item.assertPath || item.viewPath, config: reqLinkConfigs[k]}})
+                subs.push({Random: {isRes: 0, userId: this.User.id, name: k, path: item.assertPath || item.viewPath, config: reqLinkConfigs[k]}})
               }
               for (let k in resLinkConfigs) {
-                subs.push({Random: {isRes: 1, name: k, path: item.assertPath || item.viewPath, config: reqLinkConfigs[k]}})
+                subs.push({Random: {isRes: 1, userId: this.User.id, name: k, path: item.assertPath || item.viewPath, config: reqLinkConfigs[k]}})
               }
             }
 
